@@ -1,6 +1,6 @@
 #pragma once
 #include "TetrisConstants.h"
-#include <vector>;
+#include <vector>
 #include <SFML/Graphics.hpp>
 
 

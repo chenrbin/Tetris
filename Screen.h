@@ -143,7 +143,6 @@ public:
 	void clearlines() {
 		for (int i = 0; i < NUMROWS; i++) {
 			if (checkLine(board[i])) {
-				printLine(i);
 				clearLine(i);
 				setMovingBlocks(currentPositions);
 				setPreviewBlocks(currentPositions);
