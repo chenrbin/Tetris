@@ -5,6 +5,42 @@
 
 using namespace std;
 using namespace TetrisVariables;
+
+class miniTile {
+	bool hasBlock;
+	sf::Sprite sprite;
+	int xPos, yPos;
+public:
+	miniTile(sf::Texture& texture, int xPos, int yPos, float scaleFactor) {
+		this->xPos = xPos;
+		this->yPos = yPos;
+		sprite.setPosition(xPos, yPos);
+		sprite.setTexture(texture);
+		sprite.setScale(scaleFactor, scaleFactor);
+		hasBlock = false;
+	}
+	void setColor(sf::Color& blockColor) {
+		sprite.setColor(blockColor);
+	}
+	void setBlock() {
+		hasBlock = !hasBlock;
+	}
+	void setBlock(sf::Color& blockColor) { // Overload to toggle drawing block and set color
+		hasBlock = !hasBlock;
+		sprite.setColor(blockColor);
+	}
+	void draw(sf::RenderWindow* window) {
+		if (hasBlock) {
+			window->draw(sprite);
+		}
+	}
+	sf::Sprite& getSprite() {
+		return sprite;
+	}
+	bool getHasBlock() {
+		return hasBlock;
+	}
+};
 class Tile {
 	bool hasBlock; // For blocks that have dropped
 	bool hasMovingBlock; // For blocks that are still in control
@@ -50,7 +86,7 @@ public:
 		sprite.setColor(blockColor);
 	}
 	void draw(sf::RenderWindow* window) {
-		if (hasMovingBlock || hasBlock || hasPreviewBlock)
+		if (hasMovingBlock || hasBlock || hasPreviewBlock) 
 			window->draw(sprite);
 	}
 	sf::Sprite& getSprite() {

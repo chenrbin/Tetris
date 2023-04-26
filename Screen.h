@@ -8,6 +8,68 @@
 using namespace std;
 using namespace TetrisVariables;
 
+class miniScreen {
+	sf::RenderWindow* window;
+	sf::FloatRect gameBounds;
+	sf::Texture blockTexture;
+	vector<vector<miniTile>> board; // Coordinates are [row][col]
+	Tetromino* currentPiece;
+	vector<Tetromino*> tetrominos;
+	float scaleFactor;
+	vector<sf::Vector2i> currentPositions;
+public:
+	miniScreen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, float scaleFactor, vector<Tetromino*>& tetrominos) {
+		this->window = &window;
+		this->gameBounds = gameBounds;
+		this->blockTexture = blockTexture;
+		this->tetrominos = tetrominos;
+
+		for (int i = 0; i < 4; i++) {
+			vector<miniTile> row;
+			for (int j = 0; j < 4; j++) {
+				row.push_back(miniTile(blockTexture, gameBounds.left + 10 + j * TILESIZE * scaleFactor, gameBounds.top + 10 + i * TILESIZE * scaleFactor, scaleFactor));
+			}
+			board.push_back(row);
+		}
+	}
+	void setBlocks(vector<sf::Vector2i>& positions) {
+		for (sf::Vector2i& pos : positions)
+			board[pos.x][pos.y].setBlock();
+	}
+
+	void setBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
+		for (sf::Vector2i& pos : positions)
+			board[pos.x][pos.y].setBlock(color);
+	}
+	void spawnPiece(int pieceCode = -1) {
+		if (currentPositions.size() != 0) {
+			delete currentPiece;
+		}
+		currentPiece = tetrominos[pieceCode]->getNewPiece();
+		currentPiece->moveLeft();
+		currentPiece->moveLeft();
+		currentPiece->moveLeft();
+		updateBlocks();
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				board[i][j].draw(window);
+			}
+		}
+	}
+	void drawScreen() {
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				board[i][j].draw(window);
+			}
+		}
+	}
+	void updateBlocks() { // Hide current tiles, update position, set new tiles
+		if (currentPositions.size() != 0)
+			setBlocks(currentPositions);
+		currentPositions = currentPiece->getPositions();
+		setBlocks(currentPositions, currentPiece->color);
+	}
+};
 class Screen {
 	sf::RenderWindow* window;
 	sf::FloatRect gameBounds;
@@ -15,14 +77,20 @@ class Screen {
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
+	vector<Tetromino*> tetrominos;
 	vector<sf::Vector2i> currentPositions;
 	vector<sf::Vector2i> previewPositions;
+	miniScreen* holdScreen;
 public:
-	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture) {
+	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds) {
 		this->window = &window;
 		this->gameBounds = gameBounds;
 		this->blockTexture = blockTexture;
 		heldPiece = nullptr;
+		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
+		holdScreen = new miniScreen(window, holdBounds, blockTexture, 0.8, tetrominos);
+		for (int i = 0; i < tetrominos.size(); i++)
+			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
 		srand(time(NULL));
 
 		for (int i = 0; i < NUMROWS; i++) {
@@ -41,35 +109,38 @@ public:
 				board[i][j].draw(window);
 			}
 		}
+		holdScreen->drawScreen();
 	}
 
-	void spawnPiece(bool hold = false) {
+	void spawnPiece(int pieceCode = -1) {
 		if (currentPositions.size() != 0) {
 			delete currentPiece;
 		}
-		// Generate random piece
-		int num = rand() % 7;
-		if (num == 0) 
-			currentPiece = new IPiece;
-		else if (num == 1) 
-			currentPiece = new JPiece;
-		else if (num == 2) 
-			currentPiece = new LPiece;
-		else if (num == 3) 
-			currentPiece = new OPiece;
-		else if (num == 4) 
-			currentPiece = new SPiece;
-		else if (num == 5) 
-			currentPiece = new ZPiece;
-		else if (num == 6) 
-			currentPiece = new TPiece;
+		if (pieceCode == -1) { // Generate random piece
+			int num = rand() % 7;
+			currentPiece = tetrominos[num]->getNewPiece();
+			currentPiece->setPieceCode(num);
+		}
+		else {
+			currentPiece = tetrominos[pieceCode]->getNewPiece();
+			currentPiece->setPieceCode(pieceCode);
+		}
 		updateBlocks();
 	}
 	void holdPiece() {
-		if (heldPiece == nullptr) {
-			heldPiece = currentPiece;
+		if (heldPiece == nullptr) { // If holding for the first time
+			heldPiece = currentPiece->getNewPiece();
+			heldPiece->setPieceCode(currentPiece->getPieceCode());
 			spawnPiece();
 		}
+		else {
+			int temp = heldPiece->getPieceCode();
+			heldPiece = currentPiece->getNewPiece();
+			heldPiece->setPieceCode(currentPiece->getPieceCode());
+			spawnPiece(temp);	
+		}
+		holdScreen->spawnPiece(heldPiece->getPieceCode());
+
 	}
 	void updateBlocks() { // Hide current tiles, update position, set new tiles
 		if (currentPositions.size() != 0)
@@ -85,7 +156,7 @@ public:
 		previewPositions = currentPositions;
 		bool canGoDown = true;
 		while (canGoDown) {
-			for (sf::Vector2i& pos : previewPositions)
+			for (sf::Vector2i& pos : previewPositions) 
 				if (pos.x >= NUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
 					canGoDown = false;
 			if(canGoDown)

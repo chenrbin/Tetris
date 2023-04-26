@@ -18,10 +18,12 @@ struct Tetromino {
 	sf::Color color;
 	bool somethingBelow, somethingLeft, somethingRight;
 	int orientation; // Between 0 and 3
+	int pieceCode; // Between 0 and 6
 
-	Tetromino() {
+	Tetromino(int pieceCode = -1) {
 		centerPos = sf::Vector2i(1, 4); // Initial starting position for center
 		orientation = 0;
+		this->pieceCode = pieceCode;
 		somethingBelow = false, somethingLeft = false, somethingRight = false;
 		positions.push_back(&block1Pos);
 		positions.push_back(&block2Pos);
@@ -29,6 +31,13 @@ struct Tetromino {
 		positions.push_back(&centerPos);
 	}
 	virtual ~Tetromino() {}
+	virtual void setPieceCode(int num) {
+		pieceCode = num;
+	}
+	virtual int getPieceCode() {
+		return pieceCode;
+	}
+	virtual Tetromino* getNewPiece() = 0;
 	virtual void spinCW() { // Spins clockwise
 		int& row = centerPos.x, & col = centerPos.y;
 		for (sf::Vector2i* pos : positions) {
@@ -143,8 +152,8 @@ public:
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 2);
 		color = CYAN;
 	}
-	IPiece getNewPiece() {
-		return IPiece();
+	Tetromino* getNewPiece() {
+		return new IPiece;
 	}
 	void spinCW() { // Special case, center changes. Notation document which orientation to change to
 		if (orientation == 0) { // 1 v C v 2 v 3
@@ -226,8 +235,9 @@ public:
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		color = BLUE;
 	}
-	JPiece getNewPiece() {
-		return JPiece();
+	Tetromino* getNewPiece() {
+		return new JPiece;
+	}
 };
 
 class LPiece : public Tetromino { // 1 > C > 2 ^ 3
@@ -238,8 +248,9 @@ public:
 		block3Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
 		color = ORANGE;
 	}
-	LPiece getNewPiece() {
-		return LPiece();
+	Tetromino* getNewPiece() {
+		return new LPiece;
+	}
 };
 
 class OPiece : public Tetromino {
@@ -249,6 +260,9 @@ public:
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		color = YELLOW;
+	}
+	Tetromino* getNewPiece() {
+		return new OPiece;
 	}
 	void spinCW() {} // Does not do anything
 	void spinCCW() {}
@@ -262,6 +276,9 @@ public:
 		block3Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
 		color = GREEN;
 	}
+	Tetromino* getNewPiece() {
+		return new SPiece;
+	}
 };
 
 class ZPiece : public Tetromino {
@@ -272,7 +289,9 @@ public:
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		color = RED;
 	}
-	
+	ZPiece* getNewPiece() {
+		return new ZPiece;
+	}
 };
 
 class TPiece : public Tetromino {
@@ -283,5 +302,8 @@ public:
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		color = VIOLET;
+	}
+	TPiece* getNewPiece() {
+		return new TPiece;
 	}
 };

@@ -4,7 +4,7 @@
 using namespace std;
 namespace TetrisVariables {
 	// Set constant variables
-	const int WIDTH = 800, HEIGHT = 800, LEFTMARGIN = 100;
+	const int WIDTH = 800, HEIGHT = 800, LEFTMARGIN = 150;
 	const int TILESIZE = 32, NUMROWS = 20, NUMCOLS = 10;
 	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
 	const int LINEWIDTH = 2;

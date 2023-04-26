@@ -29,13 +29,21 @@ int main()
 	// Set SFML objects
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar);
 	sf::RectangleShape rect(sf::Vector2f(WIDTH, HEIGHT));
-	rect.setFillColor(sf::Color::Blue);
+	rect.setFillColor(BLUE);
 
 	sf::RectangleShape gameRect(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT));
-	gameRect.setFillColor(sf::Color::Black);
+	gameRect.setFillColor(BLACK);
 	gameRect.setOrigin(0, GAMEHEIGHT / 2);
 	gameRect.setPosition(LEFTMARGIN, HEIGHT / 2);
 	sf::FloatRect gameBounds = gameRect.getGlobalBounds();
+
+	sf::RectangleShape holdRect(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 5));
+	holdRect.setFillColor(BLACK);
+	holdRect.setOutlineColor(WHITE);
+	holdRect.setOutlineThickness(1);
+	holdRect.setOrigin(holdRect.getGlobalBounds().width, 0);
+	holdRect.setPosition(gameBounds.left, gameBounds.top);
+	sf::FloatRect holdBounds = holdRect.getGlobalBounds();
 
 	vector<sf::RectangleShape> lines;
 	for (int i = 1; i < NUMROWS; i++) {
@@ -60,7 +68,7 @@ int main()
 		throw exception();
 	}
 
-	Screen screen(window, gameBounds, texture);
+	Screen screen(window, gameBounds, texture, holdBounds);
 
 	window.setFramerateLimit(60);
 	sf::Font font;
@@ -76,8 +84,10 @@ int main()
 		timer++;
 		if (timer % 60 == 0)
 			screen.movePiece(1);
+
 		window.draw(rect);
 		window.draw(gameRect);
+		window.draw(holdRect);
 		for (int i = 0; i < lines.size(); i++) {
 			window.draw(lines[i]);
 		}
