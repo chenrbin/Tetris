@@ -44,7 +44,7 @@ struct Tetromino {
 		for (sf::Vector2i* pos : positions) {
 			sf::Sprite sprite;
 			sprite.setTexture(texture);
-			sprite.setPosition(pos->y * TILESIZE * scaleFactor, pos->x * TILESIZE * scaleFactor);
+			sprite.setPosition(xPos + (pos->y - 3) * TILESIZE * scaleFactor, yPos + pos->x * TILESIZE * scaleFactor);
 			sprite.setScale(scaleFactor, scaleFactor);
 			sprite.setColor(color);
 			sprites.push_back(sprite);

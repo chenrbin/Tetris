@@ -28,6 +28,7 @@ int main()
 {
 	// Set SFML objects
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar);
+	
 	sf::RectangleShape rect(sf::Vector2f(WIDTH, HEIGHT));
 	rect.setFillColor(BLUE);
 
@@ -44,6 +45,13 @@ int main()
 	holdRect.setOrigin(holdRect.getGlobalBounds().width, 0);
 	holdRect.setPosition(gameBounds.left, gameBounds.top);
 	sf::FloatRect holdBounds = holdRect.getGlobalBounds();
+
+	sf::RectangleShape queueRect(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 1.8));
+	queueRect.setFillColor(BLACK);
+	queueRect.setOutlineColor(WHITE);
+	queueRect.setOutlineThickness(1);
+	queueRect.setPosition(gameBounds.left + gameBounds.width, gameBounds.top);
+	sf::FloatRect queueBounds = queueRect.getGlobalBounds();
 
 	vector<sf::RectangleShape> lines;
 	for (int i = 1; i < NUMROWS; i++) {
@@ -68,7 +76,7 @@ int main()
 		throw exception();
 	}
 
-	Screen screen(window, gameBounds, texture, holdBounds);
+	Screen screen(window, gameBounds, texture, holdBounds, queueBounds);
 
 	window.setFramerateLimit(60);
 	sf::Font font;
@@ -88,6 +96,8 @@ int main()
 		window.draw(rect);
 		window.draw(gameRect);
 		window.draw(holdRect);
+		window.draw(queueRect);
+
 		for (int i = 0; i < lines.size(); i++) {
 			window.draw(lines[i]);
 		}
@@ -116,8 +126,8 @@ int main()
 					screen.spinPiece(false);
 				else if (event.key.code == sf::Keyboard::X)
 					screen.spinPiece(true);
-				else if (event.key.code == sf::Keyboard::C)
-					screen.spawnPiece();
+				// else if (event.key.code == sf::Keyboard::C)
+					// screen.spawnPiece();
 				else if (event.key.code == sf::Keyboard::LShift)
 					screen.holdPiece();
 				break;

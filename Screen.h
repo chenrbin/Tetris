@@ -5,70 +5,10 @@
 #include <cstdlib> 
 #include <ctime>
 #include "Tile.h"
+#include <algorithm>
 using namespace std;
 using namespace TetrisVariables;
 
-class miniScreen {
-	sf::RenderWindow* window;
-	sf::FloatRect gameBounds;
-	sf::Texture blockTexture;
-	vector<vector<miniTile>> board; // Coordinates are [row][col]
-	Tetromino* currentPiece;
-	vector<Tetromino*> tetrominos;
-	float scaleFactor;
-	vector<sf::Vector2i> currentPositions;
-public:
-	miniScreen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, float scaleFactor, vector<Tetromino*>& tetrominos) {
-		this->window = &window;
-		this->gameBounds = gameBounds;
-		this->blockTexture = blockTexture;
-		this->tetrominos = tetrominos;
-
-		for (int i = 0; i < 4; i++) {
-			vector<miniTile> row;
-			for (int j = 0; j < 4; j++) {
-				row.push_back(miniTile(blockTexture, gameBounds.left + 10 + j * TILESIZE * scaleFactor, gameBounds.top + 10 + i * TILESIZE * scaleFactor, scaleFactor));
-			}
-			board.push_back(row);
-		}
-	}
-	void setBlocks(vector<sf::Vector2i>& positions) {
-		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setBlock();
-	}
-	void setBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
-		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setBlock(color);
-	}
-	void spawnPiece(int pieceCode = -1) {
-		if (currentPositions.size() != 0) {
-			delete currentPiece;
-		}
-		currentPiece = tetrominos[pieceCode]->getNewPiece();
-		currentPiece->moveLeft();
-		currentPiece->moveLeft();
-		currentPiece->moveLeft();
-		updateBlocks();
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				board[i][j].draw(window);
-			}
-		}
-	}
-	void drawScreen() {
-		for (int i = 0; i < 4; i++) {
-			for (int j = 0; j < 4; j++) {
-				board[i][j].draw(window);
-			}
-		}
-	}
-	void updateBlocks() { // Hide current tiles, update position, set new tiles
-		if (currentPositions.size() != 0)
-			setBlocks(currentPositions);
-		currentPositions = currentPiece->getPositions();
-		setBlocks(currentPositions, currentPiece->color);
-	}
-};
 class Screen {
 	sf::RenderWindow* window;
 	sf::FloatRect gameBounds;
@@ -80,19 +20,28 @@ class Screen {
 	vector<sf::Vector2i> currentPositions;
 	vector<sf::Vector2i> previewPositions;
 	vector<vector<sf::Sprite>> pieceSprites;
-	miniScreen* holdScreen;
+	vector<int> nextPieceQueue; // Stores up to the next 14 pieces. The next 5 will be shown.
+	vector<vector<sf::Sprite>> nextPieceSprites;
+	vector<sf::Sprite> heldSprite;
+	sf::FloatRect holdBounds, queueBounds;
+	bool hasHeld;
+
 public:
-	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds) {
+	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds, sf::FloatRect& queueBounds) {
 		this->window = &window;
 		this->gameBounds = gameBounds;
 		this->blockTexture = blockTexture;
 		heldPiece = nullptr;
+		hasHeld = false;
+		this->holdBounds = holdBounds;
+		this->queueBounds = queueBounds;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
-		holdScreen = new miniScreen(window, holdBounds, blockTexture, 0.8, tetrominos);
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
-			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));
+			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));	
 		}
+		for (int i = 0; i < 5; i++)
+			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
 		srand(time(NULL));
 
 		for (int i = 0; i < NUMROWS; i++) {
@@ -111,9 +60,11 @@ public:
 				board[i][j].draw(window);
 			}
 		}
-		for (sf::Sprite& sprite : pieceSprites[1])
+		for (sf::Sprite& sprite : heldSprite)
 			window->draw(sprite);
-		holdScreen->drawScreen();
+		for(vector<sf::Sprite> pieceSprite: nextPieceSprites)
+			for (sf::Sprite& sprite : pieceSprite)
+				window->draw(sprite);
 	}
 
 	void spawnPiece(int pieceCode = -1) {
@@ -121,30 +72,39 @@ public:
 			delete currentPiece;
 		}
 		if (pieceCode == -1) { // Generate random piece
-			int num = rand() % 7;
-			currentPiece = tetrominos[num]->getNewPiece();
-			currentPiece->setPieceCode(num);
+			if (nextPieceQueue.size() < 7) {
+				vector<int> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
+				random_shuffle(queueBatch.begin(), queueBatch.end());
+				for (int num : queueBatch)
+					nextPieceQueue.push_back(num);
+			}
+			pieceCode = nextPieceQueue[0];
+			nextPieceQueue.erase(nextPieceQueue.begin());
+			for (int i = 0; i < 5; i++) {
+				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture, 
+					queueBounds.left + TILESIZE * SCALE, 
+					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2, SCALE);
+			}
 		}
-		else {
-			currentPiece = tetrominos[pieceCode]->getNewPiece();
-			currentPiece->setPieceCode(pieceCode);
-		}
+		currentPiece = tetrominos[pieceCode]->getNewPiece();
+		currentPiece->setPieceCode(pieceCode);
 		updateBlocks();
 	}
 	void holdPiece() {
-		if (heldPiece == nullptr) { // If holding for the first time
-			heldPiece = currentPiece->getNewPiece();
-			heldPiece->setPieceCode(currentPiece->getPieceCode());
-			spawnPiece();
-		}
-		else {
-			int temp = heldPiece->getPieceCode();
-			heldPiece = currentPiece->getNewPiece();
-			heldPiece->setPieceCode(currentPiece->getPieceCode());
-			spawnPiece(temp);	
-		}
-		holdScreen->spawnPiece(heldPiece->getPieceCode());
-
+		if(!hasHeld)
+			if (heldPiece == nullptr) { // If holding for the first time
+				heldPiece = currentPiece->getNewPiece();
+				heldPiece->setPieceCode(currentPiece->getPieceCode());
+				spawnPiece();
+			}
+			else {
+				int temp = heldPiece->getPieceCode();
+				heldPiece = currentPiece->getNewPiece();
+				heldPiece->setPieceCode(currentPiece->getPieceCode());
+				spawnPiece(temp);	
+			}
+			heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE * SCALE, SCALE);
+			hasHeld = true;
 	}
 
 	void updateBlocks() { // Hide current tiles, update position, set new tiles
@@ -177,6 +137,7 @@ public:
 		setMovingBlocks(currentPositions);
 		updateBlocks();
 		clearlines();
+		hasHeld = false;
 		spawnPiece();
 	}
 	void clearlines() {

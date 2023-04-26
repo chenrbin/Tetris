@@ -8,6 +8,7 @@ namespace TetrisVariables {
 	const int TILESIZE = 32, NUMROWS = 20, NUMCOLS = 10;
 	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
 	const int LINEWIDTH = 2;
+	const float SCALE = 0.8;
 
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
