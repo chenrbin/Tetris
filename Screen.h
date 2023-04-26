@@ -36,7 +36,6 @@ public:
 		for (sf::Vector2i& pos : positions)
 			board[pos.x][pos.y].setBlock();
 	}
-
 	void setBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
 		for (sf::Vector2i& pos : positions)
 			board[pos.x][pos.y].setBlock(color);
@@ -80,6 +79,7 @@ class Screen {
 	vector<Tetromino*> tetrominos;
 	vector<sf::Vector2i> currentPositions;
 	vector<sf::Vector2i> previewPositions;
+	vector<vector<sf::Sprite>> pieceSprites;
 	miniScreen* holdScreen;
 public:
 	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds) {
@@ -89,8 +89,10 @@ public:
 		heldPiece = nullptr;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		holdScreen = new miniScreen(window, holdBounds, blockTexture, 0.8, tetrominos);
-		for (int i = 0; i < tetrominos.size(); i++)
+		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
+			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));
+		}
 		srand(time(NULL));
 
 		for (int i = 0; i < NUMROWS; i++) {
@@ -109,6 +111,8 @@ public:
 				board[i][j].draw(window);
 			}
 		}
+		for (sf::Sprite& sprite : pieceSprites[1])
+			window->draw(sprite);
 		holdScreen->drawScreen();
 	}
 
@@ -142,6 +146,7 @@ public:
 		holdScreen->spawnPiece(heldPiece->getPieceCode());
 
 	}
+
 	void updateBlocks() { // Hide current tiles, update position, set new tiles
 		if (currentPositions.size() != 0)
 			setMovingBlocks(currentPositions);
@@ -149,7 +154,6 @@ public:
 		updatePreview();
 		setMovingBlocks(currentPositions, currentPiece->color);
 	}
-
 	void updatePreview() {
 		if (previewPositions.size() != 0) 
 			setPreviewBlocks(previewPositions); // Clear preview
@@ -209,11 +213,11 @@ public:
 				return false;
 		return true;
 	}
+
 	void setBlocks(vector<sf::Vector2i>& positions) {
 		for (sf::Vector2i& pos : positions)
 			board[pos.x][pos.y].setBlock();
 	}
-
 	void setBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
 		for (sf::Vector2i& pos : positions)
 			board[pos.x][pos.y].setBlock(color);

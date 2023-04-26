@@ -1,6 +1,7 @@
 #pragma once
 #include "TetrisConstants.h"
 #include <vector>;
+#include <SFML/Graphics.hpp>
 
 
 using namespace std;
@@ -38,6 +39,25 @@ struct Tetromino {
 		return pieceCode;
 	}
 	virtual Tetromino* getNewPiece() = 0;
+	vector<sf::Sprite> getPieceSprite(sf::Texture& texture, int xPos, int yPos, float scaleFactor) {
+		vector<sf::Sprite> sprites;
+		for (sf::Vector2i* pos : positions) {
+			sf::Sprite sprite;
+			sprite.setTexture(texture);
+			sprite.setPosition(pos->y * TILESIZE * scaleFactor, pos->x * TILESIZE * scaleFactor);
+			sprite.setScale(scaleFactor, scaleFactor);
+			sprite.setColor(color);
+			sprites.push_back(sprite);
+		}
+		return sprites;
+	}
+	sf::Color getColor() {
+		return color;
+	}
+
+	vector<sf::Vector2i> getPositions() { // Return a vector copy of the four block coordinates [row][col]
+		return vector<sf::Vector2i>{block1Pos, block2Pos, block3Pos, centerPos};
+	}
 	virtual void spinCW() { // Spins clockwise
 		int& row = centerPos.x, & col = centerPos.y;
 		for (sf::Vector2i* pos : positions) {
@@ -88,18 +108,6 @@ struct Tetromino {
 		if (orientation <= -1)
 			orientation = 3;
 	}
-
-	void checkBounds() { 
-		// Check if the piece has rotated into the screen edge, push it back out
-		for (sf::Vector2i* pos : positions) {
-			if (pos->y < 0)
-				moveRight();
-			else if (pos->y >= NUMCOLS)
-				moveLeft();
-			if (pos->x >= NUMROWS)
-				moveUp();
-		}
-	}
 	void moveUp() {
 		for (sf::Vector2i* pos : positions)
 			pos->x--;
@@ -115,6 +123,17 @@ struct Tetromino {
 	void moveRight() {
 		for (sf::Vector2i* pos : positions)
 			pos->y++;
+	}
+	void checkBounds() {
+		// Check if the piece has rotated into the screen edge, push it back out
+		for (sf::Vector2i* pos : positions) {
+			if (pos->y < 0)
+				moveRight();
+			else if (pos->y >= NUMCOLS)
+				moveLeft();
+			if (pos->x >= NUMROWS)
+				moveUp();
+		}
 	}
 	bool checkLeft() { // True if the piece can move left
 		for (sf::Vector2i* pos : positions)
@@ -135,13 +154,7 @@ struct Tetromino {
 		return true;
 	}
 
-	sf::Color getColor() {
-		return color;
-	}
-
-	vector<sf::Vector2i> getPositions() { // Return a vector copy of the four block coordinates [row][col]
-		return vector<sf::Vector2i>{block1Pos, block2Pos, block3Pos, centerPos};
-	}
+	
 };
 
 class IPiece : public Tetromino {
