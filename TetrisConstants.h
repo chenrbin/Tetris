@@ -9,6 +9,9 @@ namespace TetrisVariables {
 	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
 	const int LINEWIDTH = 2;
 	const float SCALE = 0.8;
+	const int FPS = 60; // Frame limit of the game
+	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
+	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
 
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);

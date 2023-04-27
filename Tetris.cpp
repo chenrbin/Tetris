@@ -77,8 +77,7 @@ int main()
 	}
 
 	Screen screen(window, gameBounds, texture, holdBounds, queueBounds);
-
-	window.setFramerateLimit(60);
+	window.setFramerateLimit(FPS);
 	sf::Font font;
 	if (!font.loadFromFile("font.ttf"))
 	{
@@ -89,14 +88,11 @@ int main()
 	// Game loop
 	while (window.isOpen())
 	{
-		timer++;
-		if (timer % 60 == 0)
-			screen.movePiece(1);
-
 		window.draw(rect);
 		window.draw(gameRect);
 		window.draw(holdRect);
 		window.draw(queueRect);
+		screen.doTimeStuff();
 
 		for (int i = 0; i < lines.size(); i++) {
 			window.draw(lines[i]);

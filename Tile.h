@@ -22,7 +22,8 @@ public:
 		hasMovingBlock = false;
 		hasPreviewBlock = false;
 	}
-	void moveDown() { // Move tile position down when clearing lines
+	// Move tile position down when clearing lines
+	void moveDown() { 
 		yPos += TILESIZE;
 		sprite.setPosition(xPos, yPos);
 	}

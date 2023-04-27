@@ -55,7 +55,8 @@ struct Tetromino {
 		return color;
 	}
 
-	vector<sf::Vector2i> getPositions() { // Return a vector copy of the four block coordinates [row][col]
+	// Return a vector copy of the four block coordinates [row][col]
+	vector<sf::Vector2i> getPositions() { 
 		return vector<sf::Vector2i>{block1Pos, block2Pos, block3Pos, centerPos};
 	}
 	virtual void spinCW() { // Spins clockwise
@@ -154,7 +155,6 @@ struct Tetromino {
 		return true;
 	}
 
-	
 };
 
 class IPiece : public Tetromino {

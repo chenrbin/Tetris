@@ -24,7 +24,10 @@ class Screen {
 	vector<vector<sf::Sprite>> nextPieceSprites;
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
-	bool hasHeld;
+	bool hasHeld, lockTimerStarted;
+	sf::Clock gravityTimer;
+	sf::Clock lockTimer;
+
 
 public:
 	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds, sf::FloatRect& queueBounds) {
@@ -33,6 +36,7 @@ public:
 		this->blockTexture = blockTexture;
 		heldPiece = nullptr;
 		hasHeld = false;
+		lockTimerStarted = false;
 		this->holdBounds = holdBounds;
 		this->queueBounds = queueBounds;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
@@ -52,6 +56,33 @@ public:
 			board.push_back(row);
 		}
 		spawnPiece();
+	}
+
+	// Checked every frame. Handles timer related events
+	void doTimeStuff() {
+		// Handles lock timer
+		if (!checkBelow()) {
+			if (!lockTimerStarted) {
+				lockTimer.restart();
+				lockTimerStarted = true;
+			}
+			else {
+				if (lockTimer.getElapsedTime().asSeconds() >= LOCKDELAY) {
+					lockTimer.restart();
+					setPiece();
+				}
+			}
+		}
+		else {
+			lockTimerStarted = false;
+		}
+		
+		// Handles gravity
+		if (gravityTimer.getElapsedTime().asSeconds() >= DEFAULTGRAVITY) {
+			movePiece(1);
+			gravityTimer.restart();
+		}
+
 	}
 
 	void drawScreen() {
@@ -107,7 +138,8 @@ public:
 			hasHeld = true;
 	}
 
-	void updateBlocks() { // Hide current tiles, update position, set new tiles
+	// Hide current moving tiles, update position, set new tiles
+	void updateBlocks() { 
 		if (currentPositions.size() != 0)
 			setMovingBlocks(currentPositions);
 		currentPositions = currentPiece->getPositions();
@@ -167,7 +199,8 @@ public:
 			}
 		}
 	}
-	bool checkLine(vector<Tile>& row) { // If a line has all blocks
+	// If a row is filled
+	bool checkLine(vector<Tile>& row) { 
 		for (Tile& tile : row)
 			if (!tile.getHasBlock())
 				return false;
@@ -199,7 +232,8 @@ public:
 			board[pos.x][pos.y].setPreviewBlock(color);
 	}
 
-	void movePiece(int direction){ // 0 to move left, 1 to move down, 2 to move right
+	// 0 to move left, 1 to move down, 2 to move right
+	void movePiece(int direction){ 
 		switch (direction)
 		{
 		case(0):
@@ -209,8 +243,6 @@ public:
 		case(1):
 			if (checkBelow())
 				currentPiece->moveDown();
-			else
-				setPiece();
 			break;
 		case(2):
 			if (checkRight())
@@ -231,20 +263,22 @@ public:
 		// Hide current tiles, update position, set new tiles
 		updateBlocks();
 	}
-
-	bool checkLeft() { // True if the piece can move left
+	// True if the piece can move left
+	bool checkLeft() { 
 		for (sf::Vector2i pos : currentPositions)
 			if (pos.y <= 0 || board[pos.x][pos.y - 1].getHasBlock())
 				return false;
 		return true;
 	}
-	bool checkBelow() { // True if the piece can move down
+	// True if the piece can move down
+	bool checkBelow() { 
 		for (sf::Vector2i pos : currentPositions)
 			if (pos.x >= NUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
 				return false;
 		return true;
 	}
-	bool checkRight() { // True if the piece can move right
+	// True if the piece can move right
+	bool checkRight() { 
 		for (sf::Vector2i pos : currentPositions)
 			if (pos.y >= NUMCOLS - 1 || board[pos.x][pos.y + 1].getHasBlock())
 				return false;
