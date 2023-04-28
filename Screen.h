@@ -39,7 +39,7 @@ public:
 		lockTimerStarted = false;
 		this->holdBounds = holdBounds;
 		this->queueBounds = queueBounds;
-		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
+		tetrominos = { new TPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));	
@@ -263,32 +263,61 @@ public:
 		// Hide current tiles, update position, set new tiles
 		updateBlocks();
 	}
+
 	// True if the piece can move left
 	bool checkLeft() { 
-		for (sf::Vector2i pos : currentPositions)
+		for (sf::Vector2i& pos : currentPositions)
 			if (pos.y <= 0 || board[pos.x][pos.y - 1].getHasBlock())
 				return false;
 		return true;
 	}
 	// True if the piece can move down
 	bool checkBelow() { 
-		for (sf::Vector2i pos : currentPositions)
+		for (sf::Vector2i& pos : currentPositions)
 			if (pos.x >= NUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
 				return false;
 		return true;
 	}
 	// True if the piece can move right
 	bool checkRight() { 
-		for (sf::Vector2i pos : currentPositions)
+		for (sf::Vector2i& pos : currentPositions)
 			if (pos.y >= NUMCOLS - 1 || board[pos.x][pos.y + 1].getHasBlock())
 				return false;
 		return true;
 	}
 	void spinPiece(bool clockwise) {
-		if (clockwise)
-			currentPiece->spinCW();
-		else 
-			currentPiece->spinCCW();
+		vector<vector<sf::Vector2i>> kickTestPositions;
+		if (clockwise) 
+			kickTestPositions = currentPiece->spinCW();
+		else
+			kickTestPositions = currentPiece->spinCCW();
+		if (kickTestPositions.size() == 0) // Returned by spinning o piece
+		{
+			updateBlocks();
+			return;
+		}
+		bool spinSuccessful = false;
+		for (vector<sf::Vector2i>& positions : kickTestPositions){
+			bool validPosition = true;
+			for (sf::Vector2i& pos : positions) {
+				if (pos.y < 0 || pos.y >= NUMCOLS || pos.x >= NUMROWS || board[pos.x][pos.y].getHasBlock()) {
+					print("Spin");
+					validPosition = false;
+					break;
+				}
+			}
+			if (validPosition) {
+				currentPiece->setPositions(positions);
+				lockTimer.restart(); // Restart lock timer. Can go on infinitely without second timer
+				spinSuccessful = true;
+				break;
+			}
+		}
+		if (!spinSuccessful) // If spin fails, return piece to original position
+			if (clockwise)
+				currentPiece->spinCCW();
+			else
+				currentPiece->spinCW();
 		updateBlocks();
 	}
 	

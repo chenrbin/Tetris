@@ -54,12 +54,18 @@ struct Tetromino {
 	sf::Color getColor() {
 		return color;
 	}
+	// Set absulte positions (row, col) for the piece
+	void setPositions(vector<sf::Vector2i>& newPositions) {
+		for (int i = 0; i < 4; i++)
+			*positions[i] = newPositions[i];
+	}
 
 	// Return a vector copy of the four block coordinates [row][col]
 	vector<sf::Vector2i> getPositions() { 
 		return vector<sf::Vector2i>{block1Pos, block2Pos, block3Pos, centerPos};
 	}
-	virtual void spinCW() { // Spins clockwise
+	// Spins clockwise and returns kick test positions for SZTLJ pieces
+	virtual vector<vector<sf::Vector2i>> spinCW() {
 		int& row = centerPos.x, & col = centerPos.y;
 		for (sf::Vector2i* pos : positions) {
 			if (pos->x == row - 1 && pos->y == col - 1) // Top left -> top right
@@ -79,12 +85,25 @@ struct Tetromino {
 			else if (pos->x == row + 1 && pos->y == col + 1) // Bottom right -> bottom left
 				*pos = sf::Vector2i(row + 1, col - 1);		
 		}
-		checkBounds();
+		// checkBounds();
+		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later. (1, 2) means one right two down
+		if (orientation == 0)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(-1, -1), sf::Vector2i(0, 2), sf::Vector2i(-1, 2) };
+		else if (orientation == 1)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(1, 1), sf::Vector2i(0, -2), sf::Vector2i(1, -2) };
+		else if (orientation == 2)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(1, -1), sf::Vector2i(0, 2), sf::Vector2i(1, 2) };
 		orientation++;
-		if (orientation >= 4)
+		if (orientation >= 4) {
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(-1, 1), sf::Vector2i(0, -2), sf::Vector2i(-1, -2) };
 			orientation = 0;
+		}
+		vector<vector<sf::Vector2i>> shiftedPositions;
+		for (sf::Vector2i shift : shiftValues)
+			shiftedPositions.push_back(getShiftedPositions(shift.y, shift.x));
+		return shiftedPositions;
 	}
-	virtual void spinCCW() { // Spins counterclockwise
+	virtual vector<vector<sf::Vector2i>> spinCCW() { // Spins counterclockwise
 		int &row = centerPos.x, &col = centerPos.y;
 		for (sf::Vector2i* pos : positions) {
 			if (pos->x == row - 1 && pos->y == col - 1) // Top left -> bottom left
@@ -104,10 +123,30 @@ struct Tetromino {
 			else if (pos->x == row + 1 && pos->y == col + 1) // Bottom right -> top right
 				*pos = sf::Vector2i(row - 1, col + 1);
 		}
-		checkBounds();
+		// checkBounds();
+		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later.
+		if (orientation == 1)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(1, 1), sf::Vector2i(0, -2), sf::Vector2i(1, -2) };
+		else if (orientation == 2)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(-1, -1), sf::Vector2i(0, 2), sf::Vector2i(-1, 2) };
+		else if (orientation == 3)
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(-1, 1), sf::Vector2i(0, -2), sf::Vector2i(-1, -2) };
 		orientation--;
-		if (orientation <= -1)
+		if (orientation <= -1) {
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(1, -1), sf::Vector2i(0, 2), sf::Vector2i(1, 2) };
 			orientation = 3;
+		}
+		vector<vector<sf::Vector2i>> shiftedPositions;
+		for (sf::Vector2i shift : shiftValues)
+			shiftedPositions.push_back(getShiftedPositions(shift.y, shift.x));
+		return shiftedPositions;
+	}
+
+	vector<sf::Vector2i> getShiftedPositions(int row, int col) {
+		vector<sf::Vector2i> newPositions;
+		for (sf::Vector2i* pos : positions)
+			newPositions.push_back(sf::Vector2i(pos->x + row, pos->y + col));
+		return newPositions;
 	}
 	void moveUp() {
 		for (sf::Vector2i* pos : positions)
@@ -168,7 +207,7 @@ public:
 	Tetromino* getNewPiece() {
 		return new IPiece;
 	}
-	void spinCW() { // Special case, center changes. Notation document which orientation to change to
+	vector<vector<sf::Vector2i>> spinCW() { // Special case, center changes. Notation document which orientation to change to
 		if (orientation == 0) { // 1 v C v 2 v 3
 			centerPos.y++;
 			block1Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
@@ -203,8 +242,10 @@ public:
 		// Check bounds twice
 		checkBounds();
 		checkBounds();
+
+		return vector<vector<sf::Vector2i>>{};
 	}
-	void spinCCW() {
+	vector<vector<sf::Vector2i>> spinCCW() {
 		if (orientation == 0) { // 1 ^ C ^ 2 ^ 3
 			centerPos.x++;
 			block1Pos = sf::Vector2i(centerPos.x + 1, centerPos.y);
@@ -237,6 +278,7 @@ public:
 		// Check bounds twice
 		checkBounds();
 		checkBounds();
+		return vector<vector<sf::Vector2i>>{};
 	}
 };
 
@@ -277,8 +319,12 @@ public:
 	Tetromino* getNewPiece() {
 		return new OPiece;
 	}
-	void spinCW() {} // Does not do anything
-	void spinCCW() {}
+	vector<vector<sf::Vector2i>> spinCW() {
+		return vector<vector<sf::Vector2i>>{};
+	} // Does not do anything
+	vector<vector<sf::Vector2i>> spinCCW() {
+		return vector<vector<sf::Vector2i>> {};
+	}
 };
 
 class SPiece : public Tetromino {
