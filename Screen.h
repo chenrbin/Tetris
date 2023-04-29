@@ -78,7 +78,7 @@ public:
 		else {
 			lockTimerStarted = false;
 		}
-		
+		// TODO - reset gravity timer when piece leaves ground
 		// Handles gravity
 		if (gravityTimer.getElapsedTime().asSeconds() >= DEFAULTGRAVITY) {
 			movePiece(1);
@@ -151,14 +151,14 @@ public:
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() { 
 		if (currentPositions.size() != 0)
-			setMovingBlocks(currentPositions);
+			setMovingBlocks(currentPositions, false);
 		currentPositions = currentPiece->getPositions();
 		updatePreview();
-		setMovingBlocks(currentPositions, currentPiece->color);
+		setMovingBlocks(currentPositions, true, currentPiece->color);
 	}
 	void updatePreview() {
 		if (previewPositions.size() != 0) 
-			setPreviewBlocks(previewPositions); // Clear preview
+			setPreviewBlocks(previewPositions, false); // Clear preview
 		previewPositions = currentPositions;
 		bool canGoDown = true;
 		while (canGoDown) {
@@ -171,11 +171,11 @@ public:
 		}
 		sf::Color previewColor = currentPiece->color;
 		previewColor.a = PREVIEWTRANSPARENCY;
-		setPreviewBlocks(previewPositions, previewColor);
+		setPreviewBlocks(previewPositions, true, previewColor);
 	}
 	
 	void setPiece() {
-		setBlocks(currentPositions);
+		setBlocks(currentPositions, true);
 		updateBlocks();
 		clearLines();
 		hasHeld = false;
@@ -195,15 +195,14 @@ public:
 				// Insert new row at top
 				vector<Tile> newRow;
 				for (int j = 0; j < NUMCOLS; j++) {
-					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top));
+					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top - 2 * TILESIZE));
 				}
 				board.insert(board.begin(), newRow);
 				hasCleared = true;
 			}
 		}
 		if (hasCleared) {
-			setMovingBlocks(currentPositions);
-			setPreviewBlocks(previewPositions);
+			clearMovingSprites();
 		}
 	}
 	// If a row is filled
@@ -214,31 +213,39 @@ public:
 		return true;
 	}
 
-	void setBlocks(vector<sf::Vector2i>& positions) {
+	void setBlocks(vector<sf::Vector2i>& positions, bool value) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setBlock();
+			board[pos.x][pos.y].setBlock(value);
 	}
-	void setBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
+	void setBlocks(vector<sf::Vector2i>& positions, bool value, sf::Color& color) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setBlock(color);
+			board[pos.x][pos.y].setBlock(value, color);
 	}
-	void setMovingBlocks(vector<sf::Vector2i>& positions) {
+	void setMovingBlocks(vector<sf::Vector2i>& positions, bool value) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setMovingBlock();
+			board[pos.x][pos.y].setMovingBlock(value);
 	}
-	void setMovingBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
+	void setMovingBlocks(vector<sf::Vector2i>& positions, bool value, sf::Color& color) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setMovingBlock(color);
+			board[pos.x][pos.y].setMovingBlock(value, color);
 	}
-	void setPreviewBlocks(vector<sf::Vector2i>& positions) {
+	void setPreviewBlocks(vector<sf::Vector2i>& positions, bool value) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setPreviewBlock();
+			board[pos.x][pos.y].setPreviewBlock(value);
 	}
-	void setPreviewBlocks(vector<sf::Vector2i>& positions, sf::Color& color) {
+	void setPreviewBlocks(vector<sf::Vector2i>& positions, bool value, sf::Color& color) {
 		for (sf::Vector2i& pos : positions)
-			board[pos.x][pos.y].setPreviewBlock(color);
+			board[pos.x][pos.y].setPreviewBlock(value, color);
 	}
-
+	// Hard reset moving and preview block sprites to avoid bugs.
+	void clearMovingSprites() {
+		for (int i = 1; i < REALNUMROWS; i++) {
+			for (int j = 0; j < NUMCOLS; j++) {
+				board[i][j].setMovingBlock(false);
+				board[i][j].setPreviewBlock(false);
+			}
+		}
+	}
 	// 0 to move left, 1 to move down, 2 to move right
 	void movePiece(int direction){ 
 		switch (direction)
@@ -335,8 +342,7 @@ public:
 			}
 			board.push_back(row);
 		}
-		setMovingBlocks(currentPositions);
-		setPreviewBlocks(previewPositions);
+		clearMovingSprites();
 		spawnPiece();
 		gravityTimer.restart();
 	}

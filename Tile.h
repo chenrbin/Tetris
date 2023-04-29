@@ -30,25 +30,25 @@ public:
 	void setColor(sf::Color& blockColor) {
 		sprite.setColor(blockColor);
 	}
-	void setBlock() {
-		hasBlock = !hasBlock;
+	void setBlock(bool value) {
+		hasBlock = value;
 	}
-	void setBlock(sf::Color& blockColor) { // Overload to toggle drawing block and set color
-		hasBlock = !hasBlock;
+	void setBlock(bool value, sf::Color& blockColor) { // Overload to toggle drawing block and set color
+		hasBlock = value;
 		sprite.setColor(blockColor);
 	}
-	void setMovingBlock() {
-		hasMovingBlock = !hasMovingBlock;
+	void setMovingBlock(bool value) {
+		hasMovingBlock = value;
 	}
-	void setMovingBlock(sf::Color& blockColor) { // Overload to toggle drawing block and set color
-		hasMovingBlock = !hasMovingBlock;
+	void setMovingBlock(bool value, sf::Color& blockColor) { // Overload to toggle drawing block and set color
+		hasMovingBlock = value;
 		sprite.setColor(blockColor);
 	}
-	void setPreviewBlock() {
-		hasPreviewBlock = !hasPreviewBlock;
+	void setPreviewBlock(bool value) {
+		hasPreviewBlock = value;
 	}
-	void setPreviewBlock(sf::Color& blockColor) { // Overload to toggle drawing block and set color
-		hasPreviewBlock = !hasPreviewBlock;
+	void setPreviewBlock(bool value, sf::Color& blockColor) { // Overload to toggle drawing block and set color
+		hasPreviewBlock = value;
 		sprite.setColor(blockColor);
 	}
 	void draw(sf::RenderWindow* window) {
