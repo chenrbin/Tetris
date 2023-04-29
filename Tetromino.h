@@ -208,13 +208,14 @@ public:
 		return new IPiece;
 	}
 	vector<vector<sf::Vector2i>> spinCW() { // Special case, center changes. Notation document which orientation to change to
+		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later.
 		if (orientation == 0) { // 1 v C v 2 v 3
 			centerPos.y++;
 			block1Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 			block2Pos = sf::Vector2i(centerPos.x + 1, centerPos.y);
 			block3Pos = sf::Vector2i(centerPos.x + 2, centerPos.y);
 			orientation++;
-
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-2, 0), sf::Vector2i(1, 0), sf::Vector2i(-2, 1), sf::Vector2i(1, -2) };
 		}
 		else if (orientation == 1) { // 1 < C < 2 < 3
 			centerPos.x++;
@@ -222,7 +223,8 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 			block3Pos = sf::Vector2i(centerPos.x, centerPos.y - 2);
 			orientation++;
-			
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(2, 0), sf::Vector2i(-1, -2), sf::Vector2i(2, 1) };
+
 		}
 		else if (orientation == 2) { // 1 ^ C ^ 2 ^ 3
 			centerPos.y--;
@@ -230,6 +232,7 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 			block3Pos = sf::Vector2i(centerPos.x - 2, centerPos.y);
 			orientation++;
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(2, 0), sf::Vector2i(-1, 0), sf::Vector2i(2, -1), sf::Vector2i(-1, 2) };
 
 		}
 		else if (orientation == 3) { // Back to default
@@ -238,20 +241,23 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 			block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 2);
 			orientation = 0;
-		}
-		// Check bounds twice
-		checkBounds();
-		checkBounds();
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(-2, 0), sf::Vector2i(1, 2), sf::Vector2i(-2, -1) };
 
-		return vector<vector<sf::Vector2i>>{};
+		}
+		vector<vector<sf::Vector2i>> shiftedPositions;
+		for (sf::Vector2i shift : shiftValues)
+			shiftedPositions.push_back(getShiftedPositions(shift.y, shift.x));
+		return shiftedPositions;
 	}
 	vector<vector<sf::Vector2i>> spinCCW() {
+		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later.
 		if (orientation == 0) { // 1 ^ C ^ 2 ^ 3
 			centerPos.x++;
 			block1Pos = sf::Vector2i(centerPos.x + 1, centerPos.y);
 			block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 			block3Pos = sf::Vector2i(centerPos.x - 2, centerPos.y);
 			orientation = 3;
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(2, 0), sf::Vector2i(-1, -2), sf::Vector2i(2, 1) };
 
 		}
 		else if (orientation == 1) { // To default
@@ -260,6 +266,7 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 			block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 2);
 			orientation--;
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(2, 0), sf::Vector2i(-1, 0), sf::Vector2i(2, -1), sf::Vector2i(-1, 2) };
 		}
 		else if (orientation == 2) { // 1 v C v 2 v 3
 			centerPos.x--;
@@ -267,6 +274,7 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x + 1, centerPos.y);
 			block3Pos = sf::Vector2i(centerPos.x + 2, centerPos.y);
 			orientation--;	
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(-2, 0), sf::Vector2i(1, 2), sf::Vector2i(-2, -1) };
 		}
 		else if (orientation == 3) { // 1 < C < 2 < 3
 			centerPos.y++;
@@ -274,11 +282,13 @@ public:
 			block2Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 			block3Pos = sf::Vector2i(centerPos.x, centerPos.y - 2);
 			orientation--;
+			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-2, 0), sf::Vector2i(1, 0), sf::Vector2i(-2, 1), sf::Vector2i(1, -2) };
+
 		}
-		// Check bounds twice
-		checkBounds();
-		checkBounds();
-		return vector<vector<sf::Vector2i>>{};
+		vector<vector<sf::Vector2i>> shiftedPositions;
+		for (sf::Vector2i shift : shiftValues)
+			shiftedPositions.push_back(getShiftedPositions(shift.y, shift.x));
+		return shiftedPositions;
 	}
 };
 

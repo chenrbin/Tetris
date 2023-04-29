@@ -13,6 +13,7 @@ class Screen {
 	sf::RenderWindow* window;
 	sf::FloatRect gameBounds;
 	sf::Texture blockTexture;
+	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
@@ -39,19 +40,20 @@ public:
 		lockTimerStarted = false;
 		this->holdBounds = holdBounds;
 		this->queueBounds = queueBounds;
-		tetrominos = { new TPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
+		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));	
 		}
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
 		srand(time(NULL));
 
-		for (int i = 0; i < NUMROWS; i++) {
+		// Generate board
+		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
 			for (int j = 0; j < NUMCOLS; j++) {
-				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + i * TILESIZE));
+				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
 			}
 			board.push_back(row);
 		}
@@ -86,7 +88,7 @@ public:
 	}
 
 	void drawScreen() {
-		for (int i = 0; i < NUMROWS; i++) {
+		for (int i = 1; i < REALNUMROWS; i++) {
 			for (int j = 0; j < NUMCOLS; j++) {
 				board[i][j].draw(window);
 			}
@@ -103,7 +105,7 @@ public:
 			delete currentPiece;
 		}
 		if (pieceCode == -1) { // Generate random piece
-			if (nextPieceQueue.size() < 7) {
+			if (nextPieceQueue.size() < 7) { // Pre-generate next pieces
 				vector<int> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
 				random_shuffle(queueBatch.begin(), queueBatch.end());
 				for (int num : queueBatch)
@@ -111,14 +113,22 @@ public:
 			}
 			pieceCode = nextPieceQueue[0];
 			nextPieceQueue.erase(nextPieceQueue.begin());
-			for (int i = 0; i < 5; i++) {
+			for (int i = 0; i < nextPieceSprites.size(); i++) {
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture, 
 					queueBounds.left + TILESIZE * SCALE, 
-					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2, SCALE);
+					queueBounds.top + i * 2.5 * TILESIZE * SCALE, SCALE);
 			}
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
+		updateBlocks();
+		for (sf::Vector2i& pos : currentPiece->getPositions()) {
+			if (board[pos.x][pos.y].getHasBlock()) { // Gave over is spawn position is occupied
+				resetBoard();
+				return;
+			}
+		}
 		currentPiece->setPieceCode(pieceCode);
+		movePiece(1);
 		updateBlocks();
 	}
 	void holdPiece() {
@@ -134,7 +144,7 @@ public:
 				heldPiece->setPieceCode(currentPiece->getPieceCode());
 				spawnPiece(temp);	
 			}
-			heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE * SCALE, SCALE);
+			heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2 * SCALE, SCALE);
 			hasHeld = true;
 	}
 
@@ -153,36 +163,28 @@ public:
 		bool canGoDown = true;
 		while (canGoDown) {
 			for (sf::Vector2i& pos : previewPositions) 
-				if (pos.x >= NUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
+				if (pos.x >= REALNUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
 					canGoDown = false;
 			if(canGoDown)
 				for (sf::Vector2i& pos : previewPositions)
 						pos.x++;
 		}
 		sf::Color previewColor = currentPiece->color;
-		previewColor.a = 120;
+		previewColor.a = PREVIEWTRANSPARENCY;
 		setPreviewBlocks(previewPositions, previewColor);
 	}
 	
 	void setPiece() {
 		setBlocks(currentPositions);
-		setMovingBlocks(currentPositions);
 		updateBlocks();
-		clearlines();
+		clearLines();
 		hasHeld = false;
+		gravityTimer.restart();
 		spawnPiece();
 	}
-	void clearlines() {
-		for (int i = 0; i < NUMROWS; i++) {
-			if (checkLine(board[i])) {
-				clearLine(i);
-				setMovingBlocks(currentPositions);
-				setPreviewBlocks(currentPositions);
-			}
-		}
-	}
-	void clearLine(int row) {
-		for (int i = 0; i < NUMROWS; i++) {
+	void clearLines() {
+		bool hasCleared = false;
+		for (int i = 0; i < REALNUMROWS; i++) {
 			if (checkLine(board[i])) {
 				// Move all rows above cleared row down
 				for (int j = 0; j < i; j++)
@@ -196,7 +198,12 @@ public:
 					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top));
 				}
 				board.insert(board.begin(), newRow);
+				hasCleared = true;
 			}
+		}
+		if (hasCleared) {
+			setMovingBlocks(currentPositions);
+			setPreviewBlocks(previewPositions);
 		}
 	}
 	// If a row is filled
@@ -274,7 +281,7 @@ public:
 	// True if the piece can move down
 	bool checkBelow() { 
 		for (sf::Vector2i& pos : currentPositions)
-			if (pos.x >= NUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
+			if (pos.x >= REALNUMROWS - 1 || board[pos.x + 1][pos.y].getHasBlock())
 				return false;
 		return true;
 	}
@@ -300,8 +307,7 @@ public:
 		for (vector<sf::Vector2i>& positions : kickTestPositions){
 			bool validPosition = true;
 			for (sf::Vector2i& pos : positions) {
-				if (pos.y < 0 || pos.y >= NUMCOLS || pos.x >= NUMROWS || board[pos.x][pos.y].getHasBlock()) {
-					print("Spin");
+				if (pos.y < 0 || pos.y >= NUMCOLS || pos.x >= REALNUMROWS || pos.x < 0 || board[pos.x][pos.y].getHasBlock()) {
 					validPosition = false;
 					break;
 				}
@@ -320,5 +326,24 @@ public:
 				currentPiece->spinCW();
 		updateBlocks();
 	}
-	
+	void resetBoard() {
+		board.clear();
+		for (int i = 0; i < REALNUMROWS; i++) {
+			vector<Tile> row;
+			for (int j = 0; j < NUMCOLS; j++) {
+				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
+			}
+			board.push_back(row);
+		}
+		setMovingBlocks(currentPositions);
+		setPreviewBlocks(previewPositions);
+		spawnPiece();
+		gravityTimer.restart();
+	}
+	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
+	void wait(float seconds) {
+		sf::Clock cooldown;
+		while (cooldown.getElapsedTime().asSeconds() < seconds && cooldown.getElapsedTime().asSeconds() < 10)
+			continue;
+	}
 };
