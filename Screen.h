@@ -116,7 +116,7 @@ public:
 			for (int i = 0; i < nextPieceSprites.size(); i++) {
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture, 
 					queueBounds.left + TILESIZE * SCALE, 
-					queueBounds.top + i * 2.5 * TILESIZE * SCALE, SCALE);
+					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2, SCALE);
 			}
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();

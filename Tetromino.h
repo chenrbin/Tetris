@@ -26,10 +26,7 @@ struct Tetromino {
 		orientation = 0;
 		this->pieceCode = pieceCode;
 		somethingBelow = false, somethingLeft = false, somethingRight = false;
-		positions.push_back(&block1Pos);
-		positions.push_back(&block2Pos);
-		positions.push_back(&block3Pos);
-		positions.push_back(&centerPos);
+		positions = { &block1Pos, &block2Pos, &block3Pos, &centerPos };
 	}
 	virtual ~Tetromino() {}
 	virtual void setPieceCode(int num) {
