@@ -32,14 +32,8 @@ sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColo
 	rect.setOutlineThickness(outlineThickness);
 	return rect;
 }
-int main()
-{
-	// Set SFML objects
-	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar);
-	
-	sf::RectangleShape rect(sf::Vector2f(WIDTH, HEIGHT));
-	rect.setFillColor(BLUE);
 
+void generateGameScreenRectanglesAndBounds(vector<sf::RectangleShape>& rects, vector<sf::FloatRect>& bounds) {
 	sf::RectangleShape gameRect = generateRectangle(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT), BLACK,
 		sf::Vector2f(LEFTMARGIN, HEIGHT / 2), sf::Vector2f(0, GAMEHEIGHT / 2), WHITE, 1);
 	sf::FloatRect gameBounds = gameRect.getGlobalBounds();
@@ -53,32 +47,54 @@ int main()
 	sf::FloatRect queueBounds = queueRect.getGlobalBounds();
 
 	// Mechanism to show a couple pixels of the very top row
-	sf::RectangleShape topRowRect = generateRectangle(sf::Vector2f(gameBounds.width, TILESIZE - 10), BLUE,
+	sf::RectangleShape topRowBigRect = generateRectangle(sf::Vector2f(gameBounds.width, TILESIZE - 10), BLUE,
 		sf::Vector2f(gameBounds.left, gameBounds.top - TILESIZE));
 
-	sf::RectangleShape topRowRect2 = generateRectangle(sf::Vector2f(gameBounds.width - 2, TOPROWPIXELS), BLACK,
+	sf::RectangleShape topRowSmallRect = generateRectangle(sf::Vector2f(gameBounds.width - 2, TOPROWPIXELS), BLACK,
 		sf::Vector2f(gameBounds.left + 1, gameBounds.top - TOPROWPIXELS), sf::Vector2f(0, 0), WHITE, 1);
+	
+	rects = { gameRect, holdRect, queueRect, topRowSmallRect, topRowBigRect};
+	bounds = { gameBounds, holdBounds, queueBounds };
+}
+
+// Generate a vector of numRows x numCols lines across the specified bounds
+vector<sf::RectangleShape> getLines(sf::FloatRect& bounds) {
+	vector<sf::RectangleShape> lines;
+	for (int i = 1; i < NUMROWS; i++) { // Horizontal lines
+		sf::RectangleShape line(sf::Vector2f(GAMEWIDTH, LINEWIDTH));
+		line.setPosition(bounds.left, bounds.top + i * TILESIZE - 1);
+		line.setFillColor(SEETHROUGH);
+		lines.push_back(line);
+	}
+	for (int j = 1; j < NUMCOLS; j++) { // Vertical lines
+		sf::RectangleShape line(sf::Vector2f(LINEWIDTH, GAMEHEIGHT + TOPROWPIXELS));
+		line.setPosition(bounds.left + j * TILESIZE - 1, bounds.top - TOPROWPIXELS);
+		line.setFillColor(SEETHROUGH);
+		lines.push_back(line);
+	}
+	return lines;
+}
+
+int main()
+{
+	// Set SFML objects
+	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar);
+
+	// Store these objects in a vector and construct them with a separate method to keep main clean
+	vector<sf::RectangleShape> gameScreenRectangles; // { gameRect, holdRect, queueRect, topRowSmallRect, topRowBigRect}
+	vector<sf::FloatRect> gameScreenRectangleBounds; // { gameBounds, holdBounds, queueBounds }
+	generateGameScreenRectanglesAndBounds(gameScreenRectangles, gameScreenRectangleBounds);
 
 	sf::Font font;
 	font.loadFromFile("font.ttf");
+
+	// Redefine bounds for cleaner code
+	sf::FloatRect& gameBounds = gameScreenRectangleBounds[0], holdBounds = gameScreenRectangleBounds[1], queueBounds = gameScreenRectangleBounds[2];
+	
 	sf::Text holdText = setText(font, WHITE, "Hold", 20, sf::Vector2f(holdBounds.left + holdBounds.width / 2, holdBounds.top - 20), true, false);
 	sf::Text nextText = setText(font, WHITE, "Next", 20, sf::Vector2f(queueBounds.left + queueBounds.width / 2, queueBounds.top - 20), true, false);
 
-	vector<sf::RectangleShape> lines;
-	for (int i = 1; i < NUMROWS; i++) {
-		sf::RectangleShape line(sf::Vector2f(GAMEWIDTH, LINEWIDTH));
-		line.setPosition(gameBounds.left, gameBounds.top + i * TILESIZE - 1);
-		line.setFillColor(SEETHROUGH);
-		lines.push_back(line);
-	}
-	for (int j = 1; j < NUMCOLS; j++) {
-		sf::RectangleShape line(sf::Vector2f(LINEWIDTH, GAMEHEIGHT + TOPROWPIXELS));
-		line.setPosition(gameBounds.left + j * TILESIZE - 1, gameBounds.top - TOPROWPIXELS);
-		line.setFillColor(SEETHROUGH);
-		lines.push_back(line);
-	}
-
-
+	vector<sf::RectangleShape> lines = getLines(gameBounds);
 
 	sf::Texture texture;
 	if (!texture.loadFromFile("images/tile_hidden.png"))
@@ -89,25 +105,26 @@ int main()
 
 	Screen screen(window, gameBounds, texture, holdBounds, queueBounds);
 	window.setFramerateLimit(FPS);
-	
-	int timer = 0;
+
 	// Game loop
 	while (window.isOpen())
 	{
-		window.draw(rect);
-		window.draw(gameRect);
-		window.draw(holdRect);
-		window.draw(queueRect);
+		window.clear(BLUE);
+
+
+		for (int i = 0; i < gameScreenRectangles.size() - 1; i++) // Do not draw topRowBigRect
+			window.draw(gameScreenRectangles[i]);
 		window.draw(holdText);
 		window.draw(nextText);
-		window.draw(topRowRect2);
-		screen.doTimeStuff();
-
 		for (int i = 0; i < lines.size(); i++) {
 			window.draw(lines[i]);
 		}
 		screen.drawScreen();
-		window.draw(topRowRect);
+
+		// In-game timer events
+		screen.doTimeStuff();
+		
+		window.draw(gameScreenRectangles.back()); // Draw topRowBigRect
 
 
 		// Event handler

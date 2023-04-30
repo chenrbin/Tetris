@@ -326,11 +326,12 @@ public:
 	Tetromino* getNewPiece() {
 		return new OPiece;
 	}
+	// Return current position to check. Will always rotate but does not do anything visually
 	vector<vector<sf::Vector2i>> spinCW() {
-		return vector<vector<sf::Vector2i>>{};
-	} // Does not do anything
+		return { vector<sf::Vector2i>{ block1Pos, block2Pos, block3Pos, centerPos } };
+	}
 	vector<vector<sf::Vector2i>> spinCCW() {
-		return vector<vector<sf::Vector2i>> {};
+		return { vector<sf::Vector2i>{ block1Pos, block2Pos, block3Pos, centerPos } };
 	}
 };
 

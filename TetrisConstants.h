@@ -14,6 +14,8 @@ namespace TetrisVariables {
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
 	const int NEXTPIECECOUNT = 5; // Number of next pieces visible. Max is 7. Will crash if above 7.
 
+	// Game screen state codes
+	const int MENUSCREEN = 1, GAMESCREEN = 2, SANDBOXSCREEN = 3;
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
 	const sf::Color BLACK(0, 0, 0);

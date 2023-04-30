@@ -16,7 +16,7 @@ public:
 	Tile(sf::Texture& texture, int xPos, int yPos) {
 		this->xPos = xPos;
 		this->yPos = yPos;
-		sprite.setPosition(xPos, yPos);
+		sprite.setPosition(xPos + 1, yPos + 1); // Very minor adjustment to help sprites stay within outlines
 		sprite.setTexture(texture);
 		hasBlock = false;
 		hasMovingBlock = false;

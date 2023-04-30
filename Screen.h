@@ -25,7 +25,7 @@ class Screen {
 	vector<vector<sf::Sprite>> nextPieceSprites;
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
-	bool hasHeld, lockTimerStarted;
+	bool hasHeld, lockTimerStarted, touchedGround;
 	sf::Clock gravityTimer;
 	sf::Clock lockTimer;
 
@@ -38,6 +38,7 @@ public:
 		heldPiece = nullptr;
 		hasHeld = false;
 		lockTimerStarted = false;
+		touchedGround = false;
 		this->holdBounds = holdBounds;
 		this->queueBounds = queueBounds;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
@@ -62,8 +63,11 @@ public:
 
 	// Checked every frame. Handles timer related events
 	void doTimeStuff() {
+		//TODO Super lock timer to prevent infinites
+		// 
 		// Handles lock timer
 		if (!checkBelow()) {
+			touchedGround = true;
 			if (!lockTimerStarted) {
 				lockTimer.restart();
 				lockTimerStarted = true;
@@ -76,7 +80,10 @@ public:
 			}
 		}
 		else {
+			if (touchedGround) // Restarts gravity timer if piece leaves ground
+				gravityTimer.restart();
 			lockTimerStarted = false;
+			touchedGround = false;
 		}
 		// TODO - reset gravity timer when piece leaves ground
 		// Handles gravity
@@ -179,6 +186,7 @@ public:
 		updateBlocks();
 		clearLines();
 		hasHeld = false;
+		touchedGround = false;
 		gravityTimer.restart();
 		spawnPiece();
 	}
@@ -305,11 +313,6 @@ public:
 			kickTestPositions = currentPiece->spinCW();
 		else
 			kickTestPositions = currentPiece->spinCCW();
-		if (kickTestPositions.size() == 0) // Returned by spinning o piece
-		{
-			updateBlocks();
-			return;
-		}
 		bool spinSuccessful = false;
 		for (vector<sf::Vector2i>& positions : kickTestPositions){
 			bool validPosition = true;
@@ -331,6 +334,7 @@ public:
 				currentPiece->spinCCW();
 			else
 				currentPiece->spinCW();
+
 		updateBlocks();
 	}
 	void resetBoard() {
