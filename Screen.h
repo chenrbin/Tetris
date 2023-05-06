@@ -85,7 +85,6 @@ public:
 			lockTimerStarted = false;
 			touchedGround = false;
 		}
-		// TODO - reset gravity timer when piece leaves ground
 		// Handles gravity
 		if (gravityTimer.getElapsedTime().asSeconds() >= DEFAULTGRAVITY) {
 			movePiece(1);
@@ -347,6 +346,9 @@ public:
 			board.push_back(row);
 		}
 		clearMovingSprites();
+		nextPieceQueue.clear();
+		heldPiece = nullptr;
+		heldSprite.clear();
 		spawnPiece();
 		gravityTimer.restart();
 	}
