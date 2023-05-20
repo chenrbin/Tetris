@@ -3,24 +3,37 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// TODO: sandbox mode;
-
+	// TODO: sandbox mode, class to organize sfml objects, rect and text
+	// TODO Super lock timer to prevent infinites
+	
 	// Set constant variables
-	const int WIDTH = 800, HEIGHT = 800, LEFTMARGIN = 150;
-	const int TILESIZE = 32, NUMROWS = 20, NUMCOLS = 10;
-	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
-	const int GAMETEXTSIZE = 20, MENUTEXTSIZE = 24;
-	const int LINEWIDTH = 2, TOPROWPIXELS = 10;
+
+	// Item sizes and spacings
+	const int TILESIZE = 32, LEFTMARGIN = 150, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24;
+	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
 	const float SCALE = 0.8;
+
+	// Board dimensions
+	const int WIDTH = 800, HEIGHT = 800, NUMROWS = 20, NUMCOLS = 10;
+	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
+
+	// Game mechanic related variables
 	const int FPS = 60; // Frame limit of the game
 	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
-	const int NEXTPIECECOUNT = 5; // Number of next pieces visible. Max is 7. Will crash if above 7.
+	const int NEXTPIECECOUNT = 5; // Number of next pieces visible. Max is 6. Will crash if above 7.
+	
+	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
-	const sf::Vector2f MENUBOUNDS(MENUXPOS, MENUYPOS);
-	const int MENUSPACING = 40;
+	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
+	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
+	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
+	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH, GAMEYPOS + GAMEHEIGHT / 1.8);
+
+
 	// Game screen state codes
 	const int MENUSCREEN = 1, GAMESCREEN = 2, SANDBOXSCREEN = 3, MULTIPLAYERSCREEN = 4;
+	
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
 	const sf::Color BLACK(0, 0, 0);

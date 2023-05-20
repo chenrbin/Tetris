@@ -9,7 +9,7 @@ using namespace TetrisVariables;
 class Tile {
 	bool hasBlock; // For blocks that have dropped
 	bool hasMovingBlock; // For blocks that are still in control
-	bool hasPreviewBlock; // For blocks quickdrop preview
+	bool hasPreviewBlock; // For block quickdrop preview
 	sf::Sprite sprite;
 	int xPos, yPos;
 public:

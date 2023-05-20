@@ -14,6 +14,8 @@ class Screen {
 	sf::FloatRect gameBounds;
 	sf::Texture blockTexture;
 	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
+	float gravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
+	int linesCleared;
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
@@ -35,10 +37,12 @@ public:
 		this->window = &window;
 		this->gameBounds = gameBounds;
 		this->blockTexture = blockTexture;
+		linesCleared = 0;
 		heldPiece = nullptr;
 		hasHeld = false;
 		lockTimerStarted = false;
 		touchedGround = false;
+		gravity = DEFAULTGRAVITY;
 		this->holdBounds = holdBounds;
 		this->queueBounds = queueBounds;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
@@ -62,9 +66,7 @@ public:
 	}
 
 	// Checked every frame. Handles timer related events
-	void doTimeStuff() {
-		//TODO Super lock timer to prevent infinites
-		// 
+	void doTimeStuff() { 
 		// Handles lock timer
 		if (!checkBelow()) {
 			touchedGround = true;
@@ -86,7 +88,7 @@ public:
 			touchedGround = false;
 		}
 		// Handles gravity
-		if (gravityTimer.getElapsedTime().asSeconds() >= DEFAULTGRAVITY) {
+		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0) {
 			movePiece(1);
 			gravityTimer.restart();
 		}
@@ -205,11 +207,13 @@ public:
 					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top - 2 * TILESIZE));
 				}
 				board.insert(board.begin(), newRow);
+				linesCleared++;
 				hasCleared = true;
 			}
 		}
-		if (hasCleared) {
-			clearMovingSprites();
+		if (hasCleared) { // Execute when lines have been cleared
+			printLine(linesCleared);
+			clearMovingSprites(); // Code for cleaning up flags
 		}
 	}
 	// If a row is filled
@@ -220,6 +224,10 @@ public:
 		return true;
 	}
 
+	void setGravity(float speed) {
+		gravity = speed;
+		gravityTimer.restart();
+	}
 	void setBlocks(vector<sf::Vector2i>& positions, bool value) {
 		for (sf::Vector2i& pos : positions)
 			board[pos.x][pos.y].setBlock(value);
@@ -350,6 +358,7 @@ public:
 		heldPiece = nullptr;
 		heldSprite.clear();
 		spawnPiece();
+		gravity = DEFAULTGRAVITY;
 		gravityTimer.restart();
 	}
 	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
