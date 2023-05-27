@@ -3,9 +3,8 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// TODO: sandbox mode, class to organize sfml objects, rect and text
 	// TODO Super lock timer to prevent infinites
-	
+	// Todo: second player, lose screen, speed up, improve checkbox graphics, currentgravity
 	// Set constant variables
 
 	// Item sizes and spacings

@@ -24,7 +24,6 @@ sf::Text setText(sf::Font& font, sf::Color color, string message, unsigned int t
 		text.setStyle(sf::Text::Underlined);
 	return text;
 }
-
 sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = sf::Vector2f(0, 0), sf::Color outlineColor = sf::Color(), int outlineThickness = 0)
 {
 	sf::RectangleShape rect(dimensions);
@@ -50,11 +49,10 @@ vector<sf::RectangleShape> getGameRects() {
 	// Rectangles to show a couple pixels of the very top row
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, TOPROWPIXELS), BLACK,
 		sf::Vector2f(GAMEXPOS, GAMEYPOS - TOPROWPIXELS), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, TILESIZE - 10), BLUE,
-		sf::Vector2f(GAMEXPOS, GAMEYPOS - TILESIZE)));
+	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH + 1, TILESIZE - 9), BLUE,
+		sf::Vector2f(GAMEXPOS - 1, GAMEYPOS - TILESIZE - 1)));
 	return rects;
 }
-
 // Get bounds of first three rectangles (game, hold, queue)
 vector<sf::FloatRect> getGameBounds(vector<sf::RectangleShape>& rects) {
 	vector<sf::FloatRect> bounds;
@@ -63,7 +61,6 @@ vector<sf::FloatRect> getGameBounds(vector<sf::RectangleShape>& rects) {
 		bounds.push_back(rects[i].getGlobalBounds());
 	return bounds;
 }
-
 // Generate a vector of numRows x numCols lines across the specified bounds
 vector<sf::RectangleShape> getLines(sf::FloatRect& bounds) {
 	vector<sf::RectangleShape> lines;
@@ -91,7 +88,6 @@ vector<sf::Text> getMenuText(sf::Font& font) {
 		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(MENUXPOS, MENUYPOS + MENUSPACING * i)));
 	return textboxes;
 }
-
 // Generate all text on game screen
 vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 	// Redefine bounds for cleaner code
@@ -106,12 +102,11 @@ vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 // Generate text exclusive to sandbox mode
 vector<sf::Text> getSandboxText(sf::Font& font) {
 	vector<sf::Text> textboxes;
-	vector<string> menuItems = { "Auto-fall", "Fall speed", "Creative", "Quit" };
+	vector<string> menuItems = { "Auto-fall", "Fall speed", "Creative", "Reset", "Quit" };
 	for (int i = 0; i < menuItems.size(); i++)
 		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
 	return textboxes;
 }
-
 // Get collision bounds for checkboxes
 vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 	vector<sf::FloatRect> bounds;
@@ -120,7 +115,43 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 	return bounds;
 }
 
-
+// Following functions are made for reuseability and requires specific parameters passed in.
+// Functionality of the Auto-fall box in sandbox mode. 
+void toggleGravity(Checkbox& autoFallBox, Screen& screen, float& currentGravity) {
+	if (autoFallBox.getChecked()) {
+		autoFallBox.setChecked(false);
+		screen.setGravity(0);
+	}
+	else {
+		autoFallBox.setChecked(true);
+		screen.setGravity(currentGravity);
+	}
+}
+void decrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity, vector<float>& gravitySpeeds) {
+	gravityBox.decrement();
+	currentGravity = gravitySpeeds[gravityBox.getCurrentNum() - 1];
+	if (autoFallBox.getChecked())
+		screen.setGravity(currentGravity);
+}
+void incrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity, vector<float>& gravitySpeeds) {
+	gravityBox.increment();
+	currentGravity = gravitySpeeds[gravityBox.getCurrentNum() - 1];
+	if (autoFallBox.getChecked())
+		screen.setGravity(currentGravity);
+}
+void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity) {
+	if (creativeModeBox.getChecked()) { // If box is already checked, turn off
+		creativeModeBox.setChecked(false);
+		autoFallBox.setChecked(true);
+		screen.setGravity(currentGravity);
+		screen.endCreativeMode();
+	}
+	else { // If box isn't checked, turn on
+		creativeModeBox.setChecked(true);
+		autoFallBox.setChecked(false);
+		screen.startCreativeMode();
+	}
+}
 
 // Draw all objects in a vector
 void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
@@ -156,16 +187,22 @@ int main(){
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
+	sf::Text linesClearedText = setText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
+	
+	vector<float> gravitySpeeds{ 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
+	int currentScreen = MENUSCREEN, gravityCount = gravitySpeeds.size();
+	float currentGravity = 1;
+	int linesCleared = 0; // Store a separate variable of lines cleared in main to update. Optimize later
+	bool creativeModeOn = false;
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
 	Checkbox autoFallBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
-	IncrementalBox gravityBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, font);
+	IncrementalBox gravityBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, gravityCount, font);
 	Checkbox creativeModeBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
-	
-	vector<float> gravityLevels{ 0, 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
-	int currentScreen = MENUSCREEN, currentGravityLevel = 1, gravityCount = gravityLevels.size();
-	bool creativeModeOn = false;
+	Checkbox resetBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
+	Checkbox quitBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
+	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
 
 	sf::Texture texture;
 	if (!texture.loadFromFile("images/tile_hidden.png"))
@@ -245,6 +282,12 @@ int main(){
 			screen.drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
+			window.draw(linesClearedText);
+			if (linesCleared != screen.getLinesCleared()) 
+				// Only update string if number is different. 
+				// Don't know if this is faster than updating every frame.
+				linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
+			
 
 			// In-game timer events
 			screen.doTimeStuff();
@@ -293,9 +336,8 @@ int main(){
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
 			drawVector(window, sandboxText);
-			autoFallBox.draw(window);
-			gravityBox.draw(window);
-			creativeModeBox.draw(window);
+			for (auto box : sandboxes)
+				box->draw(window);
 			
 			// In-game timer events
 			screen.doTimeStuff();
@@ -338,29 +380,46 @@ int main(){
 						screen.spawnPiece(6);
 					else if (event.key.code == sf::Keyboard::LShift)
 						screen.holdPiece();
+					// Hot keys for sandbox controls
+					else if (event.key.code == sf::Keyboard::Q)
+						toggleGravity(autoFallBox, screen, currentGravity);
+					else if (event.key.code == sf::Keyboard::W)
+						decrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
+					else if (event.key.code == sf::Keyboard::S)
+						incrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
+					else if (event.key.code == sf::Keyboard::E)
+						toggleCreative(creativeModeBox, autoFallBox, screen, currentGravity);
+					else if (event.key.code == sf::Keyboard::R)
+						screen.resetBoard();
+					else if (event.key.code == sf::Keyboard::T)
+						currentScreen = MENUSCREEN;
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
-					if (autoFallBox.getBounds().contains(clickPos)) {
-						if (autoFallBox.getChecked()) {
-							autoFallBox.setChecked(false);
-							screen.setGravity(0);
+					if (event.mouseButton.button == sf::Mouse::Left) {
+						if (autoFallBox.getBounds().contains(clickPos)) { // Turn off gravity
+							toggleGravity(autoFallBox, screen, currentGravity);
 						}
-						else {
-							autoFallBox.setChecked(true);
-							screen.setGravity(gravityLevels[currentGravityLevel]);
+						else if (gravityBox.getLeftBound().contains(clickPos)) { // Speed arrows
+							decrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
 						}
+						else if (gravityBox.getRightBound().contains(clickPos)) {
+							incrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
+						}
+						else if (creativeModeBox.getBounds().contains(clickPos)) {
+							toggleCreative(creativeModeBox, autoFallBox, screen, currentGravity);
+						}
+						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
+							screen.clickBlock(clickPos); // Will do nothing if creative mode isn't on
+						else if (resetBox.getBounds().contains(clickPos)) 
+							screen.resetBoard();
+						else if (quitBox.getBounds().contains(clickPos)) 
+							currentScreen = MENUSCREEN;
 					}
-					else if (creativeModeBox.getBounds().contains(clickPos)) {
-						if (creativeModeBox.getChecked()) {
-							creativeModeBox.setChecked(false);
-							screen.setGravity(gravityLevels[currentGravityLevel]);
-						}
-						else {
-							creativeModeBox.setChecked(true);
-							autoFallBox.setChecked(false);
-							screen.setGravity(0);
+					else if (event.mouseButton.button == sf::Mouse::Right) {
+						if (gameScreenBounds[0].contains(clickPos)) { // Creative mode right click
+							screen.clickRow(clickPos);
 						}
 					}
 					break;

@@ -13,12 +13,15 @@ protected:
 	bool checked;
 public:
 	Checkbox(float size, float left, float top, bool checked, sf::Font& font) {
+		// White outline box
 		box = sf::RectangleShape(sf::Vector2f(size, size));
 		box.setPosition(left, top);
 		box.setOutlineColor(WHITE);
 		box.setFillColor(BLUE);
 		box.setOutlineThickness(LINEWIDTH);
 		bounds = box.getGlobalBounds();
+
+		// "X" to toggle
 		check.setFont(font);
 		check.setString("X");
 		check.setCharacterSize(size);
@@ -29,7 +32,7 @@ public:
 		check.setPosition(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
 		this->checked = checked;
 	}
-	void draw(sf::RenderWindow& window) {
+	virtual void draw(sf::RenderWindow& window) {
 		window.draw(box);
 		if (checked)
 			window.draw(check);
@@ -53,18 +56,25 @@ class IncrementalBox : public Checkbox {
 	sf::FloatRect rightBound;
 	int min, max, currentNum;
 public:
-	IncrementalBox(float size, float left, float top, sf::Font& font) : Checkbox(size, left, top, true, font) {
+	IncrementalBox(float size, float left, float top, int min, int max, sf::Font& font) : Checkbox(size, left, top, true, font) {
+		// Clickable left and right arrows
 		leftArrow = sf::CircleShape(size / 2, 3);
 		leftArrow.setOrigin(size / 2, 0);
 		leftArrow.rotate(270);
-		leftBound = leftArrow.getGlobalBounds();
+		leftArrow.setPosition(bounds.left - 30, bounds.top + bounds.height / 2);
 
 		rightArrow = sf::CircleShape(size / 2, 3);
 		rightArrow.rotate(90);
+		rightArrow.setPosition(bounds.left + bounds.width + 30, bounds.top);
+
+		leftBound = leftArrow.getGlobalBounds();
 		rightBound = rightArrow.getGlobalBounds();
 
-		leftArrow.setPosition(bounds.left - 30, bounds.top + bounds.height / 2);
-		rightArrow.setPosition(bounds.left + bounds.width + 30, bounds.top);
+		// Text is numbers min-max
+		this->min = min;
+		this->max = max;
+		currentNum = min;
+		updateString();
 	}
 	void draw(sf::RenderWindow& window) {
 		window.draw(box);
@@ -72,4 +82,31 @@ public:
 		window.draw(leftArrow);
 		window.draw(rightArrow);
 	}
+	void updateString() {
+		check.setString(to_string(currentNum));
+	}
+	sf::FloatRect& getLeftBound() {
+		return leftBound;
+	}
+	sf::FloatRect& getRightBound() {
+		return rightBound;
+	}
+	int getCurrentNum() {
+		return currentNum;
+	}
+	void increment() {
+		if (currentNum < max)
+			currentNum++;
+		else
+			currentNum = min;
+		updateString();
+	}
+	void decrement() {
+		if (currentNum > min)
+			currentNum--;
+		else
+			currentNum = max;
+		updateString();
+	}
 };
+

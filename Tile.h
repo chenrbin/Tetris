@@ -25,7 +25,7 @@ public:
 	// Move tile position down when clearing lines
 	void moveDown() { 
 		yPos += TILESIZE;
-		sprite.setPosition(xPos, yPos);
+		sprite.setPosition(xPos + 1, yPos + 1);
 	}
 	void setColor(sf::Color& blockColor) {
 		sprite.setColor(blockColor);
@@ -34,6 +34,10 @@ public:
 		hasBlock = value;
 	}
 	void setBlock(bool value, sf::Color& blockColor) { // Overload to toggle drawing block and set color
+		hasBlock = value;
+		sprite.setColor(blockColor);
+	}
+	void setBlock(bool value, const sf::Color& blockColor) { // Overload to toggle drawing block and set color
 		hasBlock = value;
 		sprite.setColor(blockColor);
 	}
@@ -63,5 +67,10 @@ public:
 	}
 	bool getHasMovingBlock() {
 		return hasMovingBlock;
+	}
+	// Used for sandbox creative mode
+	void toggleBlock() {
+		sprite.setColor(WHITE);
+		hasBlock = !hasBlock;
 	}
 };
