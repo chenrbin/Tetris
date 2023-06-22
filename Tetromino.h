@@ -82,7 +82,6 @@ struct Tetromino {
 			else if (pos->x == row + 1 && pos->y == col + 1) // Bottom right -> bottom left
 				*pos = sf::Vector2i(row + 1, col - 1);		
 		}
-		// checkBounds();
 		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later. (1, 2) means one right two down
 		if (orientation == 0)
 			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(-1, 0), sf::Vector2i(-1, -1), sf::Vector2i(0, 2), sf::Vector2i(-1, 2) };
@@ -120,7 +119,6 @@ struct Tetromino {
 			else if (pos->x == row + 1 && pos->y == col + 1) // Bottom right -> top right
 				*pos = sf::Vector2i(row - 1, col + 1);
 		}
-		// checkBounds();
 		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later.
 		if (orientation == 1)
 			shiftValues = { sf::Vector2i(0, 0), sf::Vector2i(1, 0), sf::Vector2i(1, 1), sf::Vector2i(0, -2), sf::Vector2i(1, -2) };
@@ -161,36 +159,6 @@ struct Tetromino {
 		for (sf::Vector2i* pos : positions)
 			pos->y++;
 	}
-	void checkBounds() {
-		// Check if the piece has rotated into the screen edge, push it back out
-		for (sf::Vector2i* pos : positions) {
-			if (pos->y < 0)
-				moveRight();
-			else if (pos->y >= NUMCOLS)
-				moveLeft();
-			if (pos->x >= NUMROWS)
-				moveUp();
-		}
-	}
-	bool checkLeft() { // True if the piece can move left
-		for (sf::Vector2i* pos : positions)
-			if (pos->y <= 0)
-				return false;
-		return true;
-	}
-	bool checkBelow() { // True if the piece can move down
-		for (sf::Vector2i* pos : positions)
-			if (pos->x >= NUMROWS - 1)
-				return false;
-		return true;
-	}
-	bool checkRight() { // True if the piece can move right
-		for (sf::Vector2i* pos : positions)
-			if (pos->y >= NUMCOLS - 1)
-				return false;
-		return true;
-	}
-
 };
 
 class IPiece : public Tetromino {

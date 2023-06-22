@@ -3,8 +3,8 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// TODO Super lock timer to prevent infinites
-	// Todo: second player, lose screen, speed up, improve checkbox graphics, currentgravity
+	// Todo: second player, lose screen, holding keys down, instructions, fix speed up check
+
 	// Set constant variables
 
 	// Item sizes and spacings
@@ -18,17 +18,20 @@ namespace TetrisVariables {
 
 	// Game mechanic related variables
 	const int FPS = 60; // Frame limit of the game
-	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
+	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds 68
+	const int SUPERLOCKFRAMECOUNT = FPS * 5; // Second lock delay to prevent infinites
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
 	const int NEXTPIECECOUNT = 5; // Number of next pieces visible. Max is 6. Will crash if above 7.
-	
+	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
+	const int GRAVITYTIERLINES[] = { 2, 4, 60, 80, 100, 120, 140 };
+	const int GRAVITYTIERCOUNT = 7;
+
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
 	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
 	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH, GAMEYPOS + GAMEHEIGHT / 1.8);
-
 
 	// Game screen state codes
 	const int MENUSCREEN = 1, GAMESCREEN = 2, SANDBOXSCREEN = 3, MULTIPLAYERSCREEN = 4;
@@ -44,6 +47,7 @@ namespace TetrisVariables {
 	const sf::Color CYAN(0, 255, 255);
 	const sf::Color VIOLET(148, 0, 211);
 	const sf::Color SEETHROUGH(255, 255, 255, 100);
+	const sf::Color HOVERCHECKBOX(255, 255, 255, 150);
 	const int PREVIEWTRANSPARENCY = 120;
 	
 	// Print stuff for debug

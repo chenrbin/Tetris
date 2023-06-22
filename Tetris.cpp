@@ -117,38 +117,35 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 
 // Following functions are made for reuseability and requires specific parameters passed in.
 // Functionality of the Auto-fall box in sandbox mode. 
-void toggleGravity(Checkbox& autoFallBox, Screen& screen, float& currentGravity) {
+void toggleGravity(Checkbox& autoFallBox, Screen& screen) {
 	if (autoFallBox.getChecked()) {
 		autoFallBox.setChecked(false);
-		screen.setGravity(0);
+		screen.setAutoFall(false);
 	}
 	else {
 		autoFallBox.setChecked(true);
-		screen.setGravity(currentGravity);
+		screen.setAutoFall(true);
 	}
 }
-void decrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity, vector<float>& gravitySpeeds) {
+void decrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen) {
 	gravityBox.decrement();
-	currentGravity = gravitySpeeds[gravityBox.getCurrentNum() - 1];
-	if (autoFallBox.getChecked())
-		screen.setGravity(currentGravity);
+	screen.setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
 }
-void incrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity, vector<float>& gravitySpeeds) {
+void incrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen) {
 	gravityBox.increment();
-	currentGravity = gravitySpeeds[gravityBox.getCurrentNum() - 1];
-	if (autoFallBox.getChecked())
-		screen.setGravity(currentGravity);
+	screen.setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
 }
-void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& screen, float& currentGravity) {
+void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& screen) {
 	if (creativeModeBox.getChecked()) { // If box is already checked, turn off
 		creativeModeBox.setChecked(false);
 		autoFallBox.setChecked(true);
-		screen.setGravity(currentGravity);
+		screen.setAutoFall(true);
 		screen.endCreativeMode();
 	}
 	else { // If box isn't checked, turn on
 		creativeModeBox.setChecked(true);
 		autoFallBox.setChecked(false);
+		screen.setAutoFall(false);
 		screen.startCreativeMode();
 	}
 }
@@ -189,20 +186,20 @@ int main(){
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
 	sf::Text linesClearedText = setText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
 	
-	vector<float> gravitySpeeds{ 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
-	int currentScreen = MENUSCREEN, gravityCount = gravitySpeeds.size();
-	float currentGravity = 1;
-	int linesCleared = 0; // Store a separate variable of lines cleared in main to update. Optimize later
+	int currentScreen = MENUSCREEN;
 	bool creativeModeOn = false;
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
 	Checkbox autoFallBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
-	IncrementalBox gravityBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, gravityCount, font);
+	IncrementalBox gravityBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font);
 	Checkbox creativeModeBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
 	Checkbox resetBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
 	Checkbox quitBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
 	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
+	
+	FadeText speedupText(setText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
+	vector<Animation*> animations = { &speedupText };
 
 	sf::Texture texture;
 	if (!texture.loadFromFile("images/tile_hidden.png"))
@@ -211,17 +208,17 @@ int main(){
 		throw exception();
 	}
 
-	Screen screen(window, gameScreenBounds[0], texture, gameScreenBounds[1], gameScreenBounds[2]);
+	Screen screen(window, gameScreenBounds, texture, animations);
 	window.setFramerateLimit(FPS);
 
 	// Game loop
 	while (window.isOpen())
 	{
+		// Run on main menu
 		if (currentScreen == MENUSCREEN) {
 			window.clear(BLUE);
 			drawVector(window, menuText);
 			window.draw(cursor);
-
 			// Event handler for menu screen
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -245,10 +242,18 @@ int main(){
 						{
 						case 0: // Classic mode
 							currentScreen = GAMESCREEN;
+							screen.setGameMode(GAMESCREEN);
+							gameText[2].setString("Classic Mode");
 							break;
 						case 1: // Sandbox mode
 							currentScreen = SANDBOXSCREEN;
 							gameText[2].setString("Sandbox Mode");
+							screen.setGameMode(SANDBOXSCREEN);
+							autoFallBox.setChecked(true);
+							gravityBox.setValue(gravityBox.getMin());
+							creativeModeBox.setChecked(false);
+							screen.setAutoFall(true);
+							screen.endCreativeMode();
 							break;
 						case 2: // PVP mode
 							currentScreen = MULTIPLAYERSCREEN;
@@ -275,6 +280,7 @@ int main(){
 				cursor.setPosition(sf::Vector2f(MENUXPOS - 5, MENUYPOS + cursorPos * MENUSPACING));
 			}
 		}
+		// Run on classic mode
 		else if (currentScreen == GAMESCREEN) {
 			window.clear(BLUE);
 			drawVector(window, gameScreenRectangles);
@@ -282,12 +288,9 @@ int main(){
 			screen.drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
+			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
 			window.draw(linesClearedText);
-			if (linesCleared != screen.getLinesCleared()) 
-				// Only update string if number is different. 
-				// Don't know if this is faster than updating every frame.
-				linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
-			
+			speedupText.display(window);
 
 			// In-game timer events
 			screen.doTimeStuff();
@@ -326,6 +329,7 @@ int main(){
 				}
 			}
 		}
+		// Run on sandbox mode
 		else if (currentScreen == SANDBOXSCREEN) {
 			window.clear(BLUE);
 			for (int i = 0; i < gameScreenRectangles.size() - 1; i++) 
@@ -382,13 +386,13 @@ int main(){
 						screen.holdPiece();
 					// Hot keys for sandbox controls
 					else if (event.key.code == sf::Keyboard::Q)
-						toggleGravity(autoFallBox, screen, currentGravity);
+						toggleGravity(autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::W)
-						decrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
+						decrementGravity(gravityBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::S)
-						incrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
+						incrementGravity(gravityBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::E)
-						toggleCreative(creativeModeBox, autoFallBox, screen, currentGravity);
+						toggleCreative(creativeModeBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::R)
 						screen.resetBoard();
 					else if (event.key.code == sf::Keyboard::T)
@@ -398,23 +402,19 @@ int main(){
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
 					if (event.mouseButton.button == sf::Mouse::Left) {
-						if (autoFallBox.getBounds().contains(clickPos)) { // Turn off gravity
-							toggleGravity(autoFallBox, screen, currentGravity);
-						}
-						else if (gravityBox.getLeftBound().contains(clickPos)) { // Speed arrows
-							decrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
-						}
-						else if (gravityBox.getRightBound().contains(clickPos)) {
-							incrementGravity(gravityBox, autoFallBox, screen, currentGravity, gravitySpeeds);
-						}
-						else if (creativeModeBox.getBounds().contains(clickPos)) {
-							toggleCreative(creativeModeBox, autoFallBox, screen, currentGravity);
-						}
+						if (autoFallBox.getBounds().contains(clickPos))  // Turn off gravity
+							toggleGravity(autoFallBox, screen);
+						else if (gravityBox.getLeftBound().contains(clickPos))  // Speed arrows
+							decrementGravity(gravityBox, autoFallBox, screen);
+						else if (gravityBox.getRightBound().contains(clickPos)) 
+							incrementGravity(gravityBox, autoFallBox, screen);
+						else if (creativeModeBox.getBounds().contains(clickPos)) 
+							toggleCreative(creativeModeBox, autoFallBox, screen);
 						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
 							screen.clickBlock(clickPos); // Will do nothing if creative mode isn't on
 						else if (resetBox.getBounds().contains(clickPos)) 
 							screen.resetBoard();
-						else if (quitBox.getBounds().contains(clickPos)) 
+						else if (quitBox.getBounds().contains(clickPos)) // Return to menu
 							currentScreen = MENUSCREEN;
 					}
 					else if (event.mouseButton.button == sf::Mouse::Right) {
@@ -423,6 +423,13 @@ int main(){
 						}
 					}
 					break;
+				}
+				case sf::Event::MouseMoved: { // Shows a transparent X when hovering over unchecked boxes
+					sf::Vector2f mousePos(event.mouseMove.x, event.mouseMove.y);
+					autoFallBox.setHovering(autoFallBox.getBounds().contains(mousePos));
+					creativeModeBox.setHovering(creativeModeBox.getBounds().contains(mousePos));
+					resetBox.setHovering(resetBox.getBounds().contains(mousePos));
+					quitBox.setHovering(quitBox.getBounds().contains(mousePos));
 				}
 				default:
 					break;

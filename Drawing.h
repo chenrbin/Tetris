@@ -10,7 +10,8 @@ protected:
 	sf::RectangleShape box;
 	sf::FloatRect bounds;
 	sf::Text check;
-	bool checked;
+	sf::Text hoverCheck;
+	bool checked, hovering;
 public:
 	Checkbox(float size, float left, float top, bool checked, sf::Font& font) {
 		// White outline box
@@ -31,14 +32,23 @@ public:
 		check.setOrigin(textBounds.width / 2, textBounds.height);
 		check.setPosition(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
 		this->checked = checked;
+
+		hoverCheck = check;
+		hoverCheck.setFillColor(HOVERCHECKBOX);
+		hovering = false;
 	}
 	virtual void draw(sf::RenderWindow& window) {
 		window.draw(box);
 		if (checked)
 			window.draw(check);
+		else if (hovering)
+			window.draw(hoverCheck);
 	}
 	void setChecked(bool val) {
 		checked = val;
+	}
+	void setHovering(bool value) {
+		hovering = value;
 	}
 	bool getChecked() {
 		return checked;
@@ -94,6 +104,14 @@ public:
 	int getCurrentNum() {
 		return currentNum;
 	}
+	int getMin() {
+		return min;
+	}
+	void setValue(int num) {
+		if (num >= min && num <= max)
+			currentNum = num;
+		updateString();
+	}
 	void increment() {
 		if (currentNum < max)
 			currentNum++;
@@ -110,3 +128,43 @@ public:
 	}
 };
 
+class Animation { // Animations are meant to be each created once and restarted when played
+protected:
+	sf::Clock startTime;
+	float duration;
+public:
+	virtual void display(sf::RenderWindow& window) = 0;
+	virtual ~Animation() {};
+	virtual void restart() = 0;
+};
+
+class FadeText : public Animation {
+	float fadeDuration; // In seconds
+	sf::Text text; // Text to display. Properties are created using setText when constructed.
+	sf::Color textColor;
+public:
+	FadeText(sf::Text text, float duration, float fadeDuration) {
+		this->text = text;
+		this->duration = duration;
+		this->fadeDuration = fadeDuration;
+		startTime.restart();
+		textColor = text.getFillColor();
+		textColor.a = 0; // This disables the animation when constructed
+		this->text.setFillColor(textColor);
+	}
+	void display(sf::RenderWindow& window) {
+		float elapsedTime = startTime.getElapsedTime().asSeconds();
+		if (elapsedTime > duration + fadeDuration)
+			return; // Returns nothing if animation is past duration
+		if (elapsedTime > duration && textColor.a > 0) { // Begin fading
+			textColor.a = ((1 - (elapsedTime - duration) / fadeDuration) * 255);
+			text.setFillColor(textColor);
+		}
+		window.draw(text);
+	}
+	void restart() { // Turns on animation
+		startTime.restart();
+		textColor.a = 255;
+		text.setFillColor(textColor);
+	}
+};

@@ -5,6 +5,8 @@
 #include <cstdlib> 
 #include <ctime>
 #include "Tile.h"
+#include "Drawing.h"
+#include <map>
 #include <algorithm>
 using namespace std;
 using namespace TetrisVariables;
@@ -15,7 +17,7 @@ class Screen {
 	sf::Texture blockTexture;
 	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
-	int linesCleared;
+	int linesCleared, gameMode;
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
@@ -25,24 +27,29 @@ class Screen {
 	vector<int> nextPieceQueue; // Stores up to the next 14 pieces. The next 5 will be shown.
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
-	bool hasHeld, lockTimerStarted, touchedGround, creativeMode;
+	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall;
 	sf::Clock gravityTimer, lockTimer;
+	int superLockCounter;
+	map<int, float> gravityTiers;
+	vector<Animation*> animations;
 
 public:
-	Screen(sf::RenderWindow& window, sf::FloatRect& gameBounds, sf::Texture& blockTexture, sf::FloatRect& holdBounds, sf::FloatRect& queueBounds) {
+	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<Animation*>& animations) {
 		this->window = &window;
-		this->gameBounds = gameBounds;
+		this->gameBounds = gameScreenBounds[0];
+		this->holdBounds = gameScreenBounds[1];
+		this->queueBounds = gameScreenBounds[2];
 		this->blockTexture = blockTexture;
+		this->animations = animations;	
+
 		linesCleared = 0;
 		heldPiece = nullptr;
-		hasHeld = false;
-		lockTimerStarted = false;
-		touchedGround = false;
-		creativeMode = false;
+		hasHeld = false, lockTimerStarted = false, touchedGround = false;
+		creativeMode = false, autoFall = true;
+		gameMode = MENUSCREEN;
+		superLockCounter = 0;
 		startingGravity = DEFAULTGRAVITY;
 		gravity = startingGravity;
-		this->holdBounds = holdBounds;
-		this->queueBounds = queueBounds;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
@@ -50,6 +57,8 @@ public:
 		}
 		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
+		for (int i = 0; i < GRAVITYTIERCOUNT; i++)
+			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 		srand(time(NULL));
 
 		// Generate board
@@ -65,7 +74,12 @@ public:
 
 	// Checked every frame. Handles timer related events
 	void doTimeStuff() {
-		if (creativeMode) // Deactivates lock timer and gravity if creative mode is on
+		// Handles gravity. Disabled if autoFall is off (sandbox exclusive)
+		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0 && autoFall == true) {
+			movePiece(1);
+			gravityTimer.restart();
+		}
+		if (creativeMode) // Deactivates lock timer if creative mode is on
 			return;
 		// Handles lock timer
 		if (!checkBelow()) {
@@ -87,14 +101,18 @@ public:
 			lockTimerStarted = false;
 			touchedGround = false;
 		}
-		// Handles gravity
-		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0) {
-			movePiece(1);
-			gravityTimer.restart();
+		// Handles super lock timer. Resets only when a new piece is dropped. Counts frames
+		if (!checkBelow()) {
+			superLockCounter++;
+			if (superLockCounter > SUPERLOCKFRAMECOUNT) {
+				superLockCounter = 0;
+				setPiece();
+			}
 		}
 
 	}
-
+	
+	// Spawn controllable tetromino. Can be pseudorandom or specified
 	void spawnPiece(int pieceCode = -1) {
 		if (currentPositions.size() != 0) {
 			delete currentPiece;
@@ -126,7 +144,6 @@ public:
 		movePiece(1);
 		updateBlocks();
 	}
-	
 	
 	// 0 to move left, 1 to move down, 2 to move right
 	void movePiece(int direction) {
@@ -241,6 +258,20 @@ public:
 		if (hasCleared) { // Execute when lines have been cleared
 			clearMovingSprites(); // Code for cleaning up flags
 		}
+		if (gameMode == GAMESCREEN)
+			checkSpeedUp();
+	}
+	// Check to increase gravity after a number of lines has been cleared. Only in classic mode.
+	void checkSpeedUp() {
+		auto iter = gravityTiers.begin();
+		// Iterate to the next speed tier and the number of lines required to reach it
+		for (; iter != gravityTiers.end() && iter->second >= gravity; iter++);
+		if (iter == gravityTiers.end())
+			return;
+		if (linesCleared >= iter->first) {
+			setGravity(iter->second);
+			animations[0]->restart();
+		}
 	}
 	// Clear board and restart game. Reset gravity and piece queue
 	void resetBoard() {
@@ -257,12 +288,18 @@ public:
 		heldPiece = nullptr;
 		heldSprite.clear();
 		spawnPiece();
+		linesCleared = 0;
 		setGravity(startingGravity);
 		gravityTimer.restart();
+		superLockCounter = 0;
 	}
 	void setGravity(float speed) {
 		gravity = speed;
 		gravityTimer.restart();
+	}
+	// Set game mode with a constant int code defined in TetrisConstants
+	void setGameMode(const int MODE) {
+		gameMode = MODE;
 	}
 	int getLinesCleared() {
 		return linesCleared;
@@ -271,6 +308,9 @@ public:
 		return gravity;
 	}
 #pragma region Sandbox Functionality
+	void setAutoFall(bool value) {
+		autoFall = value;
+	}
 	// Turn on creative mode, disable timers and allow blocks to be placed and removed by clicking
 	void startCreativeMode() {
 		spawnPiece(currentPiece->getPieceCode());
