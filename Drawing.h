@@ -168,3 +168,45 @@ public:
 		text.setFillColor(textColor);
 	}
 };
+
+// Class to handle auto repeat / DAS
+class keyTimer {
+	sf::Clock startTimer, holdTimer;
+	int startDelay, holdDelay; // In milliseconds
+	bool startOn, holdOn;
+public:
+	keyTimer(int startDelay, int holdDelay) {
+		this->startDelay = startDelay;
+		this->holdDelay = holdDelay;
+		startOn = false;
+		holdOn = false;
+	}
+	// Handles action while key is pressed. Returns true if an action should be performed
+	bool press() {
+		if (holdOn) { // If startOn and holdOn are true, check for auto repeat
+			if (holdTimer.getElapsedTime().asMilliseconds() >= holdDelay) {
+				holdTimer.restart();
+				return true;
+			}
+			return false;
+		}
+		// If holdOn isn't true, check startOn for startTimer
+		if (!startOn) {
+			startOn = true;
+			startTimer.restart();
+			return true;
+		} 
+		else {
+			if (startTimer.getElapsedTime().asMilliseconds() >= startDelay) {
+				holdOn = true;
+				holdTimer.restart();
+			}
+			return false;
+		}
+	}
+	// Key is released. Reset boolean values
+	void release() {
+		holdOn = false;
+		startOn = false;
+	}
+};

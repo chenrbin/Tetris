@@ -17,7 +17,7 @@ class Screen {
 	sf::Texture blockTexture;
 	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
-	int linesCleared, gameMode;
+	int totalLinesCleared, gameMode;
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
@@ -27,9 +27,10 @@ class Screen {
 	vector<int> nextPieceQueue; // Stores up to the next 14 pieces. The next 5 will be shown.
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
-	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall;
+	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
 	sf::Clock gravityTimer, lockTimer;
 	int superLockCounter;
+	int comboCounter;
 	map<int, float> gravityTiers;
 	vector<Animation*> animations;
 
@@ -42,13 +43,12 @@ public:
 		this->blockTexture = blockTexture;
 		this->animations = animations;	
 
-		linesCleared = 0;
+		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
 		heldPiece = nullptr;
 		hasHeld = false, lockTimerStarted = false, touchedGround = false;
-		creativeMode = false, autoFall = true;
-		gameMode = MENUSCREEN;
-		superLockCounter = 0;
-		startingGravity = DEFAULTGRAVITY;
+		creativeMode = false, autoFall = true, gameOver = false;
+		gameMode = MAINMENU;
+		startingGravity = DEFAULTGRAVITY; // REVIEW
 		gravity = startingGravity;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
@@ -59,6 +59,7 @@ public:
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++)
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
+
 		srand(time(NULL));
 
 		// Generate board
@@ -75,7 +76,7 @@ public:
 	// Checked every frame. Handles timer related events
 	void doTimeStuff() {
 		// Handles gravity. Disabled if autoFall is off (sandbox exclusive)
-		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0 && autoFall == true) {
+		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0 && autoFall) {
 			movePiece(1);
 			gravityTimer.restart();
 		}
@@ -101,13 +102,12 @@ public:
 			lockTimerStarted = false;
 			touchedGround = false;
 		}
-		// Handles super lock timer. Resets only when a new piece is dropped. Counts frames
+		// Handles super lock timer. Resets only when a new piece is dropped. 
+		// Uses a frame counter instead of a timer.
 		if (!checkBelow()) {
 			superLockCounter++;
-			if (superLockCounter > SUPERLOCKFRAMECOUNT) {
-				superLockCounter = 0;
+			if (superLockCounter > SUPERLOCKFRAMECOUNT)
 				setPiece();
-			}
 		}
 
 	}
@@ -135,8 +135,12 @@ public:
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
 		updateBlocks();
 		for (sf::Vector2i& pos : currentPiece->getPositions()) {
-			if (board[pos.x][pos.y].getHasBlock()) { // Gave over is spawn position is occupied
-				resetBoard();
+			// Gave over is spawn position is occupied
+			if (board[pos.x][pos.y].getHasBlock()) { 
+				if (gameMode == SANDBOX)
+					resetBoard();
+				else if (gameMode == CLASSIC)
+					gameOver = true;
 				return;
 			}
 		}
@@ -144,22 +148,51 @@ public:
 		movePiece(1);
 		updateBlocks();
 	}
+
+	// Clear board and restart game. Reset gravity and piece queue
+	void resetBoard() {
+		board.clear();
+		for (int i = 0; i < REALNUMROWS; i++) {
+			vector<Tile> row;
+			for (int j = 0; j < NUMCOLS; j++) {
+				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
+			}
+			board.push_back(row);
+		}
+		clearMovingSprites();
+		nextPieceQueue.clear();
+		heldPiece = nullptr;
+		heldSprite.clear();
+		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
+			setGravity();
+		totalLinesCleared = 0;
+		gravityTimer.restart();
+		superLockCounter = 0;
+		gameOver = false;
+		spawnPiece();
+	}
 	
 	// 0 to move left, 1 to move down, 2 to move right
 	void movePiece(int direction) {
 		switch (direction)
 		{
 		case(0):
-			if (checkLeft())
+			if (checkLeft()) {
 				currentPiece->moveLeft();
+				lockTimer.restart();
+			}
 			break;
 		case(1):
-			if (checkBelow())
+			if (checkBelow()) {
 				currentPiece->moveDown();
+				lockTimer.restart();
+			}
 			break;
 		case(2):
-			if (checkRight())
+			if (checkRight()) {
 				currentPiece->moveRight();
+				lockTimer.restart();
+			}
 			break;
 		case(3):
 			if (checkBelow()) {
@@ -232,10 +265,13 @@ public:
 		hasHeld = false;
 		touchedGround = false;
 		gravityTimer.restart();
+		lockTimer.restart();
+		superLockCounter = 0;
 		spawnPiece();
 	}
 	// Check and clear any filled rows. Records number of lines cleared
 	void clearLines() {
+		int linesCleared = 0; // Counts amount of lines cleared by this piece for scoring
 		bool hasCleared = false;
 		for (int i = 0; i < REALNUMROWS; i++) {
 			if (checkLine(board[i])) {
@@ -251,14 +287,40 @@ public:
 					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top - 2 * TILESIZE));
 				}
 				board.insert(board.begin(), newRow);
+				totalLinesCleared++;
 				linesCleared++;
 				hasCleared = true;
 			}
 		}
 		if (hasCleared) { // Execute when lines have been cleared
-			clearMovingSprites(); // Code for cleaning up flags
+			clearMovingSprites(); // Cleaning up sprite flags
+			
+			switch (linesCleared)
+			{
+			case 1:
+				cout << "Single\n";
+				break;
+			case 2:
+				cout << "Double\n";
+				break; 
+			case 3:
+				cout << "Triple\n";
+				break;
+			case 4:
+				cout << "Tetris\n";
+				break;
+			default:
+				break;
+			}
+			// Records back to back line clears 
+			comboCounter++;
+			if (comboCounter > 1)
+				cout << comboCounter << "X combo\n";
 		}
-		if (gameMode == GAMESCREEN)
+		else {
+			comboCounter = 0;
+		}
+		if (gameMode == CLASSIC)
 			checkSpeedUp();
 	}
 	// Check to increase gravity after a number of lines has been cleared. Only in classic mode.
@@ -268,33 +330,21 @@ public:
 		for (; iter != gravityTiers.end() && iter->second >= gravity; iter++);
 		if (iter == gravityTiers.end())
 			return;
-		if (linesCleared >= iter->first) {
+		if (totalLinesCleared >= iter->first) {
 			setGravity(iter->second);
 			animations[0]->restart();
 		}
 	}
-	// Clear board and restart game. Reset gravity and piece queue
-	void resetBoard() {
-		board.clear();
-		for (int i = 0; i < REALNUMROWS; i++) {
-			vector<Tile> row;
-			for (int j = 0; j < NUMCOLS; j++) {
-				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
-			}
-			board.push_back(row);
-		}
-		clearMovingSprites();
-		nextPieceQueue.clear();
-		heldPiece = nullptr;
-		heldSprite.clear();
-		spawnPiece();
-		linesCleared = 0;
-		setGravity(startingGravity);
-		gravityTimer.restart();
-		superLockCounter = 0;
-	}
+	
+	
+#pragma region Getters/Setters
+	// Set gravity to a specific speed or back to its starting speed
 	void setGravity(float speed) {
 		gravity = speed;
+		gravityTimer.restart();
+	}
+	void setGravity() {
+		gravity = startingGravity;
 		gravityTimer.restart();
 	}
 	// Set game mode with a constant int code defined in TetrisConstants
@@ -302,11 +352,16 @@ public:
 		gameMode = MODE;
 	}
 	int getLinesCleared() {
-		return linesCleared;
+		return totalLinesCleared;
 	}
 	float getGravity() {
 		return gravity;
 	}
+	bool getGameOver() {
+		return gameOver;
+	}
+#pragma endregion
+
 #pragma region Sandbox Functionality
 	void setAutoFall(bool value) {
 		autoFall = value;
@@ -451,7 +506,7 @@ public:
 				return false;
 		return true;
 	}
-
+	
 	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
 	void wait(float seconds) {
 		sf::Clock cooldown;

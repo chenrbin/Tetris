@@ -24,6 +24,7 @@ sf::Text setText(sf::Font& font, sf::Color color, string message, unsigned int t
 		text.setStyle(sf::Text::Underlined);
 	return text;
 }
+// Generate rectangle entity. Can specify dimensions, color, position, origin, outline
 sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = sf::Vector2f(0, 0), sf::Color outlineColor = sf::Color(), int outlineThickness = 0)
 {
 	sf::RectangleShape rect(dimensions);
@@ -98,7 +99,6 @@ vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 	textboxes.push_back(setText(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, sf::Vector2f(gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2), true, false, true));
 	return textboxes;
 }
-
 // Generate text exclusive to sandbox mode
 vector<sf::Text> getSandboxText(sf::Font& font) {
 	vector<sf::Text> textboxes;
@@ -107,6 +107,7 @@ vector<sf::Text> getSandboxText(sf::Font& font) {
 		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
 	return textboxes;
 }
+
 // Get collision bounds for checkboxes
 vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 	vector<sf::FloatRect> bounds;
@@ -116,6 +117,7 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 }
 
 // Following functions are made for reuseability and requires specific parameters passed in.
+
 // Functionality of the Auto-fall box in sandbox mode. 
 void toggleGravity(Checkbox& autoFallBox, Screen& screen) {
 	if (autoFallBox.getChecked()) {
@@ -161,17 +163,22 @@ void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
 }
 
 int main(){
-	
 	// Set SFML objects
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, settings);
 	sf::Font font;
 	if (!font.loadFromFile("font.ttf")) {
+		cout << "Font not found\n";
+		throw exception();
+	}
+	sf::Texture texture;
+	if (!texture.loadFromFile("images/tile_hidden.png"))
+	{
+		cout << "File not found\n";
 		throw exception();
 	}
 
-	// Store these objects in a vector and construct them with a separate method to keep main clean
 	// Title screen sprites
 	vector<sf::Text> menuText = getMenuText(font);
 	int cursorPos = 0;
@@ -179,15 +186,12 @@ int main(){
 	cursor.setPosition(sf::Vector2f(MENUXPOS - 5, MENUYPOS));
 	cursor.rotate(90.f);
 
-	// Game sprites
+	// Game sprites in a vector and constructed in a separate method to keep main clean
 	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(); 
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
 	sf::Text linesClearedText = setText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
-	
-	int currentScreen = MENUSCREEN;
-	bool creativeModeOn = false;
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
@@ -197,25 +201,28 @@ int main(){
 	Checkbox resetBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
 	Checkbox quitBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
 	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
-	
+	bool creativeModeOn = false;
+
+	// Initiate animation classes
 	FadeText speedupText(setText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
 	vector<Animation*> animations = { &speedupText };
 
-	sf::Texture texture;
-	if (!texture.loadFromFile("images/tile_hidden.png"))
-	{
-		cout << "File not found\n";
-		throw exception();
-	}
+	// Initiate DAS keys
+	keyTimer leftKey(170, 50);
+	keyTimer rightKey(170, 50);
+	keyTimer downKey(170, 50);
 
+	// Set up game screen
 	Screen screen(window, gameScreenBounds, texture, animations);
 	window.setFramerateLimit(FPS);
+	window.setKeyRepeatEnabled(false);
+	int currentScreen = MAINMENU;
 
 	// Game loop
 	while (window.isOpen())
 	{
 		// Run on main menu
-		if (currentScreen == MENUSCREEN) {
+		if (currentScreen == MAINMENU) {
 			window.clear(BLUE);
 			drawVector(window, menuText);
 			window.draw(cursor);
@@ -241,14 +248,17 @@ int main(){
 						switch (cursorPos)
 						{
 						case 0: // Classic mode
-							currentScreen = GAMESCREEN;
-							screen.setGameMode(GAMESCREEN);
+							currentScreen = CLASSIC;
+							screen.setGameMode(CLASSIC);
 							gameText[2].setString("Classic Mode");
+							screen.setAutoFall(true);
+							screen.endCreativeMode();
 							break;
 						case 1: // Sandbox mode
-							currentScreen = SANDBOXSCREEN;
+							currentScreen = SANDBOX;
 							gameText[2].setString("Sandbox Mode");
-							screen.setGameMode(SANDBOXSCREEN);
+							screen.setGameMode(SANDBOX);
+							// Reset sandbox settings
 							autoFallBox.setChecked(true);
 							gravityBox.setValue(gravityBox.getMin());
 							creativeModeBox.setChecked(false);
@@ -256,7 +266,7 @@ int main(){
 							screen.endCreativeMode();
 							break;
 						case 2: // PVP mode
-							currentScreen = MULTIPLAYERSCREEN;
+							currentScreen = MULTIPLAYER;
 							// break;
 						case 3: // Settings
 							window.close();
@@ -281,7 +291,7 @@ int main(){
 			}
 		}
 		// Run on classic mode
-		else if (currentScreen == GAMESCREEN) {
+		else if (currentScreen == CLASSIC) {
 			window.clear(BLUE);
 			drawVector(window, gameScreenRectangles);
 			drawVector(window, lines);
@@ -295,6 +305,21 @@ int main(){
 			// In-game timer events
 			screen.doTimeStuff();
 
+			// Check for game over
+			if (screen.getGameOver()) 
+				currentScreen = CLASSICLOSS;
+
+			// Handles movement with auto-repeat (DAS)
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
+				if (leftKey.press())
+					screen.movePiece(0);
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
+				screen.movePiece(2);
+			// The code above prioritizes the left key if both left and right are held.
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
+				screen.movePiece(1);
+
 			// Event handler for game screen
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -305,13 +330,7 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Left)
-						screen.movePiece(0);
-					else if (event.key.code == sf::Keyboard::Down)
-						screen.movePiece(1);
-					else if (event.key.code == sf::Keyboard::Right)
-						screen.movePiece(2);
-					else if (event.key.code == sf::Keyboard::Up)
+					if (event.key.code == sf::Keyboard::Up)
 						screen.movePiece(3);
 					else if (event.key.code == sf::Keyboard::Z)
 						screen.spinPiece(false);
@@ -320,6 +339,14 @@ int main(){
 					else if (event.key.code == sf::Keyboard::LShift)
 						screen.holdPiece();
 					break;
+				}
+				case sf::Event::KeyReleased: {
+					if (event.key.code == sf::Keyboard::Left)
+						leftKey.release();
+					else if (event.key.code == sf::Keyboard::Down)
+						downKey.release();
+					else if (event.key.code == sf::Keyboard::Right)
+						rightKey.release();
 				}
 				case sf::Event::MouseButtonPressed: {
 					break;
@@ -330,7 +357,7 @@ int main(){
 			}
 		}
 		// Run on sandbox mode
-		else if (currentScreen == SANDBOXSCREEN) {
+		else if (currentScreen == SANDBOX) {
 			window.clear(BLUE);
 			for (int i = 0; i < gameScreenRectangles.size() - 1; i++) 
 				window.draw(gameScreenRectangles[i]);
@@ -346,6 +373,17 @@ int main(){
 			// In-game timer events
 			screen.doTimeStuff();
 
+			// Handles movement with auto-repeat (DAS)
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+				if (leftKey.press())
+					screen.movePiece(0);
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
+				screen.movePiece(2);
+			// The code above prioritizes the left key if both left and right are held.
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
+				screen.movePiece(1);
+
 			// Event handler for game screen
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -356,13 +394,7 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Left)
-						screen.movePiece(0);
-					else if (event.key.code == sf::Keyboard::Down)
-						screen.movePiece(1);
-					else if (event.key.code == sf::Keyboard::Right)
-						screen.movePiece(2);
-					else if (event.key.code == sf::Keyboard::Up)
+					if (event.key.code == sf::Keyboard::Up)
 						screen.movePiece(3);
 					else if (event.key.code == sf::Keyboard::Z)
 						screen.spinPiece(false);
@@ -396,8 +428,16 @@ int main(){
 					else if (event.key.code == sf::Keyboard::R)
 						screen.resetBoard();
 					else if (event.key.code == sf::Keyboard::T)
-						currentScreen = MENUSCREEN;
+						currentScreen = MAINMENU;
 					break;
+				}
+				case sf::Event::KeyReleased: {
+					if (event.key.code == sf::Keyboard::Left)
+						leftKey.release();
+					else if (event.key.code == sf::Keyboard::Down)
+						downKey.release();
+					else if (event.key.code == sf::Keyboard::Right)
+						rightKey.release();
 				}
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
@@ -415,12 +455,10 @@ int main(){
 						else if (resetBox.getBounds().contains(clickPos)) 
 							screen.resetBoard();
 						else if (quitBox.getBounds().contains(clickPos)) // Return to menu
-							currentScreen = MENUSCREEN;
+							currentScreen = MAINMENU;
 					}
-					else if (event.mouseButton.button == sf::Mouse::Right) {
-						if (gameScreenBounds[0].contains(clickPos)) { // Creative mode right click
-							screen.clickRow(clickPos);
-						}
+					else if (event.mouseButton.button == sf::Mouse::Right && gameScreenBounds[0].contains(clickPos)) {
+						screen.clickRow(clickPos); // Creative mode right click
 					}
 					break;
 				}
@@ -431,6 +469,26 @@ int main(){
 					resetBox.setHovering(resetBox.getBounds().contains(mousePos));
 					quitBox.setHovering(quitBox.getBounds().contains(mousePos));
 				}
+				default:
+					break;
+				}
+			}
+		}
+		else if (currentScreen == CLASSICLOSS) {
+			window.clear(BLACK);
+			sf::Event event;
+			while (window.pollEvent(event)) {
+				switch (event.type)
+				{
+				case sf::Event::Closed: 
+					window.close();
+					break; 
+				case sf::Event::KeyPressed: 
+					currentScreen = MAINMENU;
+					break;
+				case sf::Event::MouseButtonPressed: 
+					currentScreen = MAINMENU;
+					break;
 				default:
 					break;
 				}
