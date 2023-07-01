@@ -51,7 +51,7 @@ struct Tetromino {
 	sf::Color getColor() {
 		return color;
 	}
-	// Set absulte positions (row, col) for the piece
+	// Set absolute positions (row, col) for the piece
 	void setPositions(vector<sf::Vector2i>& newPositions) {
 		for (int i = 0; i < 4; i++)
 			*positions[i] = newPositions[i];
@@ -336,7 +336,7 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
-		color = VIOLET;
+		color = TPIECECOLOR;
 	}
 	TPiece* getNewPiece() {
 		return new TPiece;

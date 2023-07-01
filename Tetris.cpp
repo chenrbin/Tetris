@@ -107,6 +107,14 @@ vector<sf::Text> getSandboxText(sf::Font& font) {
 		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
 	return textboxes;
 }
+// Generate text for classic mode loss screen
+vector<sf::Text> getLossText(sf::Font& font) {
+	vector<sf::Text> textboxes;
+	textboxes.push_back(setText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true));
+	textboxes.push_back(setText(font, WHITE, "Press any key to return to Main Menu", GAMETEXTSIZE, sf::Vector2f(WIDTH / 2, HEIGHT / 2), true, false, true));
+
+	return textboxes;
+}
 
 // Get collision bounds for checkboxes
 vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
@@ -202,6 +210,8 @@ int main(){
 	Checkbox quitBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
 	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
 	bool creativeModeOn = false;
+
+	vector<sf::Text> lossText = getLossText(font);
 
 	// Initiate animation classes
 	FadeText speedupText(setText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
@@ -476,6 +486,7 @@ int main(){
 		}
 		else if (currentScreen == CLASSICLOSS) {
 			window.clear(BLACK);
+			drawVector(window, lossText);
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)

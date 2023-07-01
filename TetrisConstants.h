@@ -3,9 +3,9 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: second player, lose screen, instructions, review comments, back to back & t spin detection
-	// Bug : Resetting in sandbox mode does not reset gravity box
-	
+	// Todo: second player, instructions, review comments, clear text animation
+	// Known bugs:
+
 	// Set constant variables
 
 	// Item sizes and spacings
@@ -51,6 +51,8 @@ namespace TetrisVariables {
 	const sf::Color SEETHROUGH(255, 255, 255, 100);
 	const sf::Color HOVERCHECKBOX(255, 255, 255, 150);
 	const int PREVIEWTRANSPARENCY = 120;
+
+	const sf::Color TPIECECOLOR = VIOLET; // Defining T piece color for detecting T-spins
 	
 	// Print stuff for debug
 	template <typename T>

@@ -28,11 +28,14 @@ class Screen {
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
 	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
+	bool lastMoveSpin; // For checking T-spins
 	sf::Clock gravityTimer, lockTimer;
 	int superLockCounter;
 	int comboCounter;
 	map<int, float> gravityTiers;
 	vector<Animation*> animations;
+	// Stores back-to-back clear flag
+	bool backToBack;
 
 public:
 	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<Animation*>& animations) {
@@ -44,15 +47,16 @@ public:
 		this->animations = animations;	
 
 		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
+		backToBack = false;
 		heldPiece = nullptr;
 		hasHeld = false, lockTimerStarted = false, touchedGround = false;
 		creativeMode = false, autoFall = true, gameOver = false;
 		gameMode = MAINMENU;
-		startingGravity = DEFAULTGRAVITY; // REVIEW
+		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
-			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper holding and that the tetrominos vector element order does not matter.
+			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper hold functionality and that the tetrominos vector element order does not matter.
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));
 		}
 		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
@@ -129,7 +133,7 @@ public:
 			for (int i = 0; i < nextPieceSprites.size(); i++) {
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
 					queueBounds.left + TILESIZE * SCALE,
-					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2, SCALE);
+					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2.0, SCALE);
 			}
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
@@ -180,18 +184,21 @@ public:
 			if (checkLeft()) {
 				currentPiece->moveLeft();
 				lockTimer.restart();
+				lastMoveSpin = false;
 			}
 			break;
 		case(1):
 			if (checkBelow()) {
 				currentPiece->moveDown();
 				lockTimer.restart();
+				lastMoveSpin = false;
 			}
 			break;
 		case(2):
 			if (checkRight()) {
 				currentPiece->moveRight();
 				lockTimer.restart();
+				lastMoveSpin = false;
 			}
 			break;
 		case(3):
@@ -229,6 +236,7 @@ public:
 				currentPiece->setPositions(positions);
 				lockTimer.restart(); // Restart lock timer. Can go on infinitely without second timer
 				spinSuccessful = true;
+				lastMoveSpin = true;
 				break;
 			}
 		}
@@ -254,7 +262,7 @@ public:
 				heldPiece->setPieceCode(currentPiece->getPieceCode());
 				spawnPiece(temp);
 			}
-		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2 * SCALE, SCALE);
+		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0 * SCALE, SCALE);
 		hasHeld = true;
 	}
 	// Sets the current piece and spawns a new piece
@@ -273,6 +281,8 @@ public:
 	void clearLines() {
 		int linesCleared = 0; // Counts amount of lines cleared by this piece for scoring
 		bool hasCleared = false;
+		bool isTspin = checkTspin(); // Check for t-spin before lines are cleared
+		
 		for (int i = 0; i < REALNUMROWS; i++) {
 			if (checkLine(board[i])) {
 				// Move all rows above cleared row down
@@ -298,24 +308,57 @@ public:
 			switch (linesCleared)
 			{
 			case 1:
-				cout << "Single\n";
+				if (isTspin) {
+					if (backToBack)
+						cout << "Back-to-back\n";
+					cout << "T-spin single\n";
+					backToBack = true;
+				}
+				else {
+					cout << "Single\n";
+					backToBack = false;
+				}
 				break;
 			case 2:
-				cout << "Double\n";
+				if (isTspin) {
+					if (backToBack)
+						cout << "Back-to-back\n";
+					cout << "T-spin double\n";
+					backToBack = true;
+				}
+				else {
+					cout << "Double\n";
+					backToBack = false;
+				}
 				break; 
 			case 3:
-				cout << "Triple\n";
+				if (isTspin) {
+					if (backToBack)
+						cout << "Back-to-back\n";
+					cout << "T-spin triple\n";
+					backToBack = true;
+				}
+				else {
+					cout << "Triple\n";
+					backToBack = false;
+				}
 				break;
 			case 4:
+				if (backToBack)
+					cout << "Back-to-back\n";
 				cout << "Tetris\n";
+				backToBack = true;
 				break;
 			default:
 				break;
 			}
-			// Records back to back line clears 
+			// Records combo line clears 
 			comboCounter++;
 			if (comboCounter > 1)
 				cout << comboCounter << "X combo\n";
+			// Check for All Clear
+			if (checkAllClear())
+				cout << "All Clear\n";
 		}
 		else {
 			comboCounter = 0;
@@ -323,6 +366,7 @@ public:
 		if (gameMode == CLASSIC)
 			checkSpeedUp();
 	}
+	
 	// Check to increase gravity after a number of lines has been cleared. Only in classic mode.
 	void checkSpeedUp() {
 		auto iter = gravityTiers.begin();
@@ -335,7 +379,6 @@ public:
 			animations[0]->restart();
 		}
 	}
-	
 	
 #pragma region Getters/Setters
 	// Set gravity to a specific speed or back to its starting speed
@@ -499,6 +542,13 @@ public:
 				return false;
 		return true;
 	}
+	// True if the piece can move up
+	bool checkUp() {
+		for (sf::Vector2i& pos : currentPositions)
+			if (pos.x <= 0 || board[pos.x - 1][pos.y].getHasBlock())
+				return false;
+		return true;
+	}
 	// Return true if a row is filled.
 	bool checkLine(vector<Tile>& row) {
 		for (Tile& tile : row)
@@ -506,7 +556,33 @@ public:
 				return false;
 		return true;
 	}
+	// Return true if the board is cleared. Only checks if bottom row is empty.
+	bool checkAllClear() {
+		for (Tile tile : board[REALNUMROWS - 1])
+			if (tile.getHasBlock())
+				return false;
+		return true;
+	}
 	
+	// Return true if a t-spin has been achieved. 
+	bool checkTspin(){
+		if (currentPiece->getColor() != TPIECECOLOR || !lastMoveSpin) // Skip the corner checks if first two conditions fail
+			return false;
+		int cornerBlockCount = 0;
+		int row = currentPositions[3].x, col = currentPositions[3].y; // Center square position
+		
+		// Check if corners from the center position are occupied
+		if (col >= NUMCOLS - 1 || row >= REALNUMROWS - 1 || board[row + 1][col + 1].getHasBlock())
+			cornerBlockCount++;
+		if (col <= 0 || row <= 0 || board[row - 1][col - 1].getHasBlock())
+			cornerBlockCount++;
+		if (col >= NUMCOLS - 1 || row <= 0 || board[row - 1][col + 1].getHasBlock())
+			cornerBlockCount++;
+		if (col <= 0 || row >= REALNUMROWS - 1 || board[row + 1][col - 1].getHasBlock())
+			cornerBlockCount++;
+
+		return cornerBlockCount >= 3;
+	}
 	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
 	void wait(float seconds) {
 		sf::Clock cooldown;
