@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: second player, instructions, review comments, clear text animation
+	// Todo: second player, instructions, review comments, scoring, organize clear text variables
 	// Known bugs:
 
 	// Set constant variables
@@ -23,7 +23,7 @@ namespace TetrisVariables {
 	const float SUPERLOCKSECONDS = 3;
 	const int SUPERLOCKFRAMECOUNT = FPS * SUPERLOCKSECONDS; // Second lock delay to prevent infinites
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
-	const int NEXTPIECECOUNT = 5; // Number of next pieces visible. Max is 6. Will crash if above 7.
+	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Max is 6. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
 	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
 	const int GRAVITYTIERCOUNT = 7;
@@ -33,7 +33,7 @@ namespace TetrisVariables {
 	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
 	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
-	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH, GAMEYPOS + GAMEHEIGHT / 1.8);
+	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
 
 	// Game screen state codes
 	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, CLASSICLOSS = 5;

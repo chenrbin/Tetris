@@ -128,14 +128,18 @@ public:
 	}
 };
 
-class Animation { // Animations are meant to be each created once and restarted when played
+// Animations are meant to be each created once and restarted when played
+class Animation { 
 protected:
 	sf::Clock startTime;
 	float duration;
 public:
+	// Draws the animation to the window
 	virtual void display(sf::RenderWindow& window) = 0;
 	virtual ~Animation() {};
+	// Turns on animation
 	virtual void restart() = 0;
+	virtual void setString(string str) = 0;
 };
 
 class FadeText : public Animation {
@@ -152,6 +156,7 @@ public:
 		textColor.a = 0; // This disables the animation when constructed
 		this->text.setFillColor(textColor);
 	}
+	// Draws the animation to the window
 	void display(sf::RenderWindow& window) {
 		float elapsedTime = startTime.getElapsedTime().asSeconds();
 		if (elapsedTime > duration + fadeDuration)
@@ -162,10 +167,15 @@ public:
 		}
 		window.draw(text);
 	}
-	void restart() { // Turns on animation
+	// Turns on animation
+	void restart() { 
 		startTime.restart();
 		textColor.a = 255;
 		text.setFillColor(textColor);
+	}
+	// Change the text to display
+	void setString(string str) {
+		text.setString(str);
 	}
 };
 

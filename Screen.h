@@ -33,7 +33,7 @@ class Screen {
 	int superLockCounter;
 	int comboCounter;
 	map<int, float> gravityTiers;
-	vector<Animation*> animations;
+	vector<Animation*> animations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	// Stores back-to-back clear flag
 	bool backToBack;
 
@@ -44,7 +44,7 @@ public:
 		this->holdBounds = gameScreenBounds[1];
 		this->queueBounds = gameScreenBounds[2];
 		this->blockTexture = blockTexture;
-		this->animations = animations;	
+		this->animations = animations;	// Pass animations to screen class to play when prompted
 
 		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
 		backToBack = false;
@@ -309,44 +309,47 @@ public:
 			{
 			case 1:
 				if (isTspin) {
-					if (backToBack)
-						cout << "Back-to-back\n";
-					cout << "T-spin single\n";
+					if (backToBack) {
+						playBackToBackText();
+					}
+					playClearText("T-spin Single");
 					backToBack = true;
 				}
 				else {
-					cout << "Single\n";
 					backToBack = false;
 				}
 				break;
 			case 2:
 				if (isTspin) {
-					if (backToBack)
-						cout << "Back-to-back\n";
-					cout << "T-spin double\n";
+					if (backToBack) {
+						playBackToBackText();
+					}
+					playClearText("T-spin Double");
 					backToBack = true;
 				}
 				else {
-					cout << "Double\n";
+					playClearText("Double");
 					backToBack = false;
 				}
 				break; 
 			case 3:
 				if (isTspin) {
-					if (backToBack)
-						cout << "Back-to-back\n";
-					cout << "T-spin triple\n";
+					if (backToBack) {
+						playBackToBackText();
+					}
+					playClearText("T-spin Triple");
 					backToBack = true;
 				}
 				else {
-					cout << "Triple\n";
+					playClearText("Triple");
 					backToBack = false;
 				}
 				break;
 			case 4:
-				if (backToBack)
-					cout << "Back-to-back\n";
-				cout << "Tetris\n";
+				if (backToBack) {
+					playBackToBackText();
+				}
+				playClearText("Tetris");
 				backToBack = true;
 				break;
 			default:
@@ -354,11 +357,14 @@ public:
 			}
 			// Records combo line clears 
 			comboCounter++;
-			if (comboCounter > 1)
-				cout << comboCounter << "X combo\n";
-			// Check for All Clear
-			if (checkAllClear())
-				cout << "All Clear\n";
+			// Process combos
+			if (comboCounter > 1) {
+				playComboText();
+			}
+			// Process All Clear
+			if (checkAllClear()) {
+				playAllClearText();
+			}
 		}
 		else {
 			comboCounter = 0;
@@ -518,6 +524,23 @@ public:
 				board[i][j].setPreviewBlock(false);
 			}
 		}
+	}
+	// Play fadeText animations
+	void playClearText(string str) {
+		animations[1]->setString(str);
+		animations[1]->restart();
+	}
+	void playBackToBackText() {
+		animations[2]->restart();
+	}
+	void playComboText() {
+		if (comboCounter > 1) {
+			animations[3]->setString(to_string(comboCounter) + "X Combo");
+			animations[3]->restart();
+		}
+	}
+	void playAllClearText() {
+		animations[4]->restart();
 	}
 #pragma endregion
 

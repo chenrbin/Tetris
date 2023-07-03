@@ -215,7 +215,11 @@ int main(){
 
 	// Initiate animation classes
 	FadeText speedupText(setText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
-	vector<Animation*> animations = { &speedupText };
+	FadeText clearText(setText(font, WHITE, "T-spin Triple", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y)), 0, 2.5);
+	FadeText b2bText(setText(font, WHITE, "Back-to-Back", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING)), 0, 2.5);
+	FadeText comboText(setText(font, WHITE, "2X Combo", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 2)), 0, 2.5);
+	FadeText allClearText(setText(font, WHITE, "All Clear", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 3)), 0, 2.5);
+	vector<Animation*> animations = { &speedupText, &clearText, &b2bText, &comboText, &allClearText };
 
 	// Initiate DAS keys
 	keyTimer leftKey(170, 50);
@@ -310,7 +314,8 @@ int main(){
 			drawVector(window, gameText);
 			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
 			window.draw(linesClearedText);
-			speedupText.display(window);
+			for (Animation* animation : animations)
+				animation->display(window);
 
 			// In-game timer events
 			screen.doTimeStuff();
