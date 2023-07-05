@@ -8,7 +8,7 @@ using namespace std;
 using namespace TetrisVariables;
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
-sf::Text setText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
+sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
 	sf::Text text;
 	text.setFont(font);
 	text.setFillColor(color);
@@ -83,20 +83,20 @@ vector<sf::RectangleShape> getLines(sf::FloatRect& bounds) {
 // Generate all text on menu screen
 vector<sf::Text> getMenuText(sf::Font& font) {
 	vector<sf::Text> textboxes;
-	textboxes.push_back(setText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
 	vector<string> menuItems = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
 	for (int i = 0; i < menuItems.size(); i++)
-		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(MENUXPOS, MENUYPOS + MENUSPACING * i)));
+		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(MENUXPOS, MENUYPOS + MENUSPACING * i)));
 	return textboxes;
 }
-// Generate all text on game screen
+// Generate all static text on game screen
 vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 	// Redefine bounds for cleaner code
 	sf::FloatRect& gameBounds = bounds[0], holdBounds = bounds[1], queueBounds = bounds[2];
 	vector<sf::Text> textboxes;
-	textboxes.push_back(setText(font, WHITE, "Hold", GAMETEXTSIZE, sf::Vector2f(holdBounds.left + holdBounds.width / 2, holdBounds.top - GAMETEXTSIZE), true, false, true));
-	textboxes.push_back(setText(font, WHITE, "Next", GAMETEXTSIZE, sf::Vector2f(queueBounds.left + queueBounds.width / 2, queueBounds.top - GAMETEXTSIZE), true, false, true));
-	textboxes.push_back(setText(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, sf::Vector2f(gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Hold", GAMETEXTSIZE, sf::Vector2f(holdBounds.left + holdBounds.width / 2, holdBounds.top - GAMETEXTSIZE), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Next", GAMETEXTSIZE, sf::Vector2f(queueBounds.left + queueBounds.width / 2, queueBounds.top - GAMETEXTSIZE), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, sf::Vector2f(gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2), true, false, true));
 	return textboxes;
 }
 // Generate text exclusive to sandbox mode
@@ -104,14 +104,14 @@ vector<sf::Text> getSandboxText(sf::Font& font) {
 	vector<sf::Text> textboxes;
 	vector<string> menuItems = { "Auto-fall", "Fall speed", "Creative", "Reset", "Quit" };
 	for (int i = 0; i < menuItems.size(); i++)
-		textboxes.push_back(setText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
+		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
 	return textboxes;
 }
 // Generate text for classic mode loss screen
 vector<sf::Text> getLossText(sf::Font& font) {
 	vector<sf::Text> textboxes;
-	textboxes.push_back(setText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true));
-	textboxes.push_back(setText(font, WHITE, "Press any key to return to Main Menu", GAMETEXTSIZE, sf::Vector2f(WIDTH / 2, HEIGHT / 2), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Press any key to return to Main Menu", GAMETEXTSIZE, sf::Vector2f(WIDTH / 2, HEIGHT / 2), true, false, true));
 
 	return textboxes;
 }
@@ -126,7 +126,7 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 
 // Following functions are made for reuseability and requires specific parameters passed in.
 
-// Functionality of the Auto-fall box in sandbox mode. 
+// Functionality of the toggles in sandbox mode. 
 void toggleGravity(Checkbox& autoFallBox, Screen& screen) {
 	if (autoFallBox.getChecked()) {
 		autoFallBox.setChecked(false);
@@ -160,6 +160,18 @@ void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& sc
 	}
 }
 
+// Get player two assets, which are a copy of single player assets but one width to the right
+vector<sf::RectangleShape> getPlayer2Rects(vector<sf::RectangleShape> rects) {
+	for (sf::RectangleShape& rect : rects)
+		rect.move(WIDTH, 0);
+	return rects;
+}
+
+vector<sf::Text> getPlayer2Text(vector<sf::Text> vec) {
+	for (sf::Text& text : vec)
+		text.move(WIDTH, 0);
+	return vec;
+}
 // Draw all objects in a vector
 void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
 	for (auto item : vec)
@@ -169,12 +181,19 @@ void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
 	for (auto item : vec)
 		window.draw(item);
 }
+void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
+	for (Animation* animation : vec)
+		animation->draw(window);
+}
 
 int main(){
+	srand(time(NULL));
 	// Set SFML objects
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, settings);
+	window.setFramerateLimit(FPS);
+	window.setKeyRepeatEnabled(false);
 	sf::Font font;
 	if (!font.loadFromFile("font.ttf")) {
 		cout << "Font not found\n";
@@ -199,7 +218,7 @@ int main(){
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
-	sf::Text linesClearedText = setText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
+	sf::Text linesClearedText = generateText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
@@ -211,14 +230,15 @@ int main(){
 	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
 	bool creativeModeOn = false;
 
+	// Text for loss screen
 	vector<sf::Text> lossText = getLossText(font);
 
 	// Initiate animation classes
-	FadeText speedupText(setText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
-	FadeText clearText(setText(font, WHITE, "T-spin Triple", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y)), 0, 2.5);
-	FadeText b2bText(setText(font, WHITE, "Back-to-Back", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING)), 0, 2.5);
-	FadeText comboText(setText(font, WHITE, "2X Combo", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 2)), 0, 2.5);
-	FadeText allClearText(setText(font, WHITE, "All Clear", GAMETEXTSIZE * 1.5, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 3)), 0, 2.5);
+	FadeText speedupText(generateText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
+	FadeText clearText(generateText(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y)), 0, 2.5);
+	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING)), 0, 2.5);
+	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 2)), 0, 2.5);
+	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 3)), 0, 2.5);
 	vector<Animation*> animations = { &speedupText, &clearText, &b2bText, &comboText, &allClearText };
 
 	// Initiate DAS keys
@@ -226,10 +246,18 @@ int main(){
 	keyTimer rightKey(170, 50);
 	keyTimer downKey(170, 50);
 
+	// Get player two assets
+	vector<sf::RectangleShape> gameScreenRectanglesP2 = getPlayer2Rects(gameScreenRectangles);
+	vector<sf::FloatRect> gameScreenBoundsP2 = getGameBounds(gameScreenRectanglesP2);
+	vector<sf::RectangleShape> linesP2 = getPlayer2Rects(lines);
+	vector<sf::Text> gameTextP2 = getPlayer2Text(gameText);
+	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
+	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
+
 	// Set up game screen
 	Screen screen(window, gameScreenBounds, texture, animations);
-	window.setFramerateLimit(FPS);
-	window.setKeyRepeatEnabled(false);
+	
+	Screen screenP2(window, gameScreenBoundsP2, texture, animations);
 	int currentScreen = MAINMENU;
 
 	// Game loop
@@ -280,8 +308,20 @@ int main(){
 							screen.endCreativeMode();
 							break;
 						case 2: // PVP mode
+							// currentScreen = MULTIPLAYER;
+							window.setSize(sf::Vector2u(WIDTH * 2, HEIGHT));
+							window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
+							window.setPosition(sf::Vector2i(100, 100));
 							currentScreen = MULTIPLAYER;
-							// break;
+							screen.setGameMode(MULTIPLAYER);
+							gameText[2].setString("");
+							screen.setAutoFall(true);
+							screen.endCreativeMode();
+							screen.resetBoard();
+
+							screenP2.setGameMode(MULTIPLAYER);
+							screenP2.resetBoard();
+							break;
 						case 3: // Settings
 							window.close();
 							return 0;
@@ -314,8 +354,7 @@ int main(){
 			drawVector(window, gameText);
 			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
 			window.draw(linesClearedText);
-			for (Animation* animation : animations)
-				animation->display(window);
+			drawVector(window, animations);
 
 			// In-game timer events
 			screen.doTimeStuff();
@@ -489,6 +528,78 @@ int main(){
 				}
 			}
 		}
+		// Run on PVP mode
+		else if (currentScreen == MULTIPLAYER) {
+			window.clear(BLUE);
+			drawVector(window, gameScreenRectangles);
+			drawVector(window, lines);
+			screen.drawScreen();
+			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
+			drawVector(window, gameText);
+			drawVector(window, animations);
+
+			drawVector(window, gameScreenRectanglesP2);
+			drawVector(window, linesP2);
+			screenP2.drawScreen();
+			window.draw(gameScreenRectanglesP2.back());
+			drawVector(window, gameTextP2);
+
+			// In-game timer events
+			screen.doTimeStuff();
+			screenP2.doTimeStuff();
+
+			// Check for game over
+			if (screen.getGameOver())
+				currentScreen = CLASSICLOSS;
+
+			// Handles movement with auto-repeat (DAS)
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
+				if (leftKey.press())
+					screen.movePiece(0);
+			}
+			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
+				screen.movePiece(2);
+			// The code above prioritizes the left key if both left and right are held.
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
+		
+				 screen.movePiece(1);
+
+			// Event handler for game screen
+			sf::Event event;
+			while (window.pollEvent(event)) {
+				switch (event.type)
+				{
+				case sf::Event::Closed:
+					window.close();
+					break;
+				case sf::Event::KeyPressed:
+				{
+					if (event.key.code == sf::Keyboard::Up)
+						screen.movePiece(3);
+					else if (event.key.code == sf::Keyboard::Z)
+						screen.spinPiece(false);
+					else if (event.key.code == sf::Keyboard::X)
+						screen.spinPiece(true);
+					else if (event.key.code == sf::Keyboard::LShift)
+						screen.holdPiece();
+					break;
+				}
+				case sf::Event::KeyReleased: {
+					if (event.key.code == sf::Keyboard::Left)
+						leftKey.release();
+					else if (event.key.code == sf::Keyboard::Down)
+						downKey.release();
+					else if (event.key.code == sf::Keyboard::Right)
+						rightKey.release();
+				}
+				case sf::Event::MouseButtonPressed: {
+					break;
+				}
+				default:
+					break;
+				}
+			}
+		}
 		else if (currentScreen == CLASSICLOSS) {
 			window.clear(BLACK);
 			drawVector(window, lossText);
@@ -501,9 +612,13 @@ int main(){
 					break; 
 				case sf::Event::KeyPressed: 
 					currentScreen = MAINMENU;
+					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					break;
 				case sf::Event::MouseButtonPressed: 
 					currentScreen = MAINMENU;
+					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					break;
 				default:
 					break;

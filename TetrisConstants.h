@@ -3,13 +3,13 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: second player, instructions, review comments, scoring, organize clear text variables
+	// Todo: instructions, review comments, scoring, pause screen, pvp rng
 	// Known bugs:
 
 	// Set constant variables
 
 	// Item sizes and spacings
-	const int TILESIZE = 32, LEFTMARGIN = 150, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24;
+	const int TILESIZE = 32, LEFTMARGIN = 150, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
 	const float SCALE = 0.8;
 

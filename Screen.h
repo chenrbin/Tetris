@@ -34,8 +34,7 @@ class Screen {
 	int comboCounter;
 	map<int, float> gravityTiers;
 	vector<Animation*> animations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
-	// Stores back-to-back clear flag
-	bool backToBack;
+	bool backToBack; // Stores back-to-back clear flag
 
 public:
 	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<Animation*>& animations) {
@@ -61,10 +60,8 @@ public:
 		}
 		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
-		for (int i = 0; i < GRAVITYTIERCOUNT; i++)
+		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
-
-		srand(time(NULL));
 
 		// Generate board
 		for (int i = 0; i < REALNUMROWS; i++) {
@@ -107,7 +104,7 @@ public:
 			touchedGround = false;
 		}
 		// Handles super lock timer. Resets only when a new piece is dropped. 
-		// Uses a frame counter instead of a timer.
+		// Uses a frame counter instead of a timer. Increments every frame where !checkBelow
 		if (!checkBelow()) {
 			superLockCounter++;
 			if (superLockCounter > SUPERLOCKFRAMECOUNT)
@@ -118,7 +115,7 @@ public:
 	
 	// Spawn controllable tetromino. Can be pseudorandom or specified
 	void spawnPiece(int pieceCode = -1) {
-		if (currentPositions.size() != 0) {
+		if (currentPositions.size() != 0) { // Delete current piece if it exists
 			delete currentPiece;
 		}
 		if (pieceCode == -1) { // Generate random piece
@@ -130,7 +127,7 @@ public:
 			}
 			pieceCode = nextPieceQueue[0];
 			nextPieceQueue.erase(nextPieceQueue.begin());
-			for (int i = 0; i < nextPieceSprites.size(); i++) {
+			for (int i = 0; i < nextPieceSprites.size(); i++) { // Display queue
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
 					queueBounds.left + TILESIZE * SCALE,
 					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2.0, SCALE);
@@ -138,13 +135,23 @@ public:
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
 		updateBlocks();
+		// Gave over is spawn position is occupied
 		for (sf::Vector2i& pos : currentPiece->getPositions()) {
-			// Gave over is spawn position is occupied
 			if (board[pos.x][pos.y].getHasBlock()) { 
-				if (gameMode == SANDBOX)
-					resetBoard();
-				else if (gameMode == CLASSIC)
+				switch (gameMode) // Handle loss based on game mode
+				{
+				case CLASSIC:
 					gameOver = true;
+					break;
+				case SANDBOX:
+					resetBoard();
+					break;
+				case MULTIPLAYER:
+					gameOver = true;
+					break;
+				default:
+					break;
+				}
 				return;
 			}
 		}
@@ -156,6 +163,7 @@ public:
 	// Clear board and restart game. Reset gravity and piece queue
 	void resetBoard() {
 		board.clear();
+		// Generate new board
 		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
 			for (int j = 0; j < NUMCOLS; j++) {
@@ -176,7 +184,7 @@ public:
 		spawnPiece();
 	}
 	
-	// 0 to move left, 1 to move down, 2 to move right
+	// 0 to move left, 1 to move down, 2 to move right, 3 to instant drop
 	void movePiece(int direction) {
 		switch (direction)
 		{
@@ -224,6 +232,7 @@ public:
 		else
 			kickTestPositions = currentPiece->spinCCW();
 		bool spinSuccessful = false;
+		// Find the first valid kick position
 		for (vector<sf::Vector2i>& positions : kickTestPositions) {
 			bool validPosition = true;
 			for (sf::Vector2i& pos : positions) {
@@ -234,7 +243,7 @@ public:
 			}
 			if (validPosition) {
 				currentPiece->setPositions(positions);
-				lockTimer.restart(); // Restart lock timer. Can go on infinitely without second timer
+				lockTimer.restart();
 				spinSuccessful = true;
 				lastMoveSpin = true;
 				break;
@@ -250,18 +259,19 @@ public:
 	}
 	// Can hold piece once every time a piece is set
 	void holdPiece() {
-		if (!hasHeld)
-			if (heldPiece == nullptr) { // If holding for the first time
-				heldPiece = currentPiece->getNewPiece();
-				heldPiece->setPieceCode(currentPiece->getPieceCode());
-				spawnPiece();
-			}
-			else {
-				int temp = heldPiece->getPieceCode();
-				heldPiece = currentPiece->getNewPiece();
-				heldPiece->setPieceCode(currentPiece->getPieceCode());
-				spawnPiece(temp);
-			}
+		if (hasHeld) // hasHeld is true after a successful hold, and false after a piece sets
+			return;
+		if (heldPiece == nullptr) { // If holding for the first time
+			heldPiece = currentPiece->getNewPiece();
+			heldPiece->setPieceCode(currentPiece->getPieceCode());
+			spawnPiece();
+		}
+		else {
+			int temp = heldPiece->getPieceCode();
+			heldPiece = currentPiece->getNewPiece();
+			heldPiece->setPieceCode(currentPiece->getPieceCode());
+			spawnPiece(temp);
+		}
 		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0 * SCALE, SCALE);
 		hasHeld = true;
 	}
@@ -305,7 +315,7 @@ public:
 		if (hasCleared) { // Execute when lines have been cleared
 			clearMovingSprites(); // Cleaning up sprite flags
 			
-			switch (linesCleared)
+			switch (linesCleared) // Process scoring
 			{
 			case 1:
 				if (isTspin) {
@@ -313,7 +323,7 @@ public:
 						playBackToBackText();
 					}
 					playClearText("T-spin Single");
-					backToBack = true;
+					backToBack = true; // backToBack = isTspin
 				}
 				else {
 					backToBack = false;
@@ -438,7 +448,7 @@ public:
 			updateBlocks();
 		}
 	}
-	// Works like click box. Fills in all columns in a row other than the clicked column. 
+	// Works like clickBlock. Fills in all columns in a row other than the clicked column. 
 	void clickRow(sf::Vector2f& clickPos) {
 		if (!creativeMode) // Function only works if creative mode is toggled on
 			return;
@@ -455,6 +465,7 @@ public:
 #pragma endregion
 
 #pragma region Graphics
+	// Draw all tiles, held piece, and queue pieces
 	void drawScreen() {
 		for (int i = 1; i < REALNUMROWS; i++) {
 			for (int j = 0; j < NUMCOLS; j++) {
@@ -475,6 +486,7 @@ public:
 		updatePreview();
 		setMovingBlocks(currentPositions, true, currentPiece->color);
 	}
+	// Update ghost piece visuals
 	void updatePreview() {
 		if (previewPositions.size() != 0)
 			setPreviewBlocks(previewPositions, false); // Clear preview
@@ -534,10 +546,8 @@ public:
 		animations[2]->restart();
 	}
 	void playComboText() {
-		if (comboCounter > 1) {
-			animations[3]->setString(to_string(comboCounter) + "X Combo");
-			animations[3]->restart();
-		}
+		animations[3]->setString(to_string(comboCounter) + "X Combo");
+		animations[3]->restart();
 	}
 	void playAllClearText() {
 		animations[4]->restart();
