@@ -166,12 +166,12 @@ vector<sf::RectangleShape> getPlayer2Rects(vector<sf::RectangleShape> rects) {
 		rect.move(WIDTH, 0);
 	return rects;
 }
-
 vector<sf::Text> getPlayer2Text(vector<sf::Text> vec) {
 	for (sf::Text& text : vec)
 		text.move(WIDTH, 0);
 	return vec;
 }
+
 // Draw all objects in a vector
 void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
 	for (auto item : vec)
@@ -180,6 +180,10 @@ void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
 void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
 	for (auto item : vec)
 		window.draw(item);
+}
+void drawVector(sf::RenderWindow& window, vector<FadeText>& vec) {
+	for (FadeText& animation : vec)
+		animation.draw(window);
 }
 void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 	for (Animation* animation : vec)
@@ -239,12 +243,7 @@ int main(){
 	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING)), 0, 2.5);
 	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 2)), 0, 2.5);
 	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 3)), 0, 2.5);
-	vector<Animation*> animations = { &speedupText, &clearText, &b2bText, &comboText, &allClearText };
-
-	// Initiate DAS keys
-	keyTimer leftKey(170, 50);
-	keyTimer rightKey(170, 50);
-	keyTimer downKey(170, 50);
+	vector<FadeText> clearAnimations = { speedupText, clearText, b2bText, comboText, allClearText };
 
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getPlayer2Rects(gameScreenRectangles);
@@ -254,10 +253,20 @@ int main(){
 	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
 
+	// Initialize controls 
+	KeySet playerSoloKeys(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
+	KeySet player1Keys(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
+	KeySet player2Keys(LEFT2, RIGHT2, UP2, DOWN2, SPINCW2, SPINCCW2, HOLD2);
+
+	// Initiate DAS keys
+	KeyDAS playerSoloDAS(170, 50, &playerSoloKeys);
+	KeyDAS player1DAS(170, 50, &player1Keys);
+	KeyDAS player2DAS(170, 50, &player2Keys);
+
 	// Set up game screen
-	Screen screen(window, gameScreenBounds, texture, animations);
+	Screen screen(window, gameScreenBounds, texture, &clearAnimations);
 	
-	Screen screenP2(window, gameScreenBoundsP2, texture, animations);
+	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimations);
 	int currentScreen = MAINMENU;
 
 	// Game loop
@@ -308,11 +317,10 @@ int main(){
 							screen.endCreativeMode();
 							break;
 						case 2: // PVP mode
-							// currentScreen = MULTIPLAYER;
+							currentScreen = MULTIPLAYER;
 							window.setSize(sf::Vector2u(WIDTH * 2, HEIGHT));
 							window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
 							window.setPosition(sf::Vector2i(100, 100));
-							currentScreen = MULTIPLAYER;
 							screen.setGameMode(MULTIPLAYER);
 							gameText[2].setString("");
 							screen.setAutoFall(true);
@@ -354,7 +362,7 @@ int main(){
 			drawVector(window, gameText);
 			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
 			window.draw(linesClearedText);
-			drawVector(window, animations);
+			drawVector(window, clearAnimations);
 
 			// In-game timer events
 			screen.doTimeStuff();
@@ -364,15 +372,7 @@ int main(){
 				currentScreen = CLASSICLOSS;
 
 			// Handles movement with auto-repeat (DAS)
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)){
-				if (leftKey.press())
-					screen.movePiece(0);
-			}
-			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
-				screen.movePiece(2);
-			// The code above prioritizes the left key if both left and right are held.
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
-				screen.movePiece(1);
+			playerSoloDAS.checkKeyPress(screen);
 
 			// Event handler for game screen
 			sf::Event event;
@@ -384,23 +384,18 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Up)
+					if (event.key.code == playerSoloKeys.getUp())
 						screen.movePiece(3);
-					else if (event.key.code == sf::Keyboard::Z)
+					else if (event.key.code == playerSoloKeys.getSpinCCW())
 						screen.spinPiece(false);
-					else if (event.key.code == sf::Keyboard::X)
+					else if (event.key.code == playerSoloKeys.getSpinCW())
 						screen.spinPiece(true);
-					else if (event.key.code == sf::Keyboard::LShift)
+					else if (event.key.code == playerSoloKeys.getHold())
 						screen.holdPiece();
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					if (event.key.code == sf::Keyboard::Left)
-						leftKey.release();
-					else if (event.key.code == sf::Keyboard::Down)
-						downKey.release();
-					else if (event.key.code == sf::Keyboard::Right)
-						rightKey.release();
+					playerSoloDAS.releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					break;
@@ -428,15 +423,7 @@ int main(){
 			screen.doTimeStuff();
 
 			// Handles movement with auto-repeat (DAS)
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-				if (leftKey.press())
-					screen.movePiece(0);
-			}
-			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
-				screen.movePiece(2);
-			// The code above prioritizes the left key if both left and right are held.
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
-				screen.movePiece(1);
+			playerSoloDAS.checkKeyPress(screen);
 
 			// Event handler for game screen
 			sf::Event event;
@@ -448,12 +435,14 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Up)
+					if (event.key.code == playerSoloKeys.getUp())
 						screen.movePiece(3);
-					else if (event.key.code == sf::Keyboard::Z)
+					else if (event.key.code == playerSoloKeys.getSpinCCW())
 						screen.spinPiece(false);
-					else if (event.key.code == sf::Keyboard::X)
+					else if (event.key.code == playerSoloKeys.getSpinCW())
 						screen.spinPiece(true);
+					else if (event.key.code == playerSoloKeys.getHold())
+						screen.holdPiece();
 					else if (event.key.code == sf::Keyboard::Num1)
 						screen.spawnPiece(0);
 					else if (event.key.code == sf::Keyboard::Num2)
@@ -468,8 +457,6 @@ int main(){
 						screen.spawnPiece(5);
 					else if (event.key.code == sf::Keyboard::Num7)
 						screen.spawnPiece(6);
-					else if (event.key.code == sf::Keyboard::LShift)
-						screen.holdPiece();
 					// Hot keys for sandbox controls
 					else if (event.key.code == sf::Keyboard::Q)
 						toggleGravity(autoFallBox, screen);
@@ -486,12 +473,7 @@ int main(){
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					if (event.key.code == sf::Keyboard::Left)
-						leftKey.release();
-					else if (event.key.code == sf::Keyboard::Down)
-						downKey.release();
-					else if (event.key.code == sf::Keyboard::Right)
-						rightKey.release();
+					playerSoloDAS.releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
@@ -536,7 +518,7 @@ int main(){
 			screen.drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
-			drawVector(window, animations);
+			drawVector(window, clearAnimations);
 
 			drawVector(window, gameScreenRectanglesP2);
 			drawVector(window, linesP2);
@@ -549,20 +531,16 @@ int main(){
 			screenP2.doTimeStuff();
 
 			// Check for game over
-			if (screen.getGameOver())
+			if (screen.getGameOver() || screenP2.getGameOver()) {
+				window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+				window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 				currentScreen = CLASSICLOSS;
+			}
 
 			// Handles movement with auto-repeat (DAS)
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-				if (leftKey.press())
-					screen.movePiece(0);
-			}
-			else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) && (rightKey.press()))
-				screen.movePiece(2);
-			// The code above prioritizes the left key if both left and right are held.
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) && (downKey.press()))
-		
-				 screen.movePiece(1);
+			player1DAS.checkKeyPress(screen);
+			player2DAS.checkKeyPress(screenP2);
+
 
 			// Event handler for game screen
 			sf::Event event;
@@ -574,23 +552,28 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Up)
+					if (event.key.code == player1Keys.getUp())
 						screen.movePiece(3);
-					else if (event.key.code == sf::Keyboard::Z)
+					else if (event.key.code == player1Keys.getSpinCCW())
 						screen.spinPiece(false);
-					else if (event.key.code == sf::Keyboard::X)
+					else if (event.key.code == player1Keys.getSpinCW())
 						screen.spinPiece(true);
-					else if (event.key.code == sf::Keyboard::LShift)
+					else if (event.key.code == player1Keys.getHold())
 						screen.holdPiece();
+
+					if (event.key.code == player2Keys.getUp())
+						screenP2.movePiece(3);
+					else if (event.key.code == player2Keys.getSpinCCW())
+						screenP2.spinPiece(false);
+					else if (event.key.code == player2Keys.getSpinCW())
+						screenP2.spinPiece(true);
+					else if (event.key.code == player2Keys.getHold())
+						screenP2.holdPiece();
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					if (event.key.code == sf::Keyboard::Left)
-						leftKey.release();
-					else if (event.key.code == sf::Keyboard::Down)
-						downKey.release();
-					else if (event.key.code == sf::Keyboard::Right)
-						rightKey.release();
+					player1DAS.releaseKey(event.key.code);
+					player2DAS.releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					break;
@@ -612,13 +595,9 @@ int main(){
 					break; 
 				case sf::Event::KeyPressed: 
 					currentScreen = MAINMENU;
-					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
-					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					break;
 				case sf::Event::MouseButtonPressed: 
 					currentScreen = MAINMENU;
-					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
-					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					break;
 				default:
 					break;

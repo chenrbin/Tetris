@@ -33,17 +33,17 @@ class Screen {
 	int superLockCounter;
 	int comboCounter;
 	map<int, float> gravityTiers;
-	vector<Animation*> animations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
+	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	bool backToBack; // Stores back-to-back clear flag
 
 public:
-	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<Animation*>& animations) {
+	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations) {
 		this->window = &window;
 		this->gameBounds = gameScreenBounds[0];
 		this->holdBounds = gameScreenBounds[1];
 		this->queueBounds = gameScreenBounds[2];
 		this->blockTexture = blockTexture;
-		this->animations = animations;	// Pass animations to screen class to play when prompted
+		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
 
 		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
 		backToBack = false;
@@ -180,6 +180,7 @@ public:
 		totalLinesCleared = 0;
 		gravityTimer.restart();
 		superLockCounter = 0;
+		hasHeld = false;
 		gameOver = false;
 		spawnPiece();
 	}
@@ -279,7 +280,7 @@ public:
 	void setPiece() {
 		setBlocks(currentPositions, true);
 		updateBlocks();
-		clearLines();
+		doClearLines();
 		hasHeld = false;
 		touchedGround = false;
 		gravityTimer.restart();
@@ -288,7 +289,7 @@ public:
 		spawnPiece();
 	}
 	// Check and clear any filled rows. Records number of lines cleared
-	void clearLines() {
+	void doClearLines() {
 		int linesCleared = 0; // Counts amount of lines cleared by this piece for scoring
 		bool hasCleared = false;
 		bool isTspin = checkTspin(); // Check for t-spin before lines are cleared
@@ -380,11 +381,10 @@ public:
 			comboCounter = 0;
 		}
 		if (gameMode == CLASSIC)
-			checkSpeedUp();
+			doSpeedUp();
 	}
-	
 	// Check to increase gravity after a number of lines has been cleared. Only in classic mode.
-	void checkSpeedUp() {
+	void doSpeedUp() {
 		auto iter = gravityTiers.begin();
 		// Iterate to the next speed tier and the number of lines required to reach it
 		for (; iter != gravityTiers.end() && iter->second >= gravity; iter++);
@@ -392,7 +392,7 @@ public:
 			return;
 		if (totalLinesCleared >= iter->first) {
 			setGravity(iter->second);
-			animations[0]->restart();
+			(*clearAnimations)[0].restart();
 		}
 	}
 	
@@ -539,21 +539,22 @@ public:
 	}
 	// Play fadeText animations
 	void playClearText(string str) {
-		animations[1]->setString(str);
-		animations[1]->restart();
+		(*clearAnimations)[1].setString(str);
+		(*clearAnimations)[1].restart();
 	}
 	void playBackToBackText() {
-		animations[2]->restart();
+		(*clearAnimations)[2].restart();
 	}
 	void playComboText() {
-		animations[3]->setString(to_string(comboCounter) + "X Combo");
-		animations[3]->restart();
+		(*clearAnimations)[3].setString(to_string(comboCounter) + "X Combo");
+		(*clearAnimations)[3].restart();
 	}
 	void playAllClearText() {
-		animations[4]->restart();
+		(*clearAnimations)[4].restart();
 	}
 #pragma endregion
 
+#pragma region Boolean Checks
 	// True if the piece can move left
 	bool checkLeft() {
 		for (sf::Vector2i& pos : currentPositions)
@@ -596,14 +597,13 @@ public:
 				return false;
 		return true;
 	}
-	
 	// Return true if a t-spin has been achieved. 
-	bool checkTspin(){
+	bool checkTspin() {
 		if (currentPiece->getColor() != TPIECECOLOR || !lastMoveSpin) // Skip the corner checks if first two conditions fail
 			return false;
 		int cornerBlockCount = 0;
 		int row = currentPositions[3].x, col = currentPositions[3].y; // Center square position
-		
+
 		// Check if corners from the center position are occupied
 		if (col >= NUMCOLS - 1 || row >= REALNUMROWS - 1 || board[row + 1][col + 1].getHasBlock())
 			cornerBlockCount++;
@@ -616,6 +616,8 @@ public:
 
 		return cornerBlockCount >= 3;
 	}
+#pragma endregion
+
 	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
 	void wait(float seconds) {
 		sf::Clock cooldown;

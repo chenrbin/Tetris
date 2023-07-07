@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: instructions, review comments, scoring, pause screen, pvp rng
+	// Todo: instructions, scoring, pause screen, pvp rng, organize classes into bigger classes, custom keybinds
 	// Known bugs:
 
 	// Set constant variables
@@ -54,6 +54,35 @@ namespace TetrisVariables {
 
 	const sf::Color TPIECECOLOR = VIOLET; // Defining T piece color for detecting T-spins
 	
+	// Default keybinds
+	
+	// Single player
+	sf::Keyboard::Key LEFT = sf::Keyboard::Left;
+	sf::Keyboard::Key RIGHT = sf::Keyboard::Right;
+	sf::Keyboard::Key UP = sf::Keyboard::Up;
+	sf::Keyboard::Key DOWN = sf::Keyboard::Down;
+	sf::Keyboard::Key SPINCW = sf::Keyboard::X;
+	sf::Keyboard::Key SPINCCW = sf::Keyboard::Z;
+	sf::Keyboard::Key HOLD = sf::Keyboard::LShift;
+
+	// PvP player 1
+	sf::Keyboard::Key LEFT1 = sf::Keyboard::A;
+	sf::Keyboard::Key RIGHT1 = sf::Keyboard::D;
+	sf::Keyboard::Key UP1 = sf::Keyboard::W;
+	sf::Keyboard::Key DOWN1 = sf::Keyboard::S;
+	sf::Keyboard::Key SPINCW1 = sf::Keyboard::V;
+	sf::Keyboard::Key SPINCCW1 = sf::Keyboard::C;
+	sf::Keyboard::Key HOLD1 = sf::Keyboard::LShift;
+
+	// Pvp player 2
+	sf::Keyboard::Key LEFT2 = sf::Keyboard::Left;
+	sf::Keyboard::Key RIGHT2 = sf::Keyboard::Right;
+	sf::Keyboard::Key UP2 = sf::Keyboard::Up;
+	sf::Keyboard::Key DOWN2 = sf::Keyboard::Down;
+	sf::Keyboard::Key SPINCW2 = sf::Keyboard::Period;
+	sf::Keyboard::Key SPINCCW2 = sf::Keyboard::Comma;
+	sf::Keyboard::Key HOLD2 = sf::Keyboard::RShift;
+
 	// Print stuff for debug
 	template <typename T>
 	void print(T var) {
