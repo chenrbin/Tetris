@@ -344,9 +344,9 @@ public:
 		positions.push_back(0);
 		return positions.size() - 1;
 	}
-	// Resets the queue.
+	// Resets the queue
 	// NOTE: resetQueue must be called only once and before resetPosition 
-	// during each reset for a proper starting bag
+	// during each reset for a proper starting bag for all players
 	void resetQueue() {
 		pieceQueue.clear();
 		addBatch();
