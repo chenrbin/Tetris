@@ -263,10 +263,11 @@ int main(){
 	KeyDAS player1DAS(170, 50, &player1Keys);
 	KeyDAS player2DAS(170, 50, &player2Keys);
 
+	pieceBag bag;
+
 	// Set up game screen
-	Screen screen(window, gameScreenBounds, texture, &clearAnimations);
-	
-	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimations);
+	Screen screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
+	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimations, &bag);
 	int currentScreen = MAINMENU;
 
 	// Game loop
@@ -304,6 +305,8 @@ int main(){
 							gameText[2].setString("Classic Mode");
 							screen.setAutoFall(true);
 							screen.endCreativeMode();
+							bag.resetQueue();
+							screen.resetBoard();
 							break;
 						case 1: // Sandbox mode
 							currentScreen = SANDBOX;
@@ -315,6 +318,8 @@ int main(){
 							creativeModeBox.setChecked(false);
 							screen.setAutoFall(true);
 							screen.endCreativeMode();
+							bag.resetQueue();
+							screen.resetBoard();
 							break;
 						case 2: // PVP mode
 							currentScreen = MULTIPLAYER;
@@ -325,10 +330,13 @@ int main(){
 							gameText[2].setString("");
 							screen.setAutoFall(true);
 							screen.endCreativeMode();
+							bag.resetQueue();
 							screen.resetBoard();
 
 							screenP2.setGameMode(MULTIPLAYER);
 							screenP2.resetBoard();
+							
+
 							break;
 						case 3: // Settings
 							window.close();
@@ -339,7 +347,6 @@ int main(){
 						default:
 							break;
 						}
-						screen.resetBoard();
 					}
 					break;
 				}
@@ -466,8 +473,10 @@ int main(){
 						incrementGravity(gravityBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::E)
 						toggleCreative(creativeModeBox, autoFallBox, screen);
-					else if (event.key.code == sf::Keyboard::R)
+					else if (event.key.code == sf::Keyboard::R) {
+						bag.resetQueue();
 						screen.resetBoard();
+					}
 					else if (event.key.code == sf::Keyboard::T)
 						currentScreen = MAINMENU;
 					break;
@@ -488,8 +497,10 @@ int main(){
 							toggleCreative(creativeModeBox, autoFallBox, screen);
 						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
 							screen.clickBlock(clickPos); // Will do nothing if creative mode isn't on
-						else if (resetBox.getBounds().contains(clickPos)) 
+						else if (resetBox.getBounds().contains(clickPos)) {
+							bag.resetQueue();
 							screen.resetBoard();
+						}
 						else if (quitBox.getBounds().contains(clickPos)) // Return to menu
 							currentScreen = MAINMENU;
 					}

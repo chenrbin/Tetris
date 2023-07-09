@@ -17,34 +17,36 @@ class Screen {
 	sf::Texture blockTexture;
 	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
-	int totalLinesCleared, gameMode;
+	int totalLinesCleared, gameMode, playerIndex;
 	vector<vector<Tile>> board; // Coordinates are [row][col]
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
 	vector<Tetromino*> tetrominos;
 	vector<sf::Vector2i> currentPositions, previewPositions;
 	vector<vector<sf::Sprite>> pieceSprites, nextPieceSprites;
-	vector<int> nextPieceQueue; // Stores up to the next 14 pieces. The next 5 will be shown.
+	vector<int> nextPieceQueue;
 	vector<sf::Sprite> heldSprite;
 	sf::FloatRect holdBounds, queueBounds;
 	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
 	bool lastMoveSpin; // For checking T-spins
 	sf::Clock gravityTimer, lockTimer;
-	int superLockCounter;
-	int comboCounter;
+	int superLockCounter, comboCounter;
 	map<int, float> gravityTiers;
 	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
+	pieceBag* bag; // Stores the random piece generation
 	bool backToBack; // Stores back-to-back clear flag
 
 public:
-	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations) {
+	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag) {
 		this->window = &window;
 		this->gameBounds = gameScreenBounds[0];
 		this->holdBounds = gameScreenBounds[1];
 		this->queueBounds = gameScreenBounds[2];
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
+		this->bag = bag;
 
+		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
 		backToBack = false;
 		heldPiece = nullptr;
@@ -119,14 +121,8 @@ public:
 			delete currentPiece;
 		}
 		if (pieceCode == -1) { // Generate random piece
-			if (nextPieceQueue.size() < 7) { // Pre-generate next pieces
-				vector<int> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
-				random_shuffle(queueBatch.begin(), queueBatch.end());
-				for (int num : queueBatch)
-					nextPieceQueue.push_back(num);
-			}
-			pieceCode = nextPieceQueue[0];
-			nextPieceQueue.erase(nextPieceQueue.begin());
+			pieceCode = bag->getPiece(playerIndex);
+			nextPieceQueue = bag->getNextPieces(playerIndex, NEXTPIECECOUNT);
 			for (int i = 0; i < nextPieceSprites.size(); i++) { // Display queue
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
 					queueBounds.left + TILESIZE * SCALE,
@@ -172,13 +168,13 @@ public:
 			board.push_back(row);
 		}
 		clearMovingSprites();
-		nextPieceQueue.clear();
 		heldPiece = nullptr;
 		heldSprite.clear();
 		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
 			setGravity();
 		totalLinesCleared = 0;
 		gravityTimer.restart();
+		bag->resetPosition(playerIndex);
 		superLockCounter = 0;
 		hasHeld = false;
 		gameOver = false;

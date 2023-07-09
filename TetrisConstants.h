@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: instructions, scoring, pause screen, pvp rng, organize classes into bigger classes, custom keybinds
+	// Todo: instructions, scoring, pause screen, organize classes into bigger classes, custom keybinds
 	// Known bugs:
 
 	// Set constant variables
@@ -19,11 +19,11 @@ namespace TetrisVariables {
 
 	// Game mechanic related variables
 	const int FPS = 60; // Frame limit of the game
-	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds 68
+	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
 	const float SUPERLOCKSECONDS = 3;
-	const int SUPERLOCKFRAMECOUNT = FPS * SUPERLOCKSECONDS; // Second lock delay to prevent infinites
+	const int SUPERLOCKFRAMECOUNT = FPS * SUPERLOCKSECONDS; // Lock delay to prevent infinites
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
-	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Max is 6. Will crash if above 7.
+	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
 	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
 	const int GRAVITYTIERCOUNT = 7;

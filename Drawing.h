@@ -322,3 +322,50 @@ public:
 			rightKey.release();
 	}
 };
+
+// Class to store random piece order to it is consistent across all players
+class pieceBag {
+	vector<char> pieceQueue; // Complete piece order
+	vector<unsigned int> positions; // Position in the queue for each player
+public:
+	pieceBag() {
+		addBatch();
+	}
+	// Adds a bag of 7 numbers to the queue when needed.
+	void addBatch() {
+		vector<char> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
+		random_shuffle(queueBatch.begin(), queueBatch.end());
+		for (char num : queueBatch) {
+			pieceQueue.push_back(num);
+		}
+	}
+	// Adds a player who is accessing the queue. Returns the player index
+	int addPlayer() {
+		positions.push_back(0);
+		return positions.size() - 1;
+	}
+	// Resets the queue.
+	// NOTE: resetQueue must be called only once and before resetPosition 
+	// during each reset for a proper starting bag
+	void resetQueue() {
+		pieceQueue.clear();
+		addBatch();
+	}
+	void resetPosition(int playerIndex) {
+		positions[playerIndex] = 0;
+	}
+	// Get piece and increment position
+	int getPiece(int playerIndex) {
+		positions[playerIndex]++;
+		if (pieceQueue.size() < positions[playerIndex] + 7)
+			addBatch(); // Replenish queue
+		return pieceQueue[positions[playerIndex] - 1];
+	}
+	// Returns the queue of next pieces to display
+	vector<int> getNextPieces(int playerIndex, int pieceCount) {
+		vector<int> queue;
+		for (int i = 0; i < pieceCount; i++)
+			queue.push_back(pieceQueue[positions[playerIndex] + i]);
+		return queue;
+	}
+};
