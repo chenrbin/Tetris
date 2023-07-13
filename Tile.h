@@ -27,6 +27,11 @@ public:
 		yPos += TILESIZE;
 		sprite.setPosition(xPos + 1, yPos + 1);
 	}
+	// Move tile position up when adding garbage
+	void moveUp() {
+		yPos -= TILESIZE;
+		sprite.setPosition(xPos + 1, yPos + 1);
+	}
 	void setColor(sf::Color& blockColor) {
 		sprite.setColor(blockColor);
 	}

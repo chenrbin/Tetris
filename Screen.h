@@ -6,6 +6,7 @@
 #include <ctime>
 #include "Tile.h"
 #include "Drawing.h"
+#include "Mechanisms.h"
 #include <map>
 #include <algorithm>
 using namespace std;
@@ -35,6 +36,9 @@ class Screen {
 	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	pieceBag* bag; // Stores the random piece generation
 	bool backToBack; // Stores back-to-back clear flag
+	int inGarbage, outGarbage; // Lines of garbage to receive/send
+	GarbageBin bin; // Queue for garbage inventory
+	bool canDump; // Dump garbage if a piece has been set without clearing lines
 
 public:
 	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag) {
@@ -51,7 +55,7 @@ public:
 		backToBack = false;
 		heldPiece = nullptr;
 		hasHeld = false, lockTimerStarted = false, touchedGround = false;
-		creativeMode = false, autoFall = true, gameOver = false;
+		creativeMode = false, autoFall = true, gameOver = false, canDump = true;
 		gameMode = MAINMENU;
 		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
@@ -112,7 +116,7 @@ public:
 			if (superLockCounter > SUPERLOCKFRAMECOUNT)
 				setPiece();
 		}
-
+		updateGarbage(); // Garbage timers
 	}
 	
 	// Spawn controllable tetromino. Can be pseudorandom or specified
@@ -134,20 +138,7 @@ public:
 		// Gave over is spawn position is occupied
 		for (sf::Vector2i& pos : currentPiece->getPositions()) {
 			if (board[pos.x][pos.y].getHasBlock()) { 
-				switch (gameMode) // Handle loss based on game mode
-				{
-				case CLASSIC:
-					gameOver = true;
-					break;
-				case SANDBOX:
-					resetBoard();
-					break;
-				case MULTIPLAYER:
-					gameOver = true;
-					break;
-				default:
-					break;
-				}
+				doGameOver();
 				return;
 			}
 		}
@@ -178,6 +169,7 @@ public:
 		superLockCounter = 0;
 		hasHeld = false;
 		gameOver = false;
+		bin.clear();
 		spawnPiece();
 	}
 	
@@ -282,6 +274,8 @@ public:
 		gravityTimer.restart();
 		lockTimer.restart();
 		superLockCounter = 0;
+		if (inGarbage > 0 && canDump)
+			dumpGarbage(inGarbage);
 		spawnPiece();
 	}
 	// Check and clear any filled rows. Records number of lines cleared
@@ -309,6 +303,7 @@ public:
 				hasCleared = true;
 			}
 		}
+		canDump = !hasCleared; // For garbage
 		if (hasCleared) { // Execute when lines have been cleared
 			clearMovingSprites(); // Cleaning up sprite flags
 			
@@ -391,7 +386,74 @@ public:
 			(*clearAnimations)[0].restart();
 		}
 	}
+	// When clearing lines, send garbage to the opponent or cancel out incoming garbage
+	void sendGarbage(int lineCount) {
+		outGarbage = bin.clearGarbage(lineCount);
+	}
+	// Add incoming garbage with a timer. // Does nothing if count is 0;
+	void receiveGarbage(int lineCount) {
+		if (lineCount == 0)
+			return;
+		cout << "Added " << lineCount << " lines\n";
+		bin.addGarbage(lineCount);
+		bin.getBin();
+	}
+	// Check garbage bin. See if garbage should be dumped.
+	void updateGarbage() {
+		int lines = bin.checkGarbage();
+		if (lines > 0)
+			inGarbage += lines;
+	}
+	// Incoming garbage pushes the board up
+	void dumpGarbage(int lineCount) {
+		cout << "Dumped " << lineCount << " lines\n";
+		for (int i = 0; i < lineCount; i++) {
+			// If top row has blocks, game over.
+			for (Tile& tile : board[0])
+				if (tile.getHasBlock()) {
+					doGameOver();
+					return;
+				}
+
+			// Move all rows up
+			for (int j = 0; j < REALNUMROWS; j++)
+				for (Tile& tile : board[j])
+					tile.moveUp();
+			board.erase(board.begin());
+
+			// Insert new row at bottom
+			vector<Tile> newRow;
+			for (int j = 0; j < NUMCOLS; j++)
+				newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + GAMEHEIGHT - TILESIZE));
+
+			// Fill in new row except one square.
+			int randomColumn = rand() % NUMCOLS;
+			for (int j = 0; j < NUMCOLS; j++) {
+				if (j != randomColumn)
+					newRow[j].setBlock(true, WHITE);
+			}
+			board.insert(board.end(), newRow);
+		}
+		inGarbage = 0;
+	}
 	
+	// Handle loss based on game mode
+	void doGameOver() {
+		switch (gameMode) 
+		{
+		case CLASSIC:
+			gameOver = true;
+			break;
+		case SANDBOX:
+			resetBoard();
+			break;
+		case MULTIPLAYER:
+			gameOver = true;
+			break;
+		default:
+			break;
+		}
+	}
 #pragma region Getters/Setters
 	// Set gravity to a specific speed or back to its starting speed
 	void setGravity(float speed) {
@@ -414,6 +476,13 @@ public:
 	}
 	bool getGameOver() {
 		return gameOver;
+	}
+	// Sends out outgoing garbage to main for other players to receive
+	// NOTE: This will be called in main to send garbage to other players
+	int getOutGarbage() {
+		int temp = outGarbage;
+		outGarbage = 0;
+		return temp;
 	}
 #pragma endregion
 
@@ -473,6 +542,10 @@ public:
 		for (vector<sf::Sprite> pieceSprite : nextPieceSprites)
 			for (sf::Sprite& sprite : pieceSprite)
 				window->draw(sprite);
+	}
+	// Draw incoming garbage.
+	void drawGarbage() {
+
 	}
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() {
@@ -619,5 +692,9 @@ public:
 		sf::Clock cooldown;
 		while (cooldown.getElapsedTime().asSeconds() < seconds && cooldown.getElapsedTime().asSeconds() < 10)
 			continue;
+	}
+	// Calls the garbage bin's printBin function for debugging
+	void printBin() {
+		bin.printBin();
 	}
 };

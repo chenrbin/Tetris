@@ -4,6 +4,8 @@
 #include "TetrisConstants.h"
 #include <map>
 #include "Drawing.h"
+#include "Mechanisms.h"
+
 using namespace std;
 using namespace TetrisVariables;
 
@@ -37,21 +39,23 @@ sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColo
 }
 
 // Generate vector of preset game screen rectangles
-vector<sf::RectangleShape> getGameRects() {
-	// Rectangles for game screen, hold, queue, and top row
+vector<sf::RectangleShape> getGameRects(sf::Vector2f gamePos) {
+	// Rectangles for game screen, hold, queue, garbage bin, and top row, 
 	vector<sf::RectangleShape> rects;
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT), BLACK,
-		GAMEPOS, sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+		gamePos, sf::Vector2f(0, 0), WHITE, LINEWIDTH));
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 5), BLACK,
-		sf::Vector2f(GAMEXPOS - GAMEWIDTH / 2.5 - LINEWIDTH, GAMEYPOS + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+		sf::Vector2f(gamePos.x - GAMEWIDTH / 2.5 - LINEWIDTH - TILESIZE / 2, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 9 * NEXTPIECECOUNT),
-		BLACK, sf::Vector2f(GAMEXPOS + GAMEWIDTH + LINEWIDTH, GAMEYPOS + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+		BLACK, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle(sf::Vector2f(TILESIZE / 2, GAMEHEIGHT - LINEWIDTH), BLACK,
+		sf::Vector2f(gamePos.x - TILESIZE / 2 - LINEWIDTH, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
 
 	// Rectangles to show a couple pixels of the very top row
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, TOPROWPIXELS), BLACK,
-		sf::Vector2f(GAMEXPOS, GAMEYPOS - TOPROWPIXELS), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+		sf::Vector2f(gamePos.x, gamePos.y - TOPROWPIXELS), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
 	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH + 1, TILESIZE - 9), BLUE,
-		sf::Vector2f(GAMEXPOS - 1, GAMEYPOS - TILESIZE - 1)));
+		sf::Vector2f(gamePos.x - 1, gamePos.y - TILESIZE - 1)));
 	return rects;
 }
 // Get bounds of first three rectangles (game, hold, queue)
@@ -115,7 +119,15 @@ vector<sf::Text> getLossText(sf::Font& font) {
 
 	return textboxes;
 }
-
+// Generate fadeText animations
+vector<FadeText> getFadeText(sf::Vector2f gamePos, sf::Font& font) {
+	FadeText speedupText(generateText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(gamePos.x + GAMEWIDTH / 2, gamePos.y), true, false, true), 1, 1);
+	FadeText clearText(generateText(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5)), 0, 2.5);
+	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING)), 0, 2.5);
+	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING * 2)), 0, 2.5);
+	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING * 3)), 0, 2.5);
+	return { speedupText, clearText, b2bText, comboText, allClearText };
+}
 // Get collision bounds for checkboxes
 vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 	vector<sf::FloatRect> bounds;
@@ -161,11 +173,6 @@ void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& sc
 }
 
 // Get player two assets, which are a copy of single player assets but one width to the right
-vector<sf::RectangleShape> getPlayer2Rects(vector<sf::RectangleShape> rects) {
-	for (sf::RectangleShape& rect : rects)
-		rect.move(WIDTH, 0);
-	return rects;
-}
 vector<sf::Text> getPlayer2Text(vector<sf::Text> vec) {
 	for (sf::Text& text : vec)
 		text.move(WIDTH, 0);
@@ -218,7 +225,7 @@ int main(){
 	cursor.rotate(90.f);
 
 	// Game sprites in a vector and constructed in a separate method to keep main clean
-	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(); 
+	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
@@ -238,18 +245,15 @@ int main(){
 	vector<sf::Text> lossText = getLossText(font);
 
 	// Initiate animation classes
-	FadeText speedupText(generateText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS), true, false, true), 1, 1);
-	FadeText clearText(generateText(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y)), 0, 2.5);
-	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING)), 0, 2.5);
-	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 2)), 0, 2.5);
-	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * 3)), 0, 2.5);
-	vector<FadeText> clearAnimations = { speedupText, clearText, b2bText, comboText, allClearText };
+	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
+	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
+
 
 	// Get player two assets
-	vector<sf::RectangleShape> gameScreenRectanglesP2 = getPlayer2Rects(gameScreenRectangles);
+	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
 	vector<sf::FloatRect> gameScreenBoundsP2 = getGameBounds(gameScreenRectanglesP2);
-	vector<sf::RectangleShape> linesP2 = getPlayer2Rects(lines);
-	vector<sf::Text> gameTextP2 = getPlayer2Text(gameText);
+	vector<sf::RectangleShape> linesP2 = getLines(gameScreenBoundsP2[0]);
+	vector<sf::Text> gameTextP2 = getGameText(gameScreenBoundsP2, font);
 	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
 
@@ -263,11 +267,12 @@ int main(){
 	KeyDAS player1DAS(170, 50, &player1Keys);
 	KeyDAS player2DAS(170, 50, &player2Keys);
 
+	// Initiate piece rng
 	pieceBag bag;
 
 	// Set up game screen
 	Screen screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
-	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimations, &bag);
+	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
 	// Game loop
@@ -278,6 +283,7 @@ int main(){
 			window.clear(BLUE);
 			drawVector(window, menuText);
 			window.draw(cursor);
+
 			// Event handler for menu screen
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -336,7 +342,6 @@ int main(){
 							screenP2.setGameMode(MULTIPLAYER);
 							screenP2.resetBoard();
 							
-
 							break;
 						case 3: // Settings
 							window.close();
@@ -428,7 +433,6 @@ int main(){
 			
 			// In-game timer events
 			screen.doTimeStuff();
-
 			// Handles movement with auto-repeat (DAS)
 			playerSoloDAS.checkKeyPress(screen);
 
@@ -479,6 +483,12 @@ int main(){
 					}
 					else if (event.key.code == sf::Keyboard::T)
 						currentScreen = MAINMENU;
+					else if (event.key.code == sf::Keyboard::G) {
+						screen.receiveGarbage(1);
+					}
+					else if (event.key.code == sf::Keyboard::H) {
+						screen.receiveGarbage(4);
+					}
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -536,10 +546,15 @@ int main(){
 			screenP2.drawScreen();
 			window.draw(gameScreenRectanglesP2.back());
 			drawVector(window, gameTextP2);
+			drawVector(window, clearAnimationsP2);
+
 
 			// In-game timer events
 			screen.doTimeStuff();
 			screenP2.doTimeStuff();
+			// Process garbage exchange
+			screen.receiveGarbage(screenP2.getOutGarbage());
+			screenP2.receiveGarbage(screen.getOutGarbage());
 
 			// Check for game over
 			if (screen.getGameOver() || screenP2.getGameOver()) {
@@ -551,7 +566,6 @@ int main(){
 			// Handles movement with auto-repeat (DAS)
 			player1DAS.checkKeyPress(screen);
 			player2DAS.checkKeyPress(screenP2);
-
 
 			// Event handler for game screen
 			sf::Event event;
@@ -580,6 +594,12 @@ int main(){
 						screenP2.spinPiece(true);
 					else if (event.key.code == player2Keys.getHold())
 						screenP2.holdPiece();
+					else if (event.key.code == sf::Keyboard::G) { // REMOVE
+						screen.sendGarbage(2);
+					}
+					else if (event.key.code == sf::Keyboard::H) {
+						screenP2.sendGarbage(2);
+					}
 					break;
 				}
 				case sf::Event::KeyReleased: {

@@ -3,13 +3,13 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: instructions, scoring, pause screen, organize classes into bigger classes, custom keybinds
+	// Todo: Garbage visuals, garbage pvp, death animation, scoring, pause screen, custom keybinds, multiplayer loss screen
 	// Known bugs:
 
 	// Set constant variables
 
 	// Item sizes and spacings
-	const int TILESIZE = 32, LEFTMARGIN = 150, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
+	const int TILESIZE = 32, LEFTMARGIN = 180, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
 	const float SCALE = 0.8;
 
@@ -27,12 +27,14 @@ namespace TetrisVariables {
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
 	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
 	const int GRAVITYTIERCOUNT = 7;
+	const float BASEGARBAGETIMER = 3; 
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
 	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
 	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
+	const sf::Vector2f GAMEPOSP2(GAMEXPOS + WIDTH, GAMEYPOS);
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
 
 	// Game screen state codes
@@ -41,6 +43,7 @@ namespace TetrisVariables {
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
 	const sf::Color BLACK(0, 0, 0);
+	const sf::Color GRAY(128, 128, 128);
 	const sf::Color RED(255, 0, 0); 
 	const sf::Color ORANGE(255, 165, 0);
 	const sf::Color YELLOW(255, 255, 0);
