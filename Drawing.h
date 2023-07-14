@@ -2,6 +2,8 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include "TetrisConstants.h"
+#include "Tile.h"
+#include "Mechanisms.h"
 using namespace TetrisVariables;
 
 // Class to organize drawable sprites of a checkbox. Purely visual functionality.
@@ -131,7 +133,7 @@ public:
 // Animations are meant to be each created once and restarted when played
 class Animation { 
 protected:
-	sf::Clock startTime;
+	sfClockAtHome startTime;
 	float duration;
 public:
 	// Draws the animation to the window
@@ -139,7 +141,10 @@ public:
 	virtual ~Animation() {};
 	// Turns on animation
 	virtual void restart() = 0;
-	virtual void setString(string str) = 0;
+	// Return true if animation has expired
+	virtual bool isOver() {
+		return startTime.getTimeSeconds() > duration;
+	}
 };
 
 // Text that fades after a set duration
@@ -177,6 +182,85 @@ public:
 	// Change the text to display
 	void setString(string str) {
 		text.setString(str);
+	}
+};
+
+// Class to display a player's death screen
+class DeathAnimation : public Animation {
+	float endDuration; // Delay at the end of animation
+	vector<vector<Tile>> board;
+public:
+	DeathAnimation(sf::Vector2f gamePos, float duration, float endDuration, sf::Texture& blockTexture) {
+		this->duration = duration;
+		this->endDuration = endDuration;
+		startTime.restart();
+		// Generate board
+		for (int i = 0; i < REALNUMROWS; i++) {
+			vector<Tile> row;
+			for (int j = 0; j < NUMCOLS; j++) {
+				Tile tile(blockTexture, gamePos.x + j * TILESIZE, gamePos.y + (i - 2) * TILESIZE);
+				tile.setBlock(true, GRAY);
+				row.push_back(tile);
+			}
+			board.push_back(row);
+		}
+	}
+	// Draws the animation to the window
+	void draw(sf::RenderWindow& window) {
+		// Does not execute if animation duration is over
+		if (startTime.getTimeSeconds() > duration + endDuration)
+			return;
+		for (int i = 0; i < NUMROWS; i++)
+			if (startTime.getTimeSeconds() / duration * NUMROWS >= i - 1)
+				for (int j = 0; j < NUMCOLS; j++)
+					board[REALNUMROWS - i - 1][j].draw(&window);
+	}
+	// Turns on animation
+	void restart(){
+		startTime.restart();
+	}
+	// Return true if animation has expired
+	virtual bool isOver() {
+		return startTime.getTimeSeconds() > duration + endDuration;
+	}
+};
+
+// Class to display garbage bin
+class garbageStack {
+	vector<sf::RectangleShape> stack;
+public:
+	// Construct a stack of rectangles at position relative to gamePos
+	garbageStack(sf::Vector2f gamePos) {
+		for (int i = 0; i < NUMROWS; i++) {
+			sf::RectangleShape rec(sf::Vector2f(TILESIZE / 2, TILESIZE - 1));
+			rec.setPosition(gamePos.x - TILESIZE / 2, gamePos.y + GAMEHEIGHT - (i + 1) * TILESIZE + LINEWIDTH + 1);
+			rec.setOutlineColor(WHITE);
+			rec.setOutlineThickness(1);
+			stack.push_back(rec);
+		}
+	}
+	void draw(sf::RenderWindow& window) {
+		for (sf::RectangleShape& rec : stack) {
+			window.draw(rec);
+		}
+	}
+	// Update stack visuals based on a vector of garbage timers
+	void updateStack(vector<float> vec) {
+		for (int i = 0; i < 20; i++)
+		{
+			// (255 * vec[i] + 255) / 2 sets the red value to 127-255 based on timer progress
+			if (vec.size() > i) {
+				stack[i].setFillColor(sf::Color((255 * vec[i] + 255) / 2, 0, 0));
+				if (stack[i].getFillColor() == RED)
+					stack[i].setOutlineColor(RED);
+				else 
+					stack[i].setOutlineColor(WHITE);
+			}
+			else {
+				stack[i].setFillColor(BLACK);
+				stack[i].setOutlineColor(WHITE);
+			}
+		}
 	}
 };
 

@@ -111,7 +111,7 @@ vector<sf::Text> getSandboxText(sf::Font& font) {
 		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
 	return textboxes;
 }
-// Generate text for classic mode loss screen
+// Generate text for loss screen
 vector<sf::Text> getLossText(sf::Font& font) {
 	vector<sf::Text> textboxes;
 	textboxes.push_back(generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true));
@@ -137,7 +137,6 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 }
 
 // Following functions are made for reuseability and requires specific parameters passed in.
-
 // Functionality of the toggles in sandbox mode. 
 void toggleGravity(Checkbox& autoFallBox, Screen& screen) {
 	if (autoFallBox.getChecked()) {
@@ -248,7 +247,6 @@ int main(){
 	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
 	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
 
-
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
 	vector<sf::FloatRect> gameScreenBoundsP2 = getGameBounds(gameScreenRectanglesP2);
@@ -257,7 +255,7 @@ int main(){
 	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
 
-	// Initialize controls 
+	// Initialize controls.
 	KeySet playerSoloKeys(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
 	KeySet player1Keys(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
 	KeySet player2Keys(LEFT2, RIGHT2, UP2, DOWN2, SPINCW2, SPINCCW2, HOLD2);
@@ -269,7 +267,7 @@ int main(){
 
 	// Initiate piece rng
 	pieceBag bag;
-
+	
 	// Set up game screen
 	Screen screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
 	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
@@ -380,8 +378,10 @@ int main(){
 			screen.doTimeStuff();
 
 			// Check for game over
-			if (screen.getGameOver()) 
+			if (screen.getGameOver() && screen.isDeathAnimationOver()) {
 				currentScreen = CLASSICLOSS;
+				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+			}
 
 			// Handles movement with auto-repeat (DAS)
 			playerSoloDAS.checkKeyPress(screen);
@@ -404,6 +404,8 @@ int main(){
 						screen.spinPiece(true);
 					else if (event.key.code == playerSoloKeys.getHold())
 						screen.holdPiece();
+					else if (event.key.code == sf::Keyboard::Escape)
+						screen.doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -468,7 +470,7 @@ int main(){
 						screen.spawnPiece(5);
 					else if (event.key.code == sf::Keyboard::Num7)
 						screen.spawnPiece(6);
-					// Hot keys for sandbox controls
+						// Hot keys for sandbox controls
 					else if (event.key.code == sf::Keyboard::Q)
 						toggleGravity(autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::W)
@@ -489,6 +491,8 @@ int main(){
 					else if (event.key.code == sf::Keyboard::H) {
 						screen.receiveGarbage(4);
 					}
+					else if (event.key.code == sf::Keyboard::Escape)
+						screen.doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -501,9 +505,9 @@ int main(){
 							toggleGravity(autoFallBox, screen);
 						else if (gravityBox.getLeftBound().contains(clickPos))  // Speed arrows
 							decrementGravity(gravityBox, autoFallBox, screen);
-						else if (gravityBox.getRightBound().contains(clickPos)) 
+						else if (gravityBox.getRightBound().contains(clickPos))
 							incrementGravity(gravityBox, autoFallBox, screen);
-						else if (creativeModeBox.getBounds().contains(clickPos)) 
+						else if (creativeModeBox.getBounds().contains(clickPos))
 							toggleCreative(creativeModeBox, autoFallBox, screen);
 						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
 							screen.clickBlock(clickPos); // Will do nothing if creative mode isn't on
@@ -557,10 +561,25 @@ int main(){
 			screenP2.receiveGarbage(screen.getOutGarbage());
 
 			// Check for game over
-			if (screen.getGameOver() || screenP2.getGameOver()) {
-				window.setSize(sf::Vector2u(WIDTH, HEIGHT));
-				window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
-				currentScreen = CLASSICLOSS;
+			
+
+			if (screen.getGameOver()) {
+				screenP2.pauseGame();
+				if (screen.isDeathAnimationOver()) {
+					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
+					currentScreen = CLASSICLOSS;
+					lossText[0] = generateText(font, WHITE, "PLAYER 2 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+				}
+			}
+			else if (screenP2.getGameOver()) {
+				screen.pauseGame();
+				if (screenP2.isDeathAnimationOver()) {
+					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
+					currentScreen = CLASSICLOSS;
+					lossText[0] = generateText(font, WHITE, "PLAYER 1 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+				}
 			}
 
 			// Handles movement with auto-repeat (DAS)
@@ -585,8 +604,7 @@ int main(){
 						screen.spinPiece(true);
 					else if (event.key.code == player1Keys.getHold())
 						screen.holdPiece();
-
-					if (event.key.code == player2Keys.getUp())
+					else if (event.key.code == player2Keys.getUp())
 						screenP2.movePiece(3);
 					else if (event.key.code == player2Keys.getSpinCCW())
 						screenP2.spinPiece(false);
@@ -594,11 +612,9 @@ int main(){
 						screenP2.spinPiece(true);
 					else if (event.key.code == player2Keys.getHold())
 						screenP2.holdPiece();
-					else if (event.key.code == sf::Keyboard::G) { // REMOVE
-						screen.sendGarbage(2);
-					}
-					else if (event.key.code == sf::Keyboard::H) {
-						screenP2.sendGarbage(2);
+					else if (event.key.code == sf::Keyboard::Escape) {
+						screen.doPauseResume();
+						screenP2.doPauseResume();
 					}
 					break;
 				}

@@ -13,32 +13,42 @@ using namespace std;
 using namespace TetrisVariables;
 
 class Screen {
+#pragma region Attributes
 	sf::RenderWindow* window;
-	sf::FloatRect gameBounds;
+	sf::FloatRect gameBounds, holdBounds, queueBounds;
 	sf::Texture blockTexture;
-	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
+	map<int, float> gravityTiers;
+
 	int totalLinesCleared, gameMode, playerIndex;
 	vector<vector<Tile>> board; // Coordinates are [row][col]
+
 	Tetromino* currentPiece;
 	Tetromino* heldPiece;
 	vector<Tetromino*> tetrominos;
 	vector<sf::Vector2i> currentPositions, previewPositions;
+
 	vector<vector<sf::Sprite>> pieceSprites, nextPieceSprites;
 	vector<int> nextPieceQueue;
 	vector<sf::Sprite> heldSprite;
-	sf::FloatRect holdBounds, queueBounds;
+
 	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
 	bool lastMoveSpin; // For checking T-spins
-	sf::Clock gravityTimer, lockTimer;
+	sfClockAtHome gravityTimer, lockTimer; // Timer to track gravity and locking
+
 	int superLockCounter, comboCounter;
-	map<int, float> gravityTiers;
 	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	pieceBag* bag; // Stores the random piece generation
 	bool backToBack; // Stores back-to-back clear flag
+
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
+	garbageStack* garbStack;
+
+	bool paused;
+	DeathAnimation* deathAnimation;
+#pragma endregion
 
 public:
 	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag) {
@@ -49,13 +59,12 @@ public:
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
 		this->bag = bag;
-
 		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
 		backToBack = false;
 		heldPiece = nullptr;
 		hasHeld = false, lockTimerStarted = false, touchedGround = false;
-		creativeMode = false, autoFall = true, gameOver = false, canDump = true;
+		creativeMode = false, autoFall = true, gameOver = false, canDump = true, paused = false;
 		gameMode = MAINMENU;
 		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
@@ -69,6 +78,9 @@ public:
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 
+		deathAnimation = new DeathAnimation(sf::Vector2f(gameBounds.left, gameBounds.top), 2, 0.2, blockTexture);
+		garbStack = new garbageStack(sf::Vector2f(gameBounds.left, gameBounds.top));
+		
 		// Generate board
 		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
@@ -80,10 +92,17 @@ public:
 		spawnPiece();
 	}
 
+#pragma region Core Gameplay
 	// Checked every frame. Handles timer related events
 	void doTimeStuff() {
+		// Disable if paused
+		if (paused)
+			return;
+		// Update garbageStack if gameMode is sandbox or PVP
+		if (gameMode != CLASSIC)
+			garbStack->updateStack(getStackVector());
 		// Handles gravity. Disabled if autoFall is off (sandbox exclusive)
-		if (gravityTimer.getElapsedTime().asSeconds() >= gravity && gravity > 0 && autoFall) {
+		if (gravityTimer.getTimeSeconds() >= gravity && gravity > 0 && autoFall) {
 			movePiece(1);
 			gravityTimer.restart();
 		}
@@ -97,15 +116,16 @@ public:
 				lockTimerStarted = true;
 			}
 			else {
-				if (lockTimer.getElapsedTime().asSeconds() >= LOCKDELAY) {
+				if (lockTimer.getTimeSeconds() >= LOCKDELAY) {
 					lockTimer.restart();
 					setPiece();
 				}
 			}
 		}
 		else {
-			if (touchedGround) // Restarts gravity timer if piece leaves ground
+			if (touchedGround) { // Restarts gravity timer if piece leaves ground
 				gravityTimer.restart();
+			}
 			lockTimerStarted = false;
 			touchedGround = false;
 		}
@@ -118,9 +138,11 @@ public:
 		}
 		updateGarbage(); // Garbage timers
 	}
-	
 	// Spawn controllable tetromino. Can be pseudorandom or specified
 	void spawnPiece(int pieceCode = -1) {
+		// Disable if paused
+		if (paused)
+			return;
 		if (currentPositions.size() != 0) { // Delete current piece if it exists
 			delete currentPiece;
 		}
@@ -137,7 +159,7 @@ public:
 		updateBlocks();
 		// Gave over is spawn position is occupied
 		for (sf::Vector2i& pos : currentPiece->getPositions()) {
-			if (board[pos.x][pos.y].getHasBlock()) { 
+			if (board[pos.x][pos.y].getHasBlock()) {
 				doGameOver();
 				return;
 			}
@@ -146,35 +168,11 @@ public:
 		movePiece(1);
 		updateBlocks();
 	}
-
-	// Clear board and restart game. Reset gravity and piece queue
-	void resetBoard() {
-		board.clear();
-		// Generate new board
-		for (int i = 0; i < REALNUMROWS; i++) {
-			vector<Tile> row;
-			for (int j = 0; j < NUMCOLS; j++) {
-				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
-			}
-			board.push_back(row);
-		}
-		clearMovingSprites();
-		heldPiece = nullptr;
-		heldSprite.clear();
-		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
-			setGravity();
-		totalLinesCleared = 0;
-		gravityTimer.restart();
-		bag->resetPosition(playerIndex);
-		superLockCounter = 0;
-		hasHeld = false;
-		gameOver = false;
-		bin.clear();
-		spawnPiece();
-	}
-	
 	// 0 to move left, 1 to move down, 2 to move right, 3 to instant drop
 	void movePiece(int direction) {
+		// Disable if paused
+		if (paused)
+			return;
 		switch (direction)
 		{
 		case(0):
@@ -188,6 +186,7 @@ public:
 			if (checkBelow()) {
 				currentPiece->moveDown();
 				lockTimer.restart();
+				gravityTimer.restart();
 				lastMoveSpin = false;
 			}
 			break;
@@ -215,6 +214,9 @@ public:
 	}
 	// Spin piece either counterclockwise or clockwise
 	void spinPiece(bool clockwise) {
+		// Disable if paused
+		if (paused)
+			return;
 		vector<vector<sf::Vector2i>> kickTestPositions;
 		if (clockwise) // Attempt spin, get possible new positions
 			kickTestPositions = currentPiece->spinCW();
@@ -248,6 +250,9 @@ public:
 	}
 	// Can hold piece once every time a piece is set
 	void holdPiece() {
+		// Disable if paused
+		if (paused)
+			return;
 		if (hasHeld) // hasHeld is true after a successful hold, and false after a piece sets
 			return;
 		if (heldPiece == nullptr) { // If holding for the first time
@@ -283,7 +288,7 @@ public:
 		int linesCleared = 0; // Counts amount of lines cleared by this piece for scoring
 		bool hasCleared = false;
 		bool isTspin = checkTspin(); // Check for t-spin before lines are cleared
-		
+
 		for (int i = 0; i < REALNUMROWS; i++) {
 			if (checkLine(board[i])) {
 				// Move all rows above cleared row down
@@ -306,15 +311,17 @@ public:
 		canDump = !hasCleared; // For garbage
 		if (hasCleared) { // Execute when lines have been cleared
 			clearMovingSprites(); // Cleaning up sprite flags
-			
+
 			switch (linesCleared) // Process scoring
 			{
 			case 1:
 				if (isTspin) {
 					if (backToBack) {
 						playBackToBackText();
+						sendGarbage(1);
 					}
 					playClearText("T-spin Single");
+					sendGarbage(2);
 					backToBack = true; // backToBack = isTspin
 				}
 				else {
@@ -325,33 +332,41 @@ public:
 				if (isTspin) {
 					if (backToBack) {
 						playBackToBackText();
+						sendGarbage(1);
 					}
 					playClearText("T-spin Double");
+					sendGarbage(4);
 					backToBack = true;
 				}
 				else {
 					playClearText("Double");
+					sendGarbage(1);
 					backToBack = false;
 				}
-				break; 
+				break;
 			case 3:
 				if (isTspin) {
 					if (backToBack) {
 						playBackToBackText();
+						sendGarbage(3);
 					}
 					playClearText("T-spin Triple");
+					sendGarbage(6);
 					backToBack = true;
 				}
 				else {
 					playClearText("Triple");
+					sendGarbage(2);
 					backToBack = false;
 				}
 				break;
 			case 4:
 				if (backToBack) {
 					playBackToBackText();
+					sendGarbage(2);
 				}
 				playClearText("Tetris");
+				sendGarbage(4);
 				backToBack = true;
 				break;
 			default:
@@ -361,11 +376,13 @@ public:
 			comboCounter++;
 			// Process combos
 			if (comboCounter > 1) {
+				sendGarbage(1);
 				playComboText();
 			}
 			// Process All Clear
 			if (checkAllClear()) {
 				playAllClearText();
+				sendGarbage(10);
 			}
 		}
 		else {
@@ -373,6 +390,72 @@ public:
 		}
 		if (gameMode == CLASSIC)
 			doSpeedUp();
+	}
+#pragma endregion
+
+	// Pause the game and disable timers
+	void pauseGame() {
+		paused = true;
+		gravityTimer.pause();
+		lockTimer.pause();
+	}
+	// Resume game and timers
+	void resumeGame() {
+		paused = false;
+		gravityTimer.resume();
+		lockTimer.resume();
+	}
+	// Handles whether to pause or resume the game
+	void doPauseResume() {
+		if (paused)
+			resumeGame();
+		else
+			pauseGame();
+	}
+	// Clear board and restart game. Reset gravity and piece queue
+	void resetBoard() {
+		board.clear();
+		// Generate new board
+		for (int i = 0; i < REALNUMROWS; i++) {
+			vector<Tile> row;
+			for (int j = 0; j < NUMCOLS; j++) {
+				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
+			}
+			board.push_back(row);
+		}
+		clearMovingSprites();
+		heldPiece = nullptr;
+		heldSprite.clear();
+		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
+			setGravity();
+		gravityTimer.restart(), lockTimer.restart();
+		bag->resetPosition(playerIndex);
+		superLockCounter = 0;
+		hasHeld = false, gameOver = false, paused = false;
+		bin.clear();
+		totalLinesCleared = 0, inGarbage = 0; outGarbage = 0;
+		spawnPiece();
+	}
+	// Handle loss based on game mode
+	void doGameOver() {
+		switch (gameMode)
+		{
+		case CLASSIC:
+			paused = true;
+			gameOver = true;
+			playDeathAnimation();
+			break;
+		case SANDBOX:
+			resetBoard();
+			break;
+		case MULTIPLAYER:
+			paused = true;
+			gameOver = true;
+			playDeathAnimation();
+			break;
+		default:
+			break;
+		}
 	}
 	// Check to increase gravity after a number of lines has been cleared. Only in classic mode.
 	void doSpeedUp() {
@@ -386,15 +469,17 @@ public:
 			(*clearAnimations)[0].restart();
 		}
 	}
+
+	
+#pragma region Garbage Interaction
 	// When clearing lines, send garbage to the opponent or cancel out incoming garbage
 	void sendGarbage(int lineCount) {
-		outGarbage = bin.clearGarbage(lineCount);
+		outGarbage += bin.clearGarbage(lineCount);
 	}
 	// Add incoming garbage with a timer. // Does nothing if count is 0;
 	void receiveGarbage(int lineCount) {
 		if (lineCount == 0)
 			return;
-		cout << "Added " << lineCount << " lines\n";
 		bin.addGarbage(lineCount);
 		bin.getBin();
 	}
@@ -406,7 +491,8 @@ public:
 	}
 	// Incoming garbage pushes the board up
 	void dumpGarbage(int lineCount) {
-		cout << "Dumped " << lineCount << " lines\n";
+		if (creativeMode) // Disable if creative mode is on
+			return;
 		for (int i = 0; i < lineCount; i++) {
 			// If top row has blocks, game over.
 			for (Tile& tile : board[0])
@@ -436,24 +522,8 @@ public:
 		}
 		inGarbage = 0;
 	}
-	
-	// Handle loss based on game mode
-	void doGameOver() {
-		switch (gameMode) 
-		{
-		case CLASSIC:
-			gameOver = true;
-			break;
-		case SANDBOX:
-			resetBoard();
-			break;
-		case MULTIPLAYER:
-			gameOver = true;
-			break;
-		default:
-			break;
-		}
-	}
+#pragma endregion
+
 #pragma region Getters/Setters
 	// Set gravity to a specific speed or back to its starting speed
 	void setGravity(float speed) {
@@ -477,12 +547,25 @@ public:
 	bool getGameOver() {
 		return gameOver;
 	}
+	bool getPaused() {
+		return paused;
+	}
 	// Sends out outgoing garbage to main for other players to receive
 	// NOTE: This will be called in main to send garbage to other players
 	int getOutGarbage() {
 		int temp = outGarbage;
 		outGarbage = 0;
 		return temp;
+	}
+	// Return vector for drawing GarbageStack
+	vector<float> getStackVector() {
+		if (creativeMode) // Return nothing if creative mode is on
+			return {};
+		vector<float> vec = bin.getBin();
+		// Add a 1 for each garbage line ready to dump
+		for (int i = 0; i < inGarbage; i++)
+			vec.insert(vec.begin(), 1); 
+		return vec;
 	}
 #pragma endregion
 
@@ -542,10 +625,14 @@ public:
 		for (vector<sf::Sprite> pieceSprite : nextPieceSprites)
 			for (sf::Sprite& sprite : pieceSprite)
 				window->draw(sprite);
-	}
-	// Draw incoming garbage.
-	void drawGarbage() {
 
+		// Enable death animation if game is over
+		if (gameOver)
+			deathAnimation->draw(*window);
+
+		// Draw garbage stack if game mode is sandbox or PVP
+		if (gameMode != CLASSIC)
+			garbStack->draw(*window);
 	}
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() {
@@ -621,6 +708,11 @@ public:
 	void playAllClearText() {
 		(*clearAnimations)[4].restart();
 	}
+	// Play death animation. This is performed right before game over.
+	// NOTE: This will be called by main to avoid bugs when simultaneous loss in pvp
+	void playDeathAnimation() {
+		deathAnimation->restart();
+	}
 #pragma endregion
 
 #pragma region Boolean Checks
@@ -684,6 +776,10 @@ public:
 			cornerBlockCount++;
 
 		return cornerBlockCount >= 3;
+	}
+	// Check if death animation has finished playing
+	bool isDeathAnimationOver() {
+		return deathAnimation->isOver();
 	}
 #pragma endregion
 

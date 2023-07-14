@@ -3,9 +3,9 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: Garbage visuals, garbage pvp, death animation, scoring, pause screen, custom keybinds, multiplayer loss screen
-	// Known bugs:
-
+	// Todo: garbage rng, garbage pvp, scoring, pause screen, custom keybinds, multiplayer loss screen
+	// Known bugs: Death animation plays if both lose at the same time
+	// 
 	// Set constant variables
 
 	// Item sizes and spacings
@@ -13,8 +13,9 @@ namespace TetrisVariables {
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
 	const float SCALE = 0.8;
 
-	// Board dimensions
+	// Screen dimensions
 	const int WIDTH = 800, HEIGHT = 800, NUMROWS = 20, NUMCOLS = 10;
+	const int REALNUMROWS = NUMROWS + 2; // Actual number of rows. NUMROWS is the rows visible.
 	const int GAMEWIDTH = TILESIZE * NUMCOLS, GAMEHEIGHT = TILESIZE * NUMROWS;
 
 	// Game mechanic related variables
@@ -54,6 +55,7 @@ namespace TetrisVariables {
 	const sf::Color SEETHROUGH(255, 255, 255, 100);
 	const sf::Color HOVERCHECKBOX(255, 255, 255, 150);
 	const int PREVIEWTRANSPARENCY = 120;
+	const sf::Color INVISIBLE(255, 255, 255, 0);
 
 	const sf::Color TPIECECOLOR = VIOLET; // Defining T piece color for detecting T-spins
 	

@@ -35,6 +35,9 @@ public:
 	void setColor(sf::Color& blockColor) {
 		sprite.setColor(blockColor);
 	}
+	void setColor(const sf::Color& blockColor) {
+		sprite.setColor(blockColor);
+	}
 	void setBlock(bool value) {
 		hasBlock = value;
 	}

@@ -295,3 +295,37 @@ public:
 		return vec;
 	}
 };
+
+// Modified sf::Clock for ease of use and pausing
+class sfClockAtHome {
+	sf::Clock clock;
+	sf::Time storage; // For pausing and resuming the clock;
+public:
+	sfClockAtHome() {}
+
+	// Restarts both clock and storage
+	void restart() {
+		clock.restart();
+		storage = sf::Time();
+	}
+	// Saves current time in storage
+	void pause() {
+		storage = clock.getElapsedTime();
+		clock.restart();
+	}
+	// Resets current clock only
+	void resume() {
+		clock.restart();
+	}
+	// Returns time values that include stored time from pausing
+	sf::Time getElapsedTime() {
+		return clock.getElapsedTime() + storage;
+	}
+	float getTimeSeconds() {
+		return clock.getElapsedTime().asSeconds() + storage.asSeconds();
+	}
+	sf::Int32 getTimeMilliseconds() {
+		return clock.getElapsedTime().asMilliseconds() + storage.asMilliseconds();
+	}
+	
+};
