@@ -180,19 +180,15 @@ vector<sf::Text> getPlayer2Text(vector<sf::Text> vec) {
 }
 
 // Draw all objects in a vector
-void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
-	for (auto item : vec)
+template <class T> void drawVector(sf::RenderWindow& window, vector<T>& vec) {
+	for (T& item : vec)
 		window.draw(item);
 }
-void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
-	for (auto item : vec)
-		window.draw(item);
-}
-void drawVector(sf::RenderWindow& window, vector<FadeText>& vec) {
+template <> void drawVector(sf::RenderWindow& window, vector<FadeText>& vec) {
 	for (FadeText& animation : vec)
 		animation.draw(window);
 }
-void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
+template <> void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 	for (Animation* animation : vec)
 		animation->draw(window);
 }
