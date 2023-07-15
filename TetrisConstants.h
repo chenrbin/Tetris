@@ -3,8 +3,8 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: garbage rng, garbage pvp, scoring, pause screen, custom keybinds, multiplayer loss screen
-	// Known bugs: Death animation plays if both lose at the same time
+	// Todo: garbage rng, garbage pvp, scoring, pause screen, settings / instructions, custom keybinds, multiplayer loss screen
+	// Known bugs: Death animation plays if both lose at the same time (draw)
 	// 
 	// Set constant variables
 

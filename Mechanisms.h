@@ -280,7 +280,7 @@ public:
 	void printBin() {
 		for (Garbage& garb : bin) {
 			for (int i = 0; i < garb.getSize(); i++) {
-				cout << "[] " << round(garb.getTime()) << "/" << garb.getDuration() << endl;
+				cout << "[] " << garb.getTime() << "/" << garb.getDuration() << endl;
 			}
 		}
 	}

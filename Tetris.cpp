@@ -8,6 +8,7 @@
 
 using namespace std;
 using namespace TetrisVariables;
+// Ruobin Chen
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
 sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
