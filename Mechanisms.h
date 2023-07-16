@@ -4,6 +4,53 @@
 #include "TetrisConstants.h"
 using namespace TetrisVariables;
 
+// Modified sf::Clock for ease of use and pausing
+class sfClockAtHome {
+	sf::Clock clock;
+	sf::Time storage; // For pausing and resuming the clock;
+	bool paused;
+public:
+	sfClockAtHome() {
+		paused = false;
+	}
+
+	// Restarts both clock and storage
+	void restart() {
+		clock.restart();
+		storage = sf::Time();
+		paused = false;
+	}
+	// Saves current time in storage
+	void pause() {
+		if (paused)
+			return;
+		storage += clock.getElapsedTime();
+		clock.restart();
+		paused = true;
+	}
+	// Resets current clock only
+	void resume() {
+		if (!paused)
+			return;
+		clock.restart();
+		paused = false;
+	}
+	bool getPaused() {
+		return paused;
+	}
+	// Returns time values that include stored time from pausing
+	sf::Time getElapsedTime() {
+		return clock.getElapsedTime() + storage;
+	}
+	float getTimeSeconds() {
+		return clock.getElapsedTime().asSeconds() + storage.asSeconds();
+	}
+	sf::Int32 getTimeMilliseconds() {
+		return clock.getElapsedTime().asMilliseconds() + storage.asMilliseconds();
+	}
+
+};
+
 // Class to handle auto repeat / DAS
 class KeyTimer {
 	sf::Clock startTimer, holdTimer;
@@ -196,7 +243,7 @@ public:
 class Garbage {
 	int size;
 	float duration; // In seconds. Time before garbage is dumped.
-	sf::Clock timer;
+	sfClockAtHome timer;
 public:
 	Garbage(int size, float duration) {
 		this->size = size;
@@ -218,6 +265,12 @@ public:
 	// Return true if timer has exceeded duration
 	bool checkTimer() {
 		return (timer.getElapsedTime().asSeconds() >= duration);
+	}
+	void pause() {
+		timer.pause();
+	}
+	void resume() {
+		timer.resume();
 	}
 };
 // Queue for incoming garbage
@@ -284,6 +337,14 @@ public:
 			}
 		}
 	}
+	void pause() {
+		for (Garbage& garb : bin)
+			garb.pause();
+	}
+	void resume() {
+		for (Garbage& garb : bin)
+			garb.resume();
+	}
 	// Get a textual representation of the garbage that is remaining in the bin.
 	vector<float> getBin() {
 		vector<float> vec;
@@ -296,36 +357,3 @@ public:
 	}
 };
 
-// Modified sf::Clock for ease of use and pausing
-class sfClockAtHome {
-	sf::Clock clock;
-	sf::Time storage; // For pausing and resuming the clock;
-public:
-	sfClockAtHome() {}
-
-	// Restarts both clock and storage
-	void restart() {
-		clock.restart();
-		storage = sf::Time();
-	}
-	// Saves current time in storage
-	void pause() {
-		storage = clock.getElapsedTime();
-		clock.restart();
-	}
-	// Resets current clock only
-	void resume() {
-		clock.restart();
-	}
-	// Returns time values that include stored time from pausing
-	sf::Time getElapsedTime() {
-		return clock.getElapsedTime() + storage;
-	}
-	float getTimeSeconds() {
-		return clock.getElapsedTime().asSeconds() + storage.asSeconds();
-	}
-	sf::Int32 getTimeMilliseconds() {
-		return clock.getElapsedTime().asMilliseconds() + storage.asMilliseconds();
-	}
-	
-};
