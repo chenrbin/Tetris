@@ -376,7 +376,7 @@ int main(){
 
 			// Check for game over
 			if (screen.getGameOver() && screen.isDeathAnimationOver()) {
-				currentScreen = CLASSICLOSS;
+				currentScreen = LOSESCREEN;
 				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
 			}
 
@@ -558,15 +558,15 @@ int main(){
 			screenP2.receiveGarbage(screen.getOutGarbage());
 
 			// Check for game over
-			
-
 			if (screen.getGameOver()) {
 				screenP2.pauseGame();
 				if (screen.isDeathAnimationOver()) {
 					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
-					currentScreen = CLASSICLOSS;
+					currentScreen = LOSESCREEN;
 					lossText[0] = generateText(font, WHITE, "PLAYER 2 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+					if (screenP2.getGameOver() && screenP2.isDeathAnimationOver()) // Rare event if both players lose at the same time
+						lossText[0] = generateText(font, WHITE, "DRAW!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
 				}
 			}
 			else if (screenP2.getGameOver()) {
@@ -574,7 +574,7 @@ int main(){
 				if (screenP2.isDeathAnimationOver()) {
 					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
-					currentScreen = CLASSICLOSS;
+					currentScreen = LOSESCREEN;
 					lossText[0] = generateText(font, WHITE, "PLAYER 1 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
 				}
 			}
@@ -627,7 +627,7 @@ int main(){
 				}
 			}
 		}
-		else if (currentScreen == CLASSICLOSS) {
+		else if (currentScreen == LOSESCREEN) {
 			window.clear(BLACK);
 			drawVector(window, lossText);
 			sf::Event event;

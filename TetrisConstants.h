@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: garbage rng, garbage pvp, scoring, pause screen, settings / instructions, custom keybinds, multiplayer loss screen
+	// Todo: menu interface classes, clickable text, pause screen, settings / instructions, custom keybinds, 
 	// Known bugs: Death animation plays if both lose at the same time (draw)
 	// 
 	// Set constant variables
@@ -21,14 +21,14 @@ namespace TetrisVariables {
 	// Game mechanic related variables
 	const int FPS = 60; // Frame limit of the game
 	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
-	const float SUPERLOCKSECONDS = 3;
-	const int SUPERLOCKFRAMECOUNT = FPS * SUPERLOCKSECONDS; // Lock delay to prevent infinites
+	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
 	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
 	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
+	const float DEFAULTGARBAGEPROBABILITY = 0.2;
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
@@ -39,7 +39,7 @@ namespace TetrisVariables {
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
 
 	// Game screen state codes
-	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, CLASSICLOSS = 5;
+	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5;
 	
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);

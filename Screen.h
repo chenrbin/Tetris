@@ -34,9 +34,9 @@ class Screen {
 
 	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
 	bool lastMoveSpin; // For checking T-spins
-	sfClockAtHome gravityTimer, lockTimer; // Timer to track gravity and locking
+	sfClockAtHome gravityTimer, lockTimer, superLockTimer; // Timer to track gravity and locking
 
-	int superLockCounter, comboCounter;
+	int comboCounter;
 	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	pieceBag* bag; // Stores the random piece generation
 	bool backToBack; // Stores back-to-back clear flag
@@ -44,7 +44,9 @@ class Screen {
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
-	garbageStack* garbStack;
+	garbageStack* garbStack; // Visuals for garbage
+	int garbLastCol; // Stores location of garbage for randomness settings
+	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
 
 	bool paused;
 	DeathAnimation* deathAnimation;
@@ -60,7 +62,7 @@ public:
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
 		this->bag = bag;
 		playerIndex = bag->addPlayer();
-		totalLinesCleared = 0, comboCounter = 0, superLockCounter = 0;
+		totalLinesCleared = 0, comboCounter = 0;
 		backToBack = false;
 		heldPiece = nullptr;
 		hasHeld = false, lockTimerStarted = false, touchedGround = false;
@@ -80,7 +82,9 @@ public:
 
 		deathAnimation = new DeathAnimation(sf::Vector2f(gameBounds.left, gameBounds.top), 2, 0.2, blockTexture);
 		garbStack = new garbageStack(sf::Vector2f(gameBounds.left, gameBounds.top));
-		
+		garbLastCol = rand() % NUMCOLS; // Random column
+		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
+
 		// Generate board
 		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
@@ -115,12 +119,9 @@ public:
 				lockTimer.restart();
 				lockTimerStarted = true;
 			}
-			else {
-				if (lockTimer.getTimeSeconds() >= LOCKDELAY) {
-					lockTimer.restart();
+			else
+				if (lockTimer.getTimeSeconds() >= LOCKDELAY) 
 					setPiece();
-				}
-			}
 		}
 		else {
 			if (touchedGround) { // Restarts gravity timer if piece leaves ground
@@ -132,10 +133,12 @@ public:
 		// Handles super lock timer. Resets only when a new piece is dropped. 
 		// Uses a frame counter instead of a timer. Increments every frame where !checkBelow
 		if (!checkBelow()) {
-			superLockCounter++;
-			if (superLockCounter > SUPERLOCKFRAMECOUNT)
+			superLockTimer.resume();
+			if (superLockTimer.getTimeSeconds() >= SUPERLOCKDELAY)
 				setPiece();
 		}
+		else
+			superLockTimer.pause();
 		updateGarbage(); // Garbage timers
 	}
 	// Spawn controllable tetromino. Can be pseudorandom or specified
@@ -276,9 +279,7 @@ public:
 		doClearLines();
 		hasHeld = false;
 		touchedGround = false;
-		gravityTimer.restart();
-		lockTimer.restart();
-		superLockCounter = 0;
+		gravityTimer.restart(), lockTimer.restart(), superLockTimer.restart();
 		if (inGarbage > 0 && canDump)
 			dumpGarbage(inGarbage);
 		spawnPiece();
@@ -376,7 +377,16 @@ public:
 			comboCounter++;
 			// Process combos
 			if (comboCounter > 1) {
-				sendGarbage(1);
+				if (comboCounter > 2)
+					sendGarbage(1);
+				else if (comboCounter > 4)
+					sendGarbage(2);
+				else if (comboCounter > 6)
+					sendGarbage(3);
+				else if (comboCounter > 8)
+					sendGarbage(4);
+				else if (comboCounter > 11)
+					sendGarbage(5);
 				playComboText();
 			}
 			// Process All Clear
@@ -398,15 +408,21 @@ public:
 		paused = true;
 		gravityTimer.pause();
 		lockTimer.pause();
+		superLockTimer.pause();
+		bin.pause();
 	}
 	// Resume game and timers
 	void resumeGame() {
 		paused = false;
 		gravityTimer.resume();
 		lockTimer.resume();
+		superLockTimer.resume();
+		bin.resume();
 	}
 	// Handles whether to pause or resume the game
 	void doPauseResume() {
+		if (gameOver) // Disable if game is over. Prevents death animation bug
+			return;
 		if (paused)
 			resumeGame();
 		else
@@ -428,12 +444,12 @@ public:
 		heldSprite.clear();
 		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
 			setGravity();
-		gravityTimer.restart(), lockTimer.restart();
+		gravityTimer.restart(), lockTimer.restart(), superLockTimer.restart();
 		bag->resetPosition(playerIndex);
-		superLockCounter = 0;
 		hasHeld = false, gameOver = false, paused = false;
 		bin.clear();
 		totalLinesCleared = 0, inGarbage = 0; outGarbage = 0;
+		garbLastCol = rand() % NUMCOLS;
 		spawnPiece();
 	}
 	// Handle loss based on game mode
@@ -513,7 +529,15 @@ public:
 				newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + GAMEHEIGHT - TILESIZE));
 
 			// Fill in new row except one square.
-			int randomColumn = rand() % NUMCOLS;
+			int randomColumn;
+			// Increase chance of repeat columns
+			float num = (float)rand() / RAND_MAX;
+			if (num < garbRepeatProbability)
+				randomColumn = garbLastCol;
+			else {
+				randomColumn = rand() % NUMCOLS;
+				garbLastCol = randomColumn;
+			}
 			for (int j = 0; j < NUMCOLS; j++) {
 				if (j != randomColumn)
 					newRow[j].setBlock(true, WHITE);
