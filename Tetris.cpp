@@ -85,15 +85,6 @@ vector<sf::RectangleShape> getLines(sf::FloatRect& bounds) {
 	return lines;
 }
 
-// Generate all text on menu screen
-vector<sf::Text> getMenuText(sf::Font& font) {
-	vector<sf::Text> textboxes;
-	textboxes.push_back(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
-	vector<string> menuItems = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
-	for (int i = 0; i < menuItems.size(); i++)
-		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(MENUXPOS, MENUYPOS + MENUSPACING * i)));
-	return textboxes;
-}
 // Generate all static text on game screen
 vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 	// Redefine bounds for cleaner code
@@ -172,13 +163,6 @@ void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& sc
 	}
 }
 
-// Get player two assets, which are a copy of single player assets but one width to the right
-vector<sf::Text> getPlayer2Text(vector<sf::Text> vec) {
-	for (sf::Text& text : vec)
-		text.move(WIDTH, 0);
-	return vec;
-}
-
 // Draw all objects in a vector
 void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
 	for (auto item : vec)
@@ -218,11 +202,12 @@ int main(){
 	}
 
 	// Title screen sprites
-	vector<sf::Text> menuText = getMenuText(font);
-	int cursorPos = 0;
+	sf::Text titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
+
 	sf::CircleShape cursor(15.f, 3); // Triangle shaped cursor
-	cursor.setPosition(sf::Vector2f(MENUXPOS - 5, MENUYPOS));
 	cursor.rotate(90.f);
+	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
+	clickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, cursor);
 
 	// Game sprites in a vector and constructed in a separate method to keep main clean
 	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
@@ -280,8 +265,10 @@ int main(){
 		// Run on main menu
 		if (currentScreen == MAINMENU) {
 			window.clear(BLUE);
-			drawVector(window, menuText);
-			window.draw(cursor);
+			window.draw(titleText);
+			gameMenu.draw(window);
+
+			bool modeSelected = false; // Allows the z key and mouse click to start games
 
 			// Event handler for menu screen
 			sf::Event event;
@@ -293,74 +280,79 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Down) {
-						if (cursorPos < menuText.size() - 2)
-							cursorPos++;
-					}
-					else if (event.key.code == sf::Keyboard::Up) {
-						if (cursorPos > 0)
-							cursorPos--;
-					}
-					else if (event.key.code == sf::Keyboard::Z) {
-						switch (cursorPos)
-						{
-						case 0: // Classic mode
-							currentScreen = CLASSIC;
-							screen.setGameMode(CLASSIC);
-							gameText[2].setString("Classic Mode");
-							screen.setAutoFall(true);
-							screen.endCreativeMode();
-							bag.resetQueue();
-							screen.resetBoard();
-							break;
-						case 1: // Sandbox mode
-							currentScreen = SANDBOX;
-							gameText[2].setString("Sandbox Mode");
-							screen.setGameMode(SANDBOX);
-							// Reset sandbox settings
-							autoFallBox.setChecked(true);
-							gravityBox.setValue(gravityBox.getMin());
-							creativeModeBox.setChecked(false);
-							screen.setAutoFall(true);
-							screen.endCreativeMode();
-							bag.resetQueue();
-							screen.resetBoard();
-							break;
-						case 2: // PVP mode
-							currentScreen = MULTIPLAYER;
-							window.setSize(sf::Vector2u(WIDTH * 2, HEIGHT));
-							window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
-							window.setPosition(sf::Vector2i(100, 100));
-							screen.setGameMode(MULTIPLAYER);
-							gameText[2].setString("");
-							screen.setAutoFall(true);
-							screen.endCreativeMode();
-							bag.resetQueue();
-							screen.resetBoard();
-
-							screenP2.setGameMode(MULTIPLAYER);
-							screenP2.resetBoard();
-							
-							break;
-						case 3: // Settings
-							window.close();
-							return 0;
-						case 4: // Quit
-							window.close();
-							return 0;
-						default:
-							break;
-						}
-					}
+					if (event.key.code == sf::Keyboard::Down) 
+						gameMenu.moveDown();
+					else if (event.key.code == sf::Keyboard::Up) 
+						gameMenu.moveUp();
+					else if (event.key.code == sf::Keyboard::Z) 
+						modeSelected = true;
+					break;
+				}
+				case sf::Event::MouseMoved: {
+					gameMenu.updateMouse(event.mouseMove.x, event.mouseMove.y);
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
-
+					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y))
+						modeSelected = true;
+					break;
 				}
 				default:
 					break;
 				}
-				cursor.setPosition(sf::Vector2f(MENUXPOS - 5, MENUYPOS + cursorPos * MENUSPACING));
+
+			}
+
+			// Select menu option if modeSelected is true
+			if (modeSelected) {
+				switch (gameMenu.getCursorPos())
+				{
+				case 0: // Classic mode
+					currentScreen = CLASSIC;
+					screen.setGameMode(CLASSIC);
+					gameText[2].setString("Classic Mode");
+					screen.setAutoFall(true);
+					screen.endCreativeMode();
+					bag.resetQueue();
+					screen.resetBoard();
+					break;
+				case 1: // Sandbox mode
+					currentScreen = SANDBOX;
+					gameText[2].setString("Sandbox Mode");
+					screen.setGameMode(SANDBOX);
+					// Reset sandbox settings
+					autoFallBox.setChecked(true);
+					gravityBox.setValue(gravityBox.getMin());
+					creativeModeBox.setChecked(false);
+					screen.setAutoFall(true);
+					screen.endCreativeMode();
+					bag.resetQueue();
+					screen.resetBoard();
+					break;
+				case 2: // PVP mode
+					currentScreen = MULTIPLAYER;
+					window.setSize(sf::Vector2u(WIDTH * 2, HEIGHT));
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
+					window.setPosition(sf::Vector2i(100, 100));
+					screen.setGameMode(MULTIPLAYER);
+					gameText[2].setString("");
+					screen.setAutoFall(true);
+					screen.endCreativeMode();
+					bag.resetQueue();
+					screen.resetBoard();
+
+					screenP2.setGameMode(MULTIPLAYER);
+					screenP2.resetBoard();
+					break;
+				case 3: // Settings
+					window.close();
+					return 0;
+				case 4: // Quit
+					window.close();
+					return 0;
+				default:
+					break;
+				}
 			}
 		}
 		// Run on classic mode

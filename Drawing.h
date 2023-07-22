@@ -264,3 +264,80 @@ public:
 	}
 };
 
+// Class for easy sf::Text generation. Replaces the setText function
+class sfTextAtHome : public sf::Text{
+public:
+	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
+		setFont(font);
+		setFillColor(color);
+		setString(message);
+		setCharacterSize(textSize);
+		if (centered)
+			alignCenter();
+		setPosition(coords);
+		if (bold)
+			setStyle(sf::Text::Bold);
+		if (underlined)
+			setStyle(sf::Text::Underlined);
+	}
+	void alignCenter() {
+		const sf::FloatRect box = getLocalBounds();
+		setOrigin(box.width / 2.0f, box.height / 2.0f);
+	}
+	bool contains(float x, float y) {
+		return getGlobalBounds().contains(x, y);
+	}
+};
+
+// Class for a text that can be navigated and clicked
+class clickableMenu {
+	vector<sfTextAtHome> texts;
+	sf::CircleShape cursor; // Takes in a shape as the cursor. Must preset attributes.
+	int cursorPos;
+public:
+	clickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
+		for (int i = 0; i < menuText.size(); i++)
+			texts.push_back(sfTextAtHome(font, color, menuText[i], textSize, sf::Vector2f(startPos.x, startPos.y + spacing * i)));
+		this->cursor = cursor;
+		cursor.setPosition(startPos.x - 5, startPos.y);
+		cursorPos = 0;
+		updateCursor();
+	}
+	void moveUp() {
+		cursorPos--;
+		if (cursorPos < 0)
+			cursorPos = texts.size() - 1;
+		updateCursor();
+	}
+	void moveDown() {
+		cursorPos++;
+		if (cursorPos >= texts.size())
+			cursorPos = 0;
+		updateCursor();
+	}
+	// Update cursor position to the left of the text it is pointing to
+	void updateCursor() {
+		cursor.setPosition(texts[cursorPos].getPosition().x - 5, texts[cursorPos].getPosition().y);
+	}
+	// Draw all menu components
+	void draw(sf::RenderWindow& window) {
+		for (sfTextAtHome& text : texts)
+			window.draw(text);
+		window.draw(cursor);
+	}
+	// Update cursor based on mouse position. Return true if a text is select
+	bool updateMouse(float x, float y) {
+		for (int i = 0; i < texts.size(); i++) {
+			if (texts[i].contains(x, y)) {
+				cursorPos = i;
+				updateCursor();
+				return true;
+			}
+		}
+		return false;
+	}
+	int getCursorPos() {
+		return cursorPos;
+	}
+};
+

@@ -34,6 +34,7 @@ namespace TetrisVariables {
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
 	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
 	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
+	const sf::Vector2f MENUPOS(MENUXPOS, MENUYPOS);
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
 	const sf::Vector2f GAMEPOSP2(GAMEXPOS + WIDTH, GAMEYPOS);
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
