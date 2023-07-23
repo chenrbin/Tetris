@@ -35,6 +35,7 @@ public:
 		clock.restart();
 		paused = false;
 	}
+	// Returns paused status
 	bool getPaused() {
 		return paused;
 	}

@@ -259,6 +259,8 @@ int main(){
 	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
+	slidingBar<int> slider(250, sf::Vector2f(100, 250), { 10, 20, 4, 6, 7 }, font);
+
 	// Game loop
 	while (window.isOpen())
 	{
@@ -268,7 +270,9 @@ int main(){
 			window.draw(titleText);
 			gameMenu.draw(window);
 
-			bool modeSelected = false; // Allows the z key and mouse click to start games
+			slider.draw(window);
+
+			bool modeSelected = false;
 
 			// Event handler for menu screen
 			sf::Event event;
@@ -290,12 +294,18 @@ int main(){
 				}
 				case sf::Event::MouseMoved: {
 					gameMenu.updateMouse(event.mouseMove.x, event.mouseMove.y);
+					slider.moveCursor(event.mouseMove.x);
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
 					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
+					if (slider.getCursorBounds().contains(event.mouseButton.x, event.mouseButton.y))
+						slider.selectCursor(true);
 					break;
+				}
+				case sf::Event::MouseButtonReleased: {
+					slider.selectCursor(false);
 				}
 				default:
 					break;

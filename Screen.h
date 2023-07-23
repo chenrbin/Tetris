@@ -462,6 +462,7 @@ public:
 			playDeathAnimation();
 			break;
 		case SANDBOX:
+			bag->resetQueue();
 			resetBoard();
 			break;
 		case MULTIPLAYER:

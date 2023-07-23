@@ -267,7 +267,7 @@ public:
 // Class for easy sf::Text generation. Replaces the setText function
 class sfTextAtHome : public sf::Text{
 public:
-	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
+	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false, bool outline = false) {
 		setFont(font);
 		setFillColor(color);
 		setString(message);
@@ -279,6 +279,33 @@ public:
 			setStyle(sf::Text::Bold);
 		if (underlined)
 			setStyle(sf::Text::Underlined);
+		if (outline)
+		{
+			setOutlineColor(BLACK);
+			setOutlineThickness(1);
+		}
+	}
+	void alignCenter() {
+		const sf::FloatRect box = getLocalBounds();
+		setOrigin(box.width / 2.0f, box.height / 2.0f);
+	}
+	bool contains(float x, float y) {
+		return getGlobalBounds().contains(x, y);
+	}
+};
+
+// Similar to sfTextAtHome but for rectangles
+class sfRectangleAtHome : public sf::RectangleShape{
+public:
+	sfRectangleAtHome() {};
+	sfRectangleAtHome(sf::Color color, int length, int width, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), int outlineThickness = 0) {
+		setSize(sf::Vector2f(length, width));
+		setFillColor(color);
+		if (centered)
+			alignCenter();
+		setPosition(position);
+		setOutlineColor(outlineColor);
+		setOutlineThickness(outlineThickness);
 	}
 	void alignCenter() {
 		const sf::FloatRect box = getLocalBounds();
@@ -341,3 +368,98 @@ public:
 	}
 };
 
+// A sliding bar to select values
+template<typename T>
+class slidingBar
+{
+	// Sprites to draw
+	sfRectangleAtHome bar;
+	vector<sfRectangleAtHome> nodes;
+	vector<sfTextAtHome> valuesText;
+	sf::CircleShape cursor;
+
+	// Data to handle
+	int nodeCount;
+	vector<T> values;
+	int cursorIndex;
+	bool selected;
+public:
+	slidingBar(int length, sf::Vector2f position, vector<T> values, sf::Font& font) {
+		nodeCount = values.size();
+		this->values = values;
+
+		// Create bar. Width is specified but height is fixed.
+		bar = sfRectangleAtHome(WHITE, length, BARHEIGHT, sf::Vector2f(position.x, position.y - BARHEIGHT / 2), false, BLACK, 1);
+
+		// Create nodes
+		for (int i = 0; i < nodeCount; i++) {
+			nodes.push_back(sfRectangleAtHome(WHITE, NODEWIDTH, NODEHEIGHT, sf::Vector2f(position.x + i * length / (nodeCount - 1), position.y), true, BLACK, 1));
+			valuesText.push_back(sfTextAtHome(font, WHITE, to_string(values[i]), MENUTEXTSIZE, sf::Vector2f(position.x + i * length / (nodeCount - 1), position.y + NODEHEIGHT), true, false, true, true));
+		}
+
+		// Create circle cursor
+		// TODO sfCircleAtHome
+		cursor.setRadius(BAR_CURSOR_RADIUS);
+		cursor.setFillColor(WHITE);
+		cursor.setOrigin(BAR_CURSOR_RADIUS, BAR_CURSOR_RADIUS);
+		cursor.setPosition(position);
+		cursor.setOutlineColor(BLACK);
+		cursor.setOutlineThickness(1);
+	}
+	// Draw all sprites
+	void draw(sf::RenderWindow& window) {
+		window.draw(bar);
+		for (int i = 0; i < nodeCount; i++) {
+			window.draw(nodes[i]);
+			window.draw(valuesText[i]);
+		}
+		window.draw(cursor);
+	}
+	// Returns the value at the cursor
+	T getCurrentValue(){
+		return values[cursorIndex];
+	}
+	// Move the cursor based on mouse x position
+	void moveCursor(int xPosition) {
+		if (!selected)
+			return;
+		for (int i = 0; i < nodeCount; i++) {
+			sf::FloatRect nodePos = nodes[i].getGlobalBounds();
+			// Collision detections extends two node widths out both sides
+			if (xPosition > nodePos.left - NODEWIDTH * 2 && xPosition < nodePos.left + NODEWIDTH * 3) {
+				cursorIndex = i;
+				cursor.setPosition(nodePos.left + NODEWIDTH / 2, nodePos.top + NODEHEIGHT / 2);
+			}
+		}
+	}
+	void selectCursor(bool val) {
+		if (val == selected) // Do nothing if variable does not need to be changed
+			return;
+		selected = val;
+		// Visual indicator that a cursor has been clicked
+		if (val) { 
+			cursor.setRadius(BAR_CURSOR_RADIUS + BAR_CURSOR_GROWTH);
+			cursor.move(-BAR_CURSOR_GROWTH, -BAR_CURSOR_GROWTH);
+		}
+		else {
+			cout << values[cursorIndex] << endl;
+			cursor.setRadius(BAR_CURSOR_RADIUS);
+			cursor.move(BAR_CURSOR_GROWTH, BAR_CURSOR_GROWTH);
+		}
+	}
+	sf::FloatRect getCursorBounds() {
+		return cursor.getGlobalBounds();
+	}
+};
+
+// A switch that can be turned on or off
+class onOffSwitch {
+
+};
+
+class settingsTab {
+
+};
+class settingsMenu {
+
+};

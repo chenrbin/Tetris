@@ -3,15 +3,16 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: menu interface classes, clickable text, pause screen, settings / instructions, custom keybinds, 
-	// Known bugs: Death animation plays if both lose at the same time (draw)
-	// 
+	// Todo: menu interface classes, pause screen, settings / instructions, custom keybinds, 
+	// Known bugs: 
+	// DAS does not pause (Not Fixing)
+	
 	// Set constant variables
 
 	// Item sizes and spacings
 	const int TILESIZE = 32, LEFTMARGIN = 180, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
-	const float SCALE = 0.8;
+	const float SCALE = 0.8; // Smaller display for hold and next pieces
 
 	// Screen dimensions
 	const int WIDTH = 800, HEIGHT = 800, NUMROWS = 20, NUMCOLS = 10;
@@ -22,13 +23,13 @@ namespace TetrisVariables {
 	const int FPS = 60; // Frame limit of the game
 	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
 	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
-	const float DEFAULTGRAVITY = 1; // Time between gravity movements in seconds
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
 	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
+	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
-	const float DEFAULTGARBAGEPROBABILITY = 0.2;
+	const float DEFAULTGARBAGEPROBABILITY = 0.2; // Chance for a gauaranteed repeat garbage column
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
@@ -88,6 +89,13 @@ namespace TetrisVariables {
 	sf::Keyboard::Key SPINCW2 = sf::Keyboard::Period;
 	sf::Keyboard::Key SPINCCW2 = sf::Keyboard::Comma;
 	sf::Keyboard::Key HOLD2 = sf::Keyboard::RShift;
+
+	// Constants for sprite classes
+
+	// Sliding Bar.
+	const int BARHEIGHT = 6;
+	const int NODEWIDTH = 4, NODEHEIGHT = 15;
+	const int BAR_CURSOR_RADIUS = 10, BAR_CURSOR_GROWTH = 2;
 
 	// Print stuff for debug
 	template <typename T>
