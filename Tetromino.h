@@ -137,6 +137,7 @@ struct Tetromino {
 		return shiftedPositions;
 	}
 
+	// Return positions offset by a number of rows and columns
 	vector<sf::Vector2i> getShiftedPositions(int row, int col) {
 		vector<sf::Vector2i> newPositions;
 		for (sf::Vector2i* pos : positions)

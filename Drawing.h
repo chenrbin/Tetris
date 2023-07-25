@@ -267,14 +267,15 @@ public:
 // Class for easy sf::Text generation. Replaces the setText function
 class sfTextAtHome : public sf::Text{
 public:
-	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false, bool outline = false) {
+	sfTextAtHome() {}
+	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f position, bool bold = true, bool underlined = false, bool centered = false, bool outline = false) {
 		setFont(font);
 		setFillColor(color);
 		setString(message);
 		setCharacterSize(textSize);
 		if (centered)
 			alignCenter();
-		setPosition(coords);
+		setPosition(position);
 		if (bold)
 			setStyle(sf::Text::Bold);
 		if (underlined)
@@ -294,10 +295,10 @@ public:
 	}
 };
 
-// Similar to sfTextAtHome but for rectangles
+// Class for easy sf::RectangleShape generation.
 class sfRectangleAtHome : public sf::RectangleShape{
 public:
-	sfRectangleAtHome() {};
+	sfRectangleAtHome() {}
 	sfRectangleAtHome(sf::Color color, int length, int width, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), int outlineThickness = 0) {
 		setSize(sf::Vector2f(length, width));
 		setFillColor(color);
@@ -352,7 +353,7 @@ public:
 			window.draw(text);
 		window.draw(cursor);
 	}
-	// Update cursor based on mouse position. Return true if a text is select
+	// Update cursor based on mouse position. Return true if a text is selected
 	bool updateMouse(float x, float y) {
 		for (int i = 0; i < texts.size(); i++) {
 			if (texts[i].contains(x, y)) {
@@ -368,9 +369,16 @@ public:
 	}
 };
 
+// Base class for game setting
+template<typename T>
+struct optionSelector {
+	optionSelector(){}
+	virtual T getValue() = 0;
+};
+
 // A sliding bar to select values
 template<typename T>
-class slidingBar
+class slidingBar : public optionSelector<T>
 {
 	// Sprites to draw
 	sfRectangleAtHome bar;
@@ -379,10 +387,10 @@ class slidingBar
 	sf::CircleShape cursor;
 
 	// Data to handle
-	int nodeCount;
 	vector<T> values;
+	int nodeCount;
 	int cursorIndex;
-	bool selected;
+	bool cursorPressed;
 public:
 	slidingBar(int length, sf::Vector2f position, vector<T> values, sf::Font& font) {
 		nodeCount = values.size();
@@ -416,12 +424,12 @@ public:
 		window.draw(cursor);
 	}
 	// Returns the value at the cursor
-	T getCurrentValue(){
+	T getValue(){
 		return values[cursorIndex];
 	}
 	// Move the cursor based on mouse x position
 	void moveCursor(int xPosition) {
-		if (!selected)
+		if (!cursorPressed)
 			return;
 		for (int i = 0; i < nodeCount; i++) {
 			sf::FloatRect nodePos = nodes[i].getGlobalBounds();
@@ -433,16 +441,15 @@ public:
 		}
 	}
 	void selectCursor(bool val) {
-		if (val == selected) // Do nothing if variable does not need to be changed
+		if (val == cursorPressed) // Do nothing if variable does not need to be changed
 			return;
-		selected = val;
+		cursorPressed = val;
 		// Visual indicator that a cursor has been clicked
 		if (val) { 
 			cursor.setRadius(BAR_CURSOR_RADIUS + BAR_CURSOR_GROWTH);
 			cursor.move(-BAR_CURSOR_GROWTH, -BAR_CURSOR_GROWTH);
 		}
 		else {
-			cout << values[cursorIndex] << endl;
 			cursor.setRadius(BAR_CURSOR_RADIUS);
 			cursor.move(BAR_CURSOR_GROWTH, BAR_CURSOR_GROWTH);
 		}
@@ -458,8 +465,96 @@ class onOffSwitch {
 };
 
 class settingsTab {
+	sfRectangleAtHome tabRect;
+	sfTextAtHome tabText;
+	sf::FloatRect tabBounds; // Used to align tab rectangle and text
+	int index; // First tab has index of 0
+	bool selected; // The currently selected tab is violet and heighter, otherwise gray
+public:
+	settingsTab(sf::Font& font, string name, int index) {
+		// Rect origin is set at 0, 0 and text origin is centered
+		tabRect = sfRectangleAtHome(GRAY, 0, 0, sf::Vector2f(0, 0), false, BLACK, 2);
+		tabText = sfTextAtHome(font, WHITE, name, MENUTEXTSIZE, sf::Vector2f(0, 0), true, false, true, true);
+		this->index = index;
+		selected = false;
+	}
+	void draw(sf::RenderWindow& window) {
+		// Always draw the tab itself
+		window.draw(tabRect);
+		window.draw(tabText);
 
+		// Draw contents if current tab is selected
+		if (selected) {
+			
+		}
+	}
+	// Set tab size and position based on float rect
+	void setBounds(float left, float top, float width, float height) {
+		tabBounds = sf::FloatRect(left, top, width, height);
+		tabRect.setSize(sf::Vector2f(width, height));
+		tabRect.setPosition(sf::Vector2f(left, top));
+		tabText.setPosition(left + width / 2, top + height / 2);
+	}
+	void setRectColor(const sf::Color& color) {
+		tabRect.setFillColor(color);
+	}
+	void setSelected(bool val) {
+		if (selected == val)
+			return;
+		selected = val;
+		// Change tab visuals accordingly
+		if (selected) {
+			tabRect.setFillColor(VIOLET);
+			// Change width slightly to align outlines
+			setBounds(tabBounds.left, tabBounds.top, tabBounds.width - 2, tabBounds.height + TABHEIGHTGROWTH);
+		}
+		else {
+			tabRect.setFillColor(GRAY);
+			setBounds(tabBounds.left, tabBounds.top, tabBounds.width + 2, tabBounds.height - TABHEIGHTGROWTH);
+		}
+	}
+	int getIndex() {
+		return index;
+	}
+	sf::FloatRect getTabBounds() {
+		return tabBounds;
+	}
 };
 class settingsMenu {
-
+	vector<settingsTab> tabs;
+	int tabCount;
+public:
+	settingsMenu() {
+		tabCount = 0;
+	}
+	void addTab(sf::Font& font, string name) {
+		tabs.push_back(settingsTab(font, name, tabCount++));
+		alignTabs();
+	}
+	// Align tab positions across top of screen based on number of tabs
+	void alignTabs() {
+		for (int i = 0; i < tabs.size(); i++)
+			tabs[i].setBounds(WIDTH * i / tabs.size() + 1, TABTOP, WIDTH / tabs.size(), TABHEIGHT);
+	}
+	// Draw all tabs
+	void draw(sf::RenderWindow& window) {
+		for (settingsTab& tab : tabs)
+			tab.draw(window);
+	}
+	// Select specific tab. Should be called once after creating tabs to select default
+	void selectTab(int index) {
+		for (int i = 0; i < tabCount; i++)
+			if (i == index)
+				tabs[i].setSelected(true);
+			else
+				tabs[i].setSelected(false);
+	}
+	// Process clicking to select a tab
+	void clickTab(float xPos, float yPos) {
+		for (int i = 0; i < tabCount; i++)
+			if (tabs[i].getTabBounds().contains(xPos, yPos)) {
+				selectTab(i);
+				break;
+			}
+	}
 };

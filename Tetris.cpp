@@ -9,6 +9,7 @@
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
+// Line count as of 7/25/2023: 2958
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
 sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
@@ -184,11 +185,12 @@ void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 int main(){
 	srand(time(NULL));
 	// Set SFML objects
-	sf::ContextSettings settings;
-	settings.antialiasingLevel = 8;
-	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, settings);
+	sf::ContextSettings windowSettings;
+	windowSettings.antialiasingLevel = 8;
+	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, windowSettings);
 	window.setFramerateLimit(FPS);
 	window.setKeyRepeatEnabled(false);
+
 	sf::Font font;
 	if (!font.loadFromFile("font.ttf")) {
 		cout << "Font not found\n";
@@ -259,6 +261,13 @@ int main(){
 	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
+	// Set up settings sprites
+	settingsMenu gameSettings;
+	gameSettings.addTab(font, "Gameplay");
+	gameSettings.addTab(font, "Controls");
+	gameSettings.addTab(font, "Graphics");
+	gameSettings.selectTab(0);
+
 	slidingBar<int> slider(250, sf::Vector2f(100, 250), { 10, 20, 4, 6, 7 }, font);
 
 	// Game loop
@@ -269,8 +278,6 @@ int main(){
 			window.clear(BLUE);
 			window.draw(titleText);
 			gameMenu.draw(window);
-
-			slider.draw(window);
 
 			bool modeSelected = false;
 
@@ -294,18 +301,15 @@ int main(){
 				}
 				case sf::Event::MouseMoved: {
 					gameMenu.updateMouse(event.mouseMove.x, event.mouseMove.y);
-					slider.moveCursor(event.mouseMove.x);
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
 					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
-					if (slider.getCursorBounds().contains(event.mouseButton.x, event.mouseButton.y))
-						slider.selectCursor(true);
 					break;
 				}
 				case sf::Event::MouseButtonReleased: {
-					slider.selectCursor(false);
+					break;
 				}
 				default:
 					break;
@@ -355,8 +359,8 @@ int main(){
 					screenP2.resetBoard();
 					break;
 				case 3: // Settings
-					window.close();
-					return 0;
+					currentScreen = SETTINGSCREEN;
+					break;
 				case 4: // Quit
 					window.close();
 					return 0;
@@ -373,10 +377,12 @@ int main(){
 			screen.drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
-			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
-			window.draw(linesClearedText);
 			drawVector(window, clearAnimations);
 
+			// This is only shown in classic mode
+			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
+			window.draw(linesClearedText);
+			
 			// In-game timer events
 			screen.doTimeStuff();
 
@@ -488,12 +494,10 @@ int main(){
 					}
 					else if (event.key.code == sf::Keyboard::T)
 						currentScreen = MAINMENU;
-					else if (event.key.code == sf::Keyboard::G) {
+					else if (event.key.code == sf::Keyboard::G) 
 						screen.receiveGarbage(1);
-					}
-					else if (event.key.code == sf::Keyboard::H) {
+					else if (event.key.code == sf::Keyboard::H) 
 						screen.receiveGarbage(4);
-					}
 					else if (event.key.code == sf::Keyboard::Escape)
 						screen.doPauseResume();
 					break;
@@ -528,10 +532,8 @@ int main(){
 				}
 				case sf::Event::MouseMoved: { // Shows a transparent X when hovering over unchecked boxes
 					sf::Vector2f mousePos(event.mouseMove.x, event.mouseMove.y);
-					autoFallBox.setHovering(autoFallBox.getBounds().contains(mousePos));
-					creativeModeBox.setHovering(creativeModeBox.getBounds().contains(mousePos));
-					resetBox.setHovering(resetBox.getBounds().contains(mousePos));
-					quitBox.setHovering(quitBox.getBounds().contains(mousePos));
+					for (Checkbox* box : sandboxes)
+						box->setHovering(box->getBounds().contains(mousePos));
 				}
 				default:
 					break;
@@ -648,6 +650,26 @@ int main(){
 					break;
 				case sf::Event::MouseButtonPressed: 
 					currentScreen = MAINMENU;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		else if (currentScreen == SETTINGSCREEN) {
+			window.clear(BLUE);
+			gameSettings.draw(window);
+			sf::Event event;
+			while (window.pollEvent(event)) {
+				switch (event.type)
+				{
+				case sf::Event::Closed:
+					window.close();
+					break;
+				case sf::Event::KeyPressed:
+					break;
+				case sf::Event::MouseButtonPressed:
+					gameSettings.clickTab(event.mouseButton.x, event.mouseButton.y);
 					break;
 				default:
 					break;

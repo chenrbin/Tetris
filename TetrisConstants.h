@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: menu interface classes, pause screen, settings / instructions, custom keybinds, 
+	// Todo: pause screen, setting contents, custom keybinds, check for memory leaks, scoring
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -41,7 +41,7 @@ namespace TetrisVariables {
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
 
 	// Game screen state codes
-	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5;
+	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5, SETTINGSCREEN = 6;
 	
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
@@ -92,10 +92,13 @@ namespace TetrisVariables {
 
 	// Constants for sprite classes
 
-	// Sliding Bar.
+	// Sliding Bar
 	const int BARHEIGHT = 6;
 	const int NODEWIDTH = 4, NODEHEIGHT = 15;
 	const int BAR_CURSOR_RADIUS = 10, BAR_CURSOR_GROWTH = 2;
+
+	// Settings Tab
+	const int TABTOP = 0, TABHEIGHT = 50, TABHEIGHTGROWTH = 10;
 
 	// Print stuff for debug
 	template <typename T>

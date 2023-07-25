@@ -38,8 +38,8 @@ class Screen {
 
 	int comboCounter;
 	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
-	pieceBag* bag; // Stores the random piece generation
 	bool backToBack; // Stores back-to-back clear flag
+	pieceBag* bag; // Stores the random piece generation
 
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
@@ -63,16 +63,15 @@ public:
 		this->bag = bag;
 		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0;
-		backToBack = false;
 		heldPiece = nullptr;
-		hasHeld = false, lockTimerStarted = false, touchedGround = false;
+		hasHeld = false, lockTimerStarted = false, touchedGround = false, backToBack = false;
 		creativeMode = false, autoFall = true, gameOver = false, canDump = true, paused = false;
-		gameMode = MAINMENU;
+		gameMode = MAINMENU; // Gamemode will be set whenever a mode is selected from the main menu
 		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
-			tetrominos[i]->setPieceCode(i); // This piece code mess ensures proper hold functionality and that the tetrominos vector element order does not matter.
+			tetrominos[i]->setPieceCode(i); // Piece codes allow for specified piece spawns
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));
 		}
 		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
@@ -110,7 +109,7 @@ public:
 			movePiece(1);
 			gravityTimer.restart();
 		}
-		if (creativeMode) // Deactivates lock timer if creative mode is on
+		if (creativeMode) // Deactivates the rest if creative mode is on
 			return;
 		// Handles lock timer
 		if (!checkBelow()) {
@@ -131,7 +130,6 @@ public:
 			touchedGround = false;
 		}
 		// Handles super lock timer. Resets only when a new piece is dropped. 
-		// Uses a frame counter instead of a timer. Increments every frame where !checkBelow
 		if (!checkBelow()) {
 			superLockTimer.resume();
 			if (superLockTimer.getTimeSeconds() >= SUPERLOCKDELAY)
@@ -235,7 +233,7 @@ public:
 					break;
 				}
 			}
-			if (validPosition) {
+			if (validPosition) { // Execute spin
 				currentPiece->setPositions(positions);
 				lockTimer.restart();
 				spinSuccessful = true;
@@ -406,17 +404,13 @@ public:
 	// Pause the game and disable timers
 	void pauseGame() {
 		paused = true;
-		gravityTimer.pause();
-		lockTimer.pause();
-		superLockTimer.pause();
+		gravityTimer.pause(), lockTimer.pause(), superLockTimer.pause();
 		bin.pause();
 	}
 	// Resume game and timers
 	void resumeGame() {
 		paused = false;
-		gravityTimer.resume();
-		lockTimer.resume();
-		superLockTimer.resume();
+		gravityTimer.resume(), lockTimer.resume(), superLockTimer.resume();
 		bin.resume();
 	}
 	// Handles whether to pause or resume the game
@@ -734,7 +728,7 @@ public:
 		(*clearAnimations)[4].restart();
 	}
 	// Play death animation. This is performed right before game over.
-	// NOTE: This will be called by main to avoid bugs when simultaneous loss in pvp
+	// NOTE: This will be called by main to avoid bugs with simultaneous loss in pvp
 	void playDeathAnimation() {
 		deathAnimation->restart();
 	}
