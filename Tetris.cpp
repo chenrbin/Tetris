@@ -261,6 +261,11 @@ int main(){
 	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
+	// WIP Pause screen sprites
+	sf::RectangleShape pauseRect = generateRectangle(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS), BLACK, sf::Vector2f(GAMEXPOS, GAMEYPOS - TOPROWPIXELS));
+	sf::Text pauseText = generateText(font, WHITE, "PAUSED", 40, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3), true, false, true);
+	sf::Text pauseText2 = generateText(font, WHITE, "Press ESC to resume", 20, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3), true, false, true);
+
 	// Set up settings sprites
 	settingsMenu gameSettings;
 	gameSettings.addTab(font, "Gameplay");
@@ -268,7 +273,10 @@ int main(){
 	gameSettings.addTab(font, "Graphics");
 	gameSettings.selectTab(0);
 
-	slidingBar<int> slider(250, sf::Vector2f(100, 250), { 10, 20, 4, 6, 7 }, font);
+	slidingBar difficultySlider(250, { "Easy", "Normal", "Hard"}, font);
+	gameSettings[0].addSetting("Difficulty", &difficultySlider, false, font);
+	slidingBar lockTimerSlider(250, { "10", "20", "50", "100" }, font);
+	gameSettings[0].addSetting("Lock Delay", &lockTimerSlider, true, font);
 
 	// Game loop
 	while (window.isOpen())
@@ -383,6 +391,12 @@ int main(){
 			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
 			window.draw(linesClearedText);
 			
+			if (screen.getPaused())
+			{
+				window.draw(pauseRect);
+				window.draw(pauseText);
+				window.draw(pauseText2);
+			}
 			// In-game timer events
 			screen.doTimeStuff();
 
@@ -668,8 +682,15 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 					break;
+				case sf::Event::MouseMoved:
+					gameSettings.processMouseMove(event.mouseMove.x, event.mouseMove.y);
+					break;
 				case sf::Event::MouseButtonPressed:
 					gameSettings.clickTab(event.mouseButton.x, event.mouseButton.y);
+					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
+					break;
+				case sf::Event::MouseButtonReleased:
+					gameSettings.processMouseRelease();
 					break;
 				default:
 					break;

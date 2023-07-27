@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: pause screen, setting contents, custom keybinds, check for memory leaks, scoring
+	// Todo: optimize setting xPos, pause screen class, setting contents, custom keybinds, check for memory leaks, scoring, click sliding bar nodes directly
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -99,6 +99,9 @@ namespace TetrisVariables {
 
 	// Settings Tab
 	const int TABTOP = 0, TABHEIGHT = 50, TABHEIGHTGROWTH = 10;
+	// Tab items
+	const int SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 100;
+	const int SELECTORRIGHTSPACING = 200, SELECTORDOWNSPACING = 40;
 
 	// Print stuff for debug
 	template <typename T>
