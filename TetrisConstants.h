@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: optimize setting xPos, pause screen class, setting contents, custom keybinds, check for memory leaks, scoring, click sliding bar nodes directly
+	// Todo: review parameter types, optimize setting xPos, pause screen class, setting contents, custom keybinds, scoring, click sliding bar nodes directly 
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -12,7 +12,7 @@ namespace TetrisVariables {
 	// Item sizes and spacings
 	const int TILESIZE = 32, LEFTMARGIN = 180, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
-	const float SCALE = 0.8; // Smaller display for hold and next pieces
+	const float SCALE = 0.8f; // Smaller display for hold and next pieces
 
 	// Screen dimensions
 	const int WIDTH = 800, HEIGHT = 800, NUMROWS = 20, NUMCOLS = 10;
@@ -25,20 +25,20 @@ namespace TetrisVariables {
 	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
-	const float GRAVITYSPEEDS[] = { 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01 };
+	const float GRAVITYSPEEDS[] = { 1, 0.75f, 0.5f, 0.25f, 0.1f, 0.05f, 0.01f };
 	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
-	const float DEFAULTGARBAGEPROBABILITY = 0.2; // Chance for a gauaranteed repeat garbage column
+	const float DEFAULTGARBAGEPROBABILITY = 0.2f; // Chance for a gauaranteed repeat garbage column
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
-	const int GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
+	const float GAMEXPOS = LEFTMARGIN, GAMEYPOS = ((HEIGHT - GAMEHEIGHT) / 2);
 	const sf::Vector2f TITLETEXTPOS(WIDTH / 2, 100);
 	const sf::Vector2f MENUPOS(MENUXPOS, MENUYPOS);
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
 	const sf::Vector2f GAMEPOSP2(GAMEXPOS + WIDTH, GAMEYPOS);
-	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5);
+	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5f);
 
 	// Game screen state codes
 	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5, SETTINGSCREEN = 6;

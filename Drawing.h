@@ -17,7 +17,7 @@ protected:
 public:
 	Checkbox(float size, float left, float top, bool checked, sf::Font& font) {
 		// White outline box
-		box = sf::RectangleShape(sf::Vector2f(size, size));
+		box = sf::RectangleShape({ size, size });
 		box.setPosition(left, top);
 		box.setOutlineColor(WHITE);
 		box.setFillColor(BLUE);
@@ -136,6 +136,9 @@ protected:
 	sfClockAtHome startTime;
 	float duration;
 public:
+	Animation() {
+		duration = 0;
+	}
 	// Draws the animation to the window
 	virtual void draw(sf::RenderWindow& window) = 0;
 	virtual ~Animation() {};
@@ -232,8 +235,8 @@ public:
 	// Construct a stack of rectangles at position relative to gamePos
 	garbageStack(sf::Vector2f gamePos) {
 		for (int i = 0; i < NUMROWS; i++) {
-			sf::RectangleShape rec(sf::Vector2f(TILESIZE / 2, TILESIZE - 1));
-			rec.setPosition(gamePos.x - TILESIZE / 2, gamePos.y + GAMEHEIGHT - (i + 1) * TILESIZE + LINEWIDTH + 1);
+			sf::RectangleShape rec({ TILESIZE / 2.0f, TILESIZE - 1 });
+			rec.setPosition(gamePos.x - TILESIZE / 2.0f, gamePos.y + GAMEHEIGHT - (i + 1) * TILESIZE + LINEWIDTH + 1);
 			rec.setOutlineColor(WHITE);
 			rec.setOutlineThickness(1);
 			stack.push_back(rec);
@@ -299,8 +302,8 @@ public:
 class sfRectangleAtHome : public sf::RectangleShape{
 public:
 	sfRectangleAtHome() {}
-	sfRectangleAtHome(sf::Color color, int length, int width, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), int outlineThickness = 0) {
-		setSize(sf::Vector2f(length, width));
+	sfRectangleAtHome(sf::Color color, sf::Vector2f size, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), float outlineThickness = 0) {
+		setSize(size);
 		setFillColor(color);
 		if (centered)
 			alignCenter();
@@ -325,7 +328,7 @@ class clickableMenu {
 public:
 	clickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
 		for (int i = 0; i < menuText.size(); i++)
-			texts.push_back(sfTextAtHome(font, color, menuText[i], textSize, sf::Vector2f(startPos.x, startPos.y + spacing * i)));
+			texts.push_back(sfTextAtHome(font, color, menuText[i], textSize, { startPos.x, startPos.y + spacing * i }));
 		this->cursor = cursor;
 		cursor.setPosition(startPos.x - 5, startPos.y);
 		cursorPos = 0;
@@ -354,7 +357,7 @@ public:
 		window.draw(cursor);
 	}
 	// Update cursor based on mouse position. Return true if a text is selected
-	bool updateMouse(float x, float y) {
+	bool updateMouse(int x, int y) {
 		for (int i = 0; i < texts.size(); i++) {
 			if (texts[i].contains(x, y)) {
 				cursorPos = i;
@@ -369,6 +372,16 @@ public:
 	}
 };
 
+// Class for a button that can be clicked
+class clickableButton {
+	sfRectangleAtHome button;
+	sfTextAtHome text;
+public:
+	clickableButton(sf::Vector2f buttonSize, sf::Vector2f position, string message, const sf::Color& buttonColor = BLACK, const sf::Color& textColor = WHITE) {
+		button = sfRectangleAtHome(buttonColor, { buttonSize.x, buttonSize.y }, { position.x, position.y }, true, BLACK, 1);
+	}
+};
+
 // Base class for game setting
 struct optionSelector {
 	optionSelector() {};
@@ -380,10 +393,10 @@ struct optionSelector {
 
 	// React to mouse movement, click, and release. 
 	// Returns whether a successful action is performed for efficiency purposes
-	virtual bool processMouseMove(float mouseX, float mouseY) {
+	virtual bool processMouseMove(int mouseX, int mouseY) {
 		return false;
 	}
-	virtual bool processMouseClick(float mouseX, float mouseY) {
+	virtual bool processMouseClick(int mouseX, int mouseY) {
 		return false;
 	}
 	virtual bool processMouseRelease() {
@@ -407,17 +420,17 @@ class slidingBar : public optionSelector
 	int cursorIndex;
 	bool cursorPressed;
 public:
-	slidingBar(int length, vector<string> values, sf::Font& font) {
+	slidingBar(float length, vector<string> values, sf::Font& font) {
 		nodeCount = values.size();
 		this->values = values;
 
 		// Create bar. Width is specified but height is fixed.
-		bar = sfRectangleAtHome(WHITE, length, BARHEIGHT, sf::Vector2f(0, 0 - BARHEIGHT / 2), false, BLACK, 1);
+		bar = sfRectangleAtHome(WHITE, { length, BARHEIGHT }, { 0, 0 - BARHEIGHT / 2 }, false, BLACK, 1);
 
 		// Create nodes
 		for (int i = 0; i < nodeCount; i++) {
-			nodes.push_back(sfRectangleAtHome(WHITE, NODEWIDTH, NODEHEIGHT, sf::Vector2f(0 + i * length / (nodeCount - 1), 0), true, BLACK, 1));
-			valuesText.push_back(sfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, sf::Vector2f(0 + i * length / (nodeCount - 1), NODEHEIGHT), true, false, true, true));
+			nodes.push_back(sfRectangleAtHome(WHITE, { NODEWIDTH, NODEHEIGHT }, { 0 + i * length / (nodeCount - 1), 0 }, true, BLACK, 1));
+			valuesText.push_back(sfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { 0 + i * length / (nodeCount - 1), NODEHEIGHT }, true, false, true, true));
 		}
 
 		// Create circle cursor
@@ -441,8 +454,8 @@ public:
 	string getValue(){
 		return values[cursorIndex];
 	}
-	// Move the cursor based on mouse x position
-	bool moveCursor(int xPosition) {
+	// Move the cursor based on mouse x position to select a node
+	bool moveCursor(float xPosition) {
 		if (!cursorPressed)
 			return false;
 		for (int i = 0; i < nodeCount; i++) {
@@ -450,7 +463,7 @@ public:
 			// Collision detections extends two node widths out both sides
 			if (xPosition > nodePos.left - NODEWIDTH * 2 && xPosition < nodePos.left + NODEWIDTH * 3) {
 				cursorIndex = i;
-				cursor.setPosition(nodePos.left + NODEWIDTH / 2, nodePos.top + NODEHEIGHT / 2);
+				cursor.setPosition(nodePos.left + NODEWIDTH / 2.0f, nodePos.top + NODEHEIGHT / 2.0f);
 				return true;
 			}
 		}
@@ -484,12 +497,13 @@ public:
 			text.move(offsetX, offsetY);
 		cursor.move(offsetX, offsetY);
 	}
-	bool processMouseMove(float mouseX, float mouseY) {
+	bool processMouseMove(int mouseX, int mouseY) {
 		return moveCursor(mouseX);
 	}
-	bool processMouseClick(float mouseX, float mouseY) {
+	bool processMouseClick(int mouseX, int mouseY) {
 		if (getCursorBounds().contains(mouseX, mouseY))
 			return setCursorPressed(true);
+		return false;
 	}
 	bool processMouseRelease() {
 		return setCursorPressed(false);
@@ -514,8 +528,8 @@ class settingsTab {
 public:
 	settingsTab(sf::Font& font, string name, int index) {
 		// Rect origin is set at 0, 0 and text origin is centered
-		tabRect = sfRectangleAtHome(GRAY, 0, 0, sf::Vector2f(0, 0), false, BLACK, 2);
-		tabText = sfTextAtHome(font, WHITE, name, MENUTEXTSIZE, sf::Vector2f(0, 0), true, false, true, true);
+		tabRect = sfRectangleAtHome(GRAY, { 0, 0 }, { 0, 0 }, false, BLACK, 2);
+		tabText = sfTextAtHome(font, WHITE, name, MENUTEXTSIZE, { 0, 0 }, true, false, true, true);
 		this->index = index;
 		tabSelected = false;
 		settingCount = 0;
@@ -537,8 +551,8 @@ public:
 	// Set tab size and position based on float rect
 	void setBounds(float left, float top, float width, float height) {
 		tabBounds = sf::FloatRect(left, top, width, height);
-		tabRect.setSize(sf::Vector2f(width, height));
-		tabRect.setPosition(sf::Vector2f(left, top));
+		tabRect.setSize({ width, height });
+		tabRect.setPosition(left, top);
 		tabText.setPosition(left + width / 2, top + height / 2);
 	}
 	void setRectColor(const sf::Color& color) {
@@ -568,14 +582,14 @@ public:
 	// Add a setting option and its selection mechanism. True to place mechanism to the right of text, false for below.
 	void addSetting(string text, optionSelector* selector, bool selectorPositionRight, sf::Font& font) {
 		// Determine sprite position based on setting count
-		int xPos, yPos;
-		if (settingCount < 1)
+		float xPos, yPos;
+		if (settingCount < 7)
 			xPos = SETTINGXPOS;
 		else // Next column
 			xPos = SETTINGXPOS + 300;
 		yPos = SETTINGYPOS + settingCount * SETTINGSPACING;
 		
-		settingsTexts.push_back(sfTextAtHome(font, WHITE, text, MENUTEXTSIZE, sf::Vector2f(xPos, yPos)));
+		settingsTexts.push_back(sfTextAtHome(font, WHITE, text, MENUTEXTSIZE, { xPos, yPos }));
 		settingSelectors.push_back(selector);
 		if (selectorPositionRight)
 			selector->move(xPos + SELECTORRIGHTSPACING, yPos);
@@ -584,12 +598,12 @@ public:
 		settingCount++;
 	}
 	// Check all mechanisms on mouse click position
-	void processMouseMove(float mouseX, float mouseY) {
+	void processMouseMove(int mouseX, int mouseY) {
 		for (optionSelector* selector : settingSelectors)
 			if (selector->processMouseMove(mouseX, mouseY)) 
 				break; // Break after a successful action. Skips the need to check everything
 	}
-	void processMouseClick(float mouseX, float mouseY) {
+	void processMouseClick(int mouseX, int mouseY) {
 		for (optionSelector* selector : settingSelectors)
 			if (selector->processMouseClick(mouseX, mouseY))
 				break; // Since no sprites overlap, this saves the need to check all bounds;
@@ -616,7 +630,7 @@ public:
 	// Align tab positions across top of screen based on number of tabs
 	void alignTabs() {
 		for (int i = 0; i < tabs.size(); i++)
-			tabs[i].setBounds(WIDTH * i / tabs.size() + 1, TABTOP, WIDTH / tabs.size(), TABHEIGHT);
+			tabs[i].setBounds(WIDTH * i / tabs.size() + 1.0f, TABTOP, WIDTH / tabs.size(), TABHEIGHT);
 	}
 	// Draw all tabs
 	void draw(sf::RenderWindow& window) {
@@ -641,10 +655,10 @@ public:
 			}
 	}
 	// Process mouse events for current tab
-	void processMouseMove(float mouseX, float mouseY) {
+	void processMouseMove(int mouseX, int mouseY) {
 		tabs[currentTabIndex].processMouseMove(mouseX, mouseY);
 	}
-	void processMouseClick(float mouseX, float mouseY) {
+	void processMouseClick(int mouseX, int mouseY) {
 		tabs[currentTabIndex].processMouseClick(mouseX, mouseY);
 	}
 	void processMouseRelease() {

@@ -11,9 +11,9 @@ class Tile {
 	bool hasMovingBlock; // For blocks that are still in control
 	bool hasPreviewBlock; // For block ghost piece
 	sf::Sprite sprite;
-	int xPos, yPos;
+	float xPos, yPos;
 public:
-	Tile(sf::Texture& texture, int xPos, int yPos) {
+	Tile(sf::Texture& texture, float xPos, float yPos) {
 		this->xPos = xPos;
 		this->yPos = yPos;
 		sprite.setPosition(xPos + 1, yPos + 1); // Very minor adjustment to help sprites stay within outlines

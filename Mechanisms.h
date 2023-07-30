@@ -213,7 +213,7 @@ public:
 	// Adds a player who is accessing the queue. Returns the player index
 	int addPlayer() {
 		positions.push_back(0);
-		return positions.size() - 1;
+		return (int)positions.size() - 1;
 	}
 	// Resets the queue
 	// NOTE: resetQueue must be called before resetPosition 

@@ -29,7 +29,7 @@ sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned 
 	return text;
 }
 // Generate rectangle entity. Can specify dimensions, color, position, origin, outline
-sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = sf::Vector2f(0, 0), sf::Color outlineColor = sf::Color(), int outlineThickness = 0)
+sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = { 0, 0 }, sf::Color outlineColor = sf::Color(), float outlineThickness = 0)
 {
 	sf::RectangleShape rect(dimensions);
 	rect.setFillColor(fillColor);
@@ -44,20 +44,20 @@ sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColo
 vector<sf::RectangleShape> getGameRects(sf::Vector2f gamePos) {
 	// Rectangles for game screen, hold, queue, garbage bin, and top row, 
 	vector<sf::RectangleShape> rects;
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT), BLACK,
-		gamePos, sf::Vector2f(0, 0), WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 5), BLACK,
-		sf::Vector2f(gamePos.x - GAMEWIDTH / 2.5 - LINEWIDTH - TILESIZE / 2, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH / 2.5, GAMEHEIGHT / 9 * NEXTPIECECOUNT),
-		BLACK, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle(sf::Vector2f(TILESIZE / 2, GAMEHEIGHT - LINEWIDTH), BLACK,
-		sf::Vector2f(gamePos.x - TILESIZE / 2 - LINEWIDTH, gamePos.y + LINEWIDTH), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ GAMEWIDTH, GAMEHEIGHT }, BLACK,
+		gamePos, { 0, 0 }, WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ GAMEWIDTH / 2.5, GAMEHEIGHT / 5 }, BLACK,
+		{ gamePos.x - GAMEWIDTH / 2.5f - LINEWIDTH - TILESIZE / 2, gamePos.y + LINEWIDTH }, { 0,  0 }, WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ GAMEWIDTH / 2.5, GAMEHEIGHT / 9 * NEXTPIECECOUNT },
+		BLACK, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, { 0, 0 }, WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ TILESIZE / 2, GAMEHEIGHT - LINEWIDTH }, BLACK,
+		{ gamePos.x - TILESIZE / 2 - LINEWIDTH, gamePos.y + LINEWIDTH }, { 0, 0 }, WHITE, LINEWIDTH));
 
 	// Rectangles to show a couple pixels of the very top row
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH, TOPROWPIXELS), BLACK,
-		sf::Vector2f(gamePos.x, gamePos.y - TOPROWPIXELS), sf::Vector2f(0, 0), WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle(sf::Vector2f(GAMEWIDTH + 1, TILESIZE - 9), BLUE,
-		sf::Vector2f(gamePos.x - 1, gamePos.y - TILESIZE - 1)));
+	rects.push_back(generateRectangle({ GAMEWIDTH, TOPROWPIXELS }, BLACK,
+		{ gamePos.x, gamePos.y - TOPROWPIXELS }, { 0, 0 }, WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ GAMEWIDTH + 1, TILESIZE - 9 }, BLUE,
+		{ gamePos.x - 1, gamePos.y - TILESIZE - 1 }));
 	return rects;
 }
 // Get bounds of first three rectangles (game, hold, queue)
@@ -72,13 +72,13 @@ vector<sf::FloatRect> getGameBounds(vector<sf::RectangleShape>& rects) {
 vector<sf::RectangleShape> getLines(sf::FloatRect& bounds) {
 	vector<sf::RectangleShape> lines;
 	for (int i = 1; i < NUMROWS; i++) { // Horizontal lines
-		sf::RectangleShape line(sf::Vector2f(GAMEWIDTH, LINEWIDTH));
+		sf::RectangleShape line({ GAMEWIDTH, LINEWIDTH });
 		line.setPosition(bounds.left, bounds.top + i * TILESIZE - 1);
 		line.setFillColor(SEETHROUGH);
 		lines.push_back(line);
 	}
 	for (int j = 1; j < NUMCOLS; j++) { // Vertical lines
-		sf::RectangleShape line(sf::Vector2f(LINEWIDTH, GAMEHEIGHT + TOPROWPIXELS));
+		sf::RectangleShape line({ LINEWIDTH, GAMEHEIGHT + TOPROWPIXELS });
 		line.setPosition(bounds.left + j * TILESIZE - 1, bounds.top - TOPROWPIXELS);
 		line.setFillColor(SEETHROUGH);
 		lines.push_back(line);
@@ -91,9 +91,9 @@ vector<sf::Text> getGameText(vector<sf::FloatRect>& bounds, sf::Font& font) {
 	// Redefine bounds for cleaner code
 	sf::FloatRect& gameBounds = bounds[0], holdBounds = bounds[1], queueBounds = bounds[2];
 	vector<sf::Text> textboxes;
-	textboxes.push_back(generateText(font, WHITE, "Hold", GAMETEXTSIZE, sf::Vector2f(holdBounds.left + holdBounds.width / 2, holdBounds.top - GAMETEXTSIZE), true, false, true));
-	textboxes.push_back(generateText(font, WHITE, "Next", GAMETEXTSIZE, sf::Vector2f(queueBounds.left + queueBounds.width / 2, queueBounds.top - GAMETEXTSIZE), true, false, true));
-	textboxes.push_back(generateText(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, sf::Vector2f(gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Hold", GAMETEXTSIZE, { holdBounds.left + holdBounds.width / 2, holdBounds.top - GAMETEXTSIZE }, true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Next", GAMETEXTSIZE, { queueBounds.left + queueBounds.width / 2, queueBounds.top - GAMETEXTSIZE }, true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, { gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2 }, true, false, true));
 	return textboxes;
 }
 // Generate text exclusive to sandbox mode
@@ -101,24 +101,24 @@ vector<sf::Text> getSandboxText(sf::Font& font) {
 	vector<sf::Text> textboxes;
 	vector<string> menuItems = { "Auto-fall", "Fall speed", "Creative", "Reset", "Quit" };
 	for (int i = 0; i < menuItems.size(); i++)
-		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, sf::Vector2f(SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i)));
+		textboxes.push_back(generateText(font, WHITE, menuItems[i], MENUTEXTSIZE, { SANDBOXMENUPOS.x, SANDBOXMENUPOS.y + MENUSPACING * i }));
 	return textboxes;
 }
 // Generate text for loss screen
 vector<sf::Text> getLossText(sf::Font& font) {
 	vector<sf::Text> textboxes;
-	textboxes.push_back(generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true));
-	textboxes.push_back(generateText(font, WHITE, "Press any key to return to Main Menu", GAMETEXTSIZE, sf::Vector2f(WIDTH / 2, HEIGHT / 2), true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true));
+	textboxes.push_back(generateText(font, WHITE, "Press any key to return to Main Menu", GAMETEXTSIZE, { WIDTH / 2, HEIGHT / 2 }, true, false, true));
 
 	return textboxes;
 }
 // Generate fadeText animations
 vector<FadeText> getFadeText(sf::Vector2f gamePos, sf::Font& font) {
-	FadeText speedupText(generateText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, sf::Vector2f(gamePos.x + GAMEWIDTH / 2, gamePos.y), true, false, true), 1, 1);
-	FadeText clearText(generateText(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5)), 0, 2.5);
-	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING)), 0, 2.5);
-	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING * 2)), 0, 2.5);
-	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, sf::Vector2f(gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5 + MENUSPACING * 3)), 0, 2.5);
+	FadeText speedupText(generateText(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, { gamePos.x + GAMEWIDTH / 2, gamePos.y }, true, false, true), 1, 1);
+	FadeText clearText(generateText(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f }), 0, 2.5f);
+	FadeText b2bText(generateText(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING }), 0, 2.5f);
+	FadeText comboText(generateText(font, WHITE, "2X Combo", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 2 }), 0, 2.5f);
+	FadeText allClearText(generateText(font, WHITE, "All Clear", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 3 }), 0, 2.5f);
 	return { speedupText, clearText, b2bText, comboText, allClearText };
 }
 // Get collision bounds for checkboxes
@@ -166,11 +166,11 @@ void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& sc
 
 // Draw all objects in a vector
 void drawVector(sf::RenderWindow& window, vector<sf::RectangleShape>& vec) {
-	for (auto item : vec)
+	for (sf::RectangleShape& item : vec)
 		window.draw(item);
 }
 void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
-	for (auto item : vec)
+	for (sf::Text& item : vec)
 		window.draw(item);
 }
 void drawVector(sf::RenderWindow& window, vector<FadeText>& vec) {
@@ -216,7 +216,7 @@ int main(){
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
-	sf::Text linesClearedText = generateText(font, WHITE, "Lines: 0", 25, sf::Vector2f(GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS));
+	sf::Text linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
@@ -262,9 +262,9 @@ int main(){
 	int currentScreen = MAINMENU;
 
 	// WIP Pause screen sprites
-	sf::RectangleShape pauseRect = generateRectangle(sf::Vector2f(GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS), BLACK, sf::Vector2f(GAMEXPOS, GAMEYPOS - TOPROWPIXELS));
-	sf::Text pauseText = generateText(font, WHITE, "PAUSED", 40, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3), true, false, true);
-	sf::Text pauseText2 = generateText(font, WHITE, "Press ESC to resume", 20, sf::Vector2f(GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3), true, false, true);
+	sf::RectangleShape pauseRect = generateRectangle({ GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, BLACK, { GAMEXPOS, GAMEYPOS - TOPROWPIXELS });
+	sf::Text pauseText = generateText(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true);
+	sf::Text pauseText2 = generateText(font, WHITE, "Press ESC to resume", 20, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3 }, true, false, true);
 
 	// Set up settings sprites
 	settingsMenu gameSettings;
@@ -274,9 +274,10 @@ int main(){
 	gameSettings.selectTab(0);
 
 	slidingBar difficultySlider(250, { "Easy", "Normal", "Hard"}, font);
-	gameSettings[0].addSetting("Difficulty", &difficultySlider, false, font);
+	gameSettings[0].addSetting("Difficulty", &difficultySlider, true, font);
 	slidingBar lockTimerSlider(250, { "10", "20", "50", "100" }, font);
 	gameSettings[0].addSetting("Lock Delay", &lockTimerSlider, true, font);
+	
 
 	// Game loop
 	while (window.isOpen())
@@ -353,9 +354,9 @@ int main(){
 					break;
 				case 2: // PVP mode
 					currentScreen = MULTIPLAYER;
-					window.setSize(sf::Vector2u(WIDTH * 2, HEIGHT));
+					window.setSize({ WIDTH * 2, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
-					window.setPosition(sf::Vector2i(100, 100));
+					window.setPosition({ 100, 100 });
 					screen.setGameMode(MULTIPLAYER);
 					gameText[2].setString("");
 					screen.setAutoFall(true);
@@ -403,7 +404,7 @@ int main(){
 			// Check for game over
 			if (screen.getGameOver() && screen.isDeathAnimationOver()) {
 				currentScreen = LOSESCREEN;
-				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 			}
 
 			// Handles movement with auto-repeat (DAS)
@@ -545,9 +546,8 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseMoved: { // Shows a transparent X when hovering over unchecked boxes
-					sf::Vector2f mousePos(event.mouseMove.x, event.mouseMove.y);
 					for (Checkbox* box : sandboxes)
-						box->setHovering(box->getBounds().contains(mousePos));
+						box->setHovering(box->getBounds().contains((float)event.mouseMove.x, (float)event.mouseMove.y));
 				}
 				default:
 					break;
@@ -583,21 +583,21 @@ int main(){
 			if (screen.getGameOver()) {
 				screenP2.pauseGame();
 				if (screen.isDeathAnimationOver()) {
-					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setSize({ WIDTH, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					currentScreen = LOSESCREEN;
-					lossText[0] = generateText(font, WHITE, "PLAYER 2 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+					lossText[0] = generateText(font, WHITE, "PLAYER 2 WINS!", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 					if (screenP2.getGameOver() && screenP2.isDeathAnimationOver()) // Rare event if both players lose at the same time
-						lossText[0] = generateText(font, WHITE, "DRAW!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+						lossText[0] = generateText(font, WHITE, "DRAW!", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 				}
 			}
 			else if (screenP2.getGameOver()) {
 				screen.pauseGame();
 				if (screenP2.isDeathAnimationOver()) {
-					window.setSize(sf::Vector2u(WIDTH, HEIGHT));
+					window.setSize({ WIDTH, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					currentScreen = LOSESCREEN;
-					lossText[0] = generateText(font, WHITE, "PLAYER 1 WINS!", GAMETEXTSIZE * 4, sf::Vector2f(WIDTH / 2, GAMEYPOS), true, false, true);
+					lossText[0] = generateText(font, WHITE, "PLAYER 1 WINS!", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 				}
 			}
 
@@ -686,7 +686,7 @@ int main(){
 					gameSettings.processMouseMove(event.mouseMove.x, event.mouseMove.y);
 					break;
 				case sf::Event::MouseButtonPressed:
-					gameSettings.clickTab(event.mouseButton.x, event.mouseButton.y);
+					gameSettings.clickTab((float)event.mouseButton.x, (float)event.mouseButton.y);
 					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
 					break;
 				case sf::Event::MouseButtonReleased:

@@ -72,15 +72,15 @@ public:
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // Piece codes allow for specified piece spawns
-			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 0.8));
+			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, SCALE));
 		}
 		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 
-		deathAnimation = new DeathAnimation(sf::Vector2f(gameBounds.left, gameBounds.top), 2, 0.2, blockTexture);
-		garbStack = new garbageStack(sf::Vector2f(gameBounds.left, gameBounds.top));
+		deathAnimation = new DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
+		garbStack = new garbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
 		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
 
@@ -153,7 +153,7 @@ public:
 			for (int i = 0; i < nextPieceSprites.size(); i++) { // Display queue
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
 					queueBounds.left + TILESIZE * SCALE,
-					queueBounds.top + i * 2.5 * TILESIZE * SCALE + TILESIZE / 2.0, SCALE);
+					queueBounds.top + i * 2.5f * TILESIZE * SCALE + TILESIZE / 2.0f, SCALE);
 			}
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
@@ -267,7 +267,7 @@ public:
 			heldPiece->setPieceCode(currentPiece->getPieceCode());
 			spawnPiece(temp);
 		}
-		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0 * SCALE, SCALE);
+		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0f * SCALE, SCALE);
 		hasHeld = true;
 	}
 	// Sets the current piece and spawns a new piece
@@ -607,8 +607,8 @@ public:
 		if (!creativeMode) // Function only works if creative mode is toggled on
 			return;
 		// Convert mouse position to game coordinates.
-		int col = (clickPos.x - gameBounds.left) / TILESIZE;
-		int row = (clickPos.y - gameBounds.top) / TILESIZE + 2; // Adjust to exclude the rows outside of game window
+		int col = (int)((clickPos.x - gameBounds.left) / TILESIZE);
+		int row = (int)((clickPos.y - gameBounds.top) / TILESIZE + 2); // Adjust to exclude the rows outside of game window
 
 		if (!board[row][col].getHasMovingBlock()) {
 			board[row][col].toggleBlock();
@@ -620,8 +620,8 @@ public:
 		if (!creativeMode) // Function only works if creative mode is toggled on
 			return;
 		// Convert mouse position to game coordinates.
-		int col = (clickPos.x - gameBounds.left) / TILESIZE;
-		int row = (clickPos.y - gameBounds.top) / TILESIZE + 2; // Adjust to exclude the rows outside of game window
+		int col = (int)((clickPos.x - gameBounds.left) / TILESIZE);
+		int row = (int)((clickPos.y - gameBounds.top) / TILESIZE + 2); // Adjust to exclude the rows outside of game window
 		for (int i = 0; i < NUMCOLS; i++) {
 			if (!board[row][i].getHasMovingBlock())
 				board[row][i].setBlock(true, WHITE);

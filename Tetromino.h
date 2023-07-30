@@ -36,7 +36,7 @@ struct Tetromino {
 		return pieceCode;
 	}
 	virtual Tetromino* getNewPiece() = 0;
-	vector<sf::Sprite> getPieceSprite(sf::Texture& texture, int xPos, int yPos, float scaleFactor) {
+	vector<sf::Sprite> getPieceSprite(sf::Texture& texture, float xPos, float yPos, float scaleFactor) {
 		vector<sf::Sprite> sprites;
 		for (sf::Vector2i* pos : positions) {
 			sf::Sprite sprite;
