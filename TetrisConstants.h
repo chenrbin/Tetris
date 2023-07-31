@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: review parameter types, optimize setting xPos, pause screen class, setting contents, custom keybinds, scoring, click sliding bar nodes directly 
+	// Todo: review parameter types, optimize setting xPos, pause screen class, setting contents, custom keybinds
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -25,7 +25,7 @@ namespace TetrisVariables {
 	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
 	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
-	const float GRAVITYSPEEDS[] = { 1, 0.75f, 0.5f, 0.25f, 0.1f, 0.05f, 0.01f };
+	const float GRAVITYSPEEDS[] = { 1, 0.5f, 0.25f, 0.1f, 0.05f, 0.02f, 0.01f };
 	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 

@@ -6,45 +6,89 @@
 #include "Mechanisms.h"
 using namespace TetrisVariables;
 
+// Class for easy sf::Text generation. Replaces the setText function
+class SfTextAtHome : public sf::Text {
+public:
+	SfTextAtHome() {}
+	SfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f position, bool bold = true, bool underlined = false, bool centered = false, bool outline = false) {
+		setFont(font);
+		setFillColor(color);
+		setString(message);
+		setCharacterSize(textSize);
+		if (centered)
+			alignCenter();
+		setPosition(position);
+		if (bold)
+			setStyle(sf::Text::Bold);
+		if (underlined)
+			setStyle(sf::Text::Underlined);
+		if (outline)
+		{
+			setOutlineColor(BLACK);
+			setOutlineThickness(1);
+		}
+	}
+	void alignCenter() {
+		const sf::FloatRect box = getLocalBounds();
+		setOrigin(box.width / 2.0f, box.height / 2.0f);
+	}
+	bool contains(float x, float y) {
+		return getGlobalBounds().contains(x, y);
+	}
+};
+
+// Class for easy sf::RectangleShape generation.
+class SfRectangleAtHome : public sf::RectangleShape {
+public:
+	SfRectangleAtHome() {}
+	SfRectangleAtHome(sf::Color color, sf::Vector2f size, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), float outlineThickness = 0) {
+		setSize(size);
+		setFillColor(color);
+		if (centered)
+			alignCenter();
+		setPosition(position);
+		setOutlineColor(outlineColor);
+		setOutlineThickness(outlineThickness);
+	}
+	void alignCenter() {
+		const sf::FloatRect box = getLocalBounds();
+		setOrigin(box.width / 2.0f, box.height / 2.0f);
+	}
+	bool contains(float x, float y) {
+		return getGlobalBounds().contains(x, y);
+	}
+};
+
 // Class to organize drawable sprites of a checkbox. Purely visual functionality.
-class Checkbox {
+class Checkbox : public sf::Drawable{
 protected:
-	sf::RectangleShape box;
+	SfRectangleAtHome box;
 	sf::FloatRect bounds;
-	sf::Text check;
-	sf::Text hoverCheck;
+	SfTextAtHome check, hoverCheck;
 	bool checked, hovering;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(box, states);
+		if (checked)
+			target.draw(check, states);
+		else if (hovering)
+			target.draw(hoverCheck, states);
+	}
 public:
 	Checkbox(float size, float left, float top, bool checked, sf::Font& font) {
 		// White outline box
-		box = sf::RectangleShape({ size, size });
-		box.setPosition(left, top);
-		box.setOutlineColor(WHITE);
-		box.setFillColor(BLUE);
-		box.setOutlineThickness(LINEWIDTH);
+		box = SfRectangleAtHome(BLUE, { size, size }, { left, top }, false, WHITE, LINEWIDTH);
 		bounds = box.getGlobalBounds();
 
 		// "X" to toggle
-		check.setFont(font);
-		check.setString("X");
-		check.setCharacterSize(size);
-		check.setFillColor(WHITE);
-		check.setStyle(sf::Text::Bold);
+		check = SfTextAtHome(font, WHITE, "X", size, { bounds.left + bounds.width / 2, bounds.top + bounds.height / 2 }, true, false, true);
+		check.move(0, -check.getGlobalBounds().height / 2);
 		sf::FloatRect textBounds = check.getGlobalBounds();
-		check.setOrigin(textBounds.width / 2, textBounds.height);
-		check.setPosition(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
 		this->checked = checked;
 
 		hoverCheck = check;
 		hoverCheck.setFillColor(HOVERCHECKBOX);
 		hovering = false;
-	}
-	virtual void draw(sf::RenderWindow& window) {
-		window.draw(box);
-		if (checked)
-			window.draw(check);
-		else if (hovering)
-			window.draw(hoverCheck);
 	}
 	void setChecked(bool val) {
 		checked = val;
@@ -67,6 +111,13 @@ class IncrementalBox : public Checkbox {
 	sf::CircleShape rightArrow;
 	sf::FloatRect rightBound;
 	int min, max, currentNum;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(box, states);
+		target.draw(check, states);
+		target.draw(leftArrow, states);
+		target.draw(rightArrow, states);
+	}
 public:
 	IncrementalBox(float size, float left, float top, int min, int max, sf::Font& font) : Checkbox(size, left, top, true, font) {
 		// Clickable left and right arrows
@@ -87,12 +138,6 @@ public:
 		this->max = max;
 		currentNum = min;
 		updateString();
-	}
-	void draw(sf::RenderWindow& window) {
-		window.draw(box);
-		window.draw(check);
-		window.draw(leftArrow);
-		window.draw(rightArrow);
 	}
 	void updateString() {
 		check.setString(to_string(currentNum));
@@ -135,12 +180,13 @@ class Animation {
 protected:
 	sfClockAtHome startTime;
 	float duration;
+
 public:
 	Animation() {
 		duration = 0;
 	}
 	// Draws the animation to the window
-	virtual void draw(sf::RenderWindow& window) = 0;
+	virtual void drawAnimation(sf::RenderWindow& window) = 0;
 	virtual ~Animation() {};
 	// Turns on animation
 	virtual void restart() = 0;
@@ -166,7 +212,7 @@ public:
 		this->text.setFillColor(textColor);
 	}
 	// Draws the animation to the window
-	void draw(sf::RenderWindow& window) {
+	void drawAnimation(sf::RenderWindow& window) {
 		float elapsedTime = startTime.getElapsedTime().asSeconds();
 		if (elapsedTime > duration + fadeDuration)
 			return; // Returns nothing if animation is past duration
@@ -188,7 +234,7 @@ public:
 	}
 };
 
-// Class to display a player's death screen
+// Class to display a player's death screen. Made from an empty board of tiles
 class DeathAnimation : public Animation {
 	float endDuration; // Delay at the end of animation
 	vector<vector<Tile>> board;
@@ -209,14 +255,14 @@ public:
 		}
 	}
 	// Draws the animation to the window
-	void draw(sf::RenderWindow& window) {
+	void drawAnimation(sf::RenderWindow& window) {
 		// Does not execute if animation duration is over
 		if (startTime.getTimeSeconds() > duration + endDuration)
 			return;
 		for (int i = 0; i < NUMROWS; i++)
 			if (startTime.getTimeSeconds() / duration * NUMROWS >= i - 1)
 				for (int j = 0; j < NUMCOLS; j++)
-					board[REALNUMROWS - i - 1][j].draw(&window);
+					window.draw(board[REALNUMROWS - i - 1][j]);
 	}
 	// Turns on animation
 	void restart(){
@@ -229,11 +275,17 @@ public:
 };
 
 // Class to display garbage bin
-class garbageStack {
+class GarbageStack : public sf::Drawable{
 	vector<sf::RectangleShape> stack;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		for (int i = 0; i < stack.size(); i++) {
+			target.draw(stack[i], states);
+		}
+	}
 public:
 	// Construct a stack of rectangles at position relative to gamePos
-	garbageStack(sf::Vector2f gamePos) {
+	GarbageStack(sf::Vector2f gamePos) {
 		for (int i = 0; i < NUMROWS; i++) {
 			sf::RectangleShape rec({ TILESIZE / 2.0f, TILESIZE - 1 });
 			rec.setPosition(gamePos.x - TILESIZE / 2.0f, gamePos.y + GAMEHEIGHT - (i + 1) * TILESIZE + LINEWIDTH + 1);
@@ -242,18 +294,13 @@ public:
 			stack.push_back(rec);
 		}
 	}
-	void draw(sf::RenderWindow& window) {
-		for (sf::RectangleShape& rec : stack) {
-			window.draw(rec);
-		}
-	}
 	// Update stack visuals based on a vector of garbage timers
 	void updateStack(vector<float> vec) {
 		for (int i = 0; i < 20; i++)
 		{
 			// (255 * vec[i] + 255) / 2 sets the red value to 127-255 based on timer progress
 			if (vec.size() > i) {
-				stack[i].setFillColor(sf::Color((255 * vec[i] + 255) / 2, 0, 0));
+				stack[i].setFillColor(sf::Color( (255 * vec[i] + 255) / 2, 0, 0 ));
 				if (stack[i].getFillColor() == RED)
 					stack[i].setOutlineColor(RED);
 				else 
@@ -267,68 +314,22 @@ public:
 	}
 };
 
-// Class for easy sf::Text generation. Replaces the setText function
-class sfTextAtHome : public sf::Text{
-public:
-	sfTextAtHome() {}
-	sfTextAtHome(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f position, bool bold = true, bool underlined = false, bool centered = false, bool outline = false) {
-		setFont(font);
-		setFillColor(color);
-		setString(message);
-		setCharacterSize(textSize);
-		if (centered)
-			alignCenter();
-		setPosition(position);
-		if (bold)
-			setStyle(sf::Text::Bold);
-		if (underlined)
-			setStyle(sf::Text::Underlined);
-		if (outline)
-		{
-			setOutlineColor(BLACK);
-			setOutlineThickness(1);
-		}
-	}
-	void alignCenter() {
-		const sf::FloatRect box = getLocalBounds();
-		setOrigin(box.width / 2.0f, box.height / 2.0f);
-	}
-	bool contains(float x, float y) {
-		return getGlobalBounds().contains(x, y);
-	}
-};
-
-// Class for easy sf::RectangleShape generation.
-class sfRectangleAtHome : public sf::RectangleShape{
-public:
-	sfRectangleAtHome() {}
-	sfRectangleAtHome(sf::Color color, sf::Vector2f size, sf::Vector2f position, bool centered = false, sf::Color outlineColor = sf::Color(), float outlineThickness = 0) {
-		setSize(size);
-		setFillColor(color);
-		if (centered)
-			alignCenter();
-		setPosition(position);
-		setOutlineColor(outlineColor);
-		setOutlineThickness(outlineThickness);
-	}
-	void alignCenter() {
-		const sf::FloatRect box = getLocalBounds();
-		setOrigin(box.width / 2.0f, box.height / 2.0f);
-	}
-	bool contains(float x, float y) {
-		return getGlobalBounds().contains(x, y);
-	}
-};
-
 // Class for a text that can be navigated and clicked
-class clickableMenu {
-	vector<sfTextAtHome> texts;
+class ClickableMenu : public sf::Drawable{
+	vector<SfTextAtHome> texts;
 	sf::CircleShape cursor; // Takes in a shape as the cursor. Must preset attributes.
 	int cursorPos;
+
+	// Draw all menu components
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		for (int i = 0; i < texts.size(); i++)
+			target.draw(texts[i], states);
+		target.draw(cursor, states);
+	}
 public:
-	clickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
+	ClickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
 		for (int i = 0; i < menuText.size(); i++)
-			texts.push_back(sfTextAtHome(font, color, menuText[i], textSize, { startPos.x, startPos.y + spacing * i }));
+			texts.push_back(SfTextAtHome(font, color, menuText[i], textSize, { startPos.x, startPos.y + spacing * i }));
 		this->cursor = cursor;
 		cursor.setPosition(startPos.x - 5, startPos.y);
 		cursorPos = 0;
@@ -350,12 +351,6 @@ public:
 	void updateCursor() {
 		cursor.setPosition(texts[cursorPos].getPosition().x - 5, texts[cursorPos].getPosition().y);
 	}
-	// Draw all menu components
-	void draw(sf::RenderWindow& window) {
-		for (sfTextAtHome& text : texts)
-			window.draw(text);
-		window.draw(cursor);
-	}
 	// Update cursor based on mouse position. Return true if a text is selected
 	bool updateMouse(int x, int y) {
 		for (int i = 0; i < texts.size(); i++) {
@@ -373,23 +368,29 @@ public:
 };
 
 // Class for a button that can be clicked
-class clickableButton {
-	sfRectangleAtHome button;
-	sfTextAtHome text;
+class ClickableButton : public sf::Drawable{
+	SfRectangleAtHome button;
+	SfTextAtHome text;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(button, states);
+		target.draw(text, states);
+	}
 public:
-	clickableButton(sf::Vector2f buttonSize, sf::Vector2f position, string message, const sf::Color& buttonColor = BLACK, const sf::Color& textColor = WHITE) {
-		button = sfRectangleAtHome(buttonColor, { buttonSize.x, buttonSize.y }, { position.x, position.y }, true, BLACK, 1);
+	ClickableButton(sf::Vector2f buttonSize, sf::Vector2f position, sf::Font& font, string message, const sf::Color& buttonColor = BLACK, const sf::Color& textColor = WHITE) {
+		button = SfRectangleAtHome(buttonColor, { buttonSize.x, buttonSize.y }, { position.x, position.y }, true, BLACK, 1);
+		text = SfTextAtHome(font, textColor, message, buttonSize.y, position, true, false, true);
+		text.move(0, -text.getGlobalBounds().height / 2);
 	}
 };
 
 // Base class for game setting
-struct optionSelector {
-	optionSelector() {};
+struct OptionSelector : public sf::Drawable {
+	OptionSelector() {};
 	// Values return as a string and will need to be manually converted to numbers.
 	virtual string getValue() = 0;
 	// Move all sprites
 	virtual void move(float offsetX, float offsetY) = 0;
-	virtual void draw(sf::RenderWindow& window) = 0;
 
 	// React to mouse movement, click, and release. 
 	// Returns whether a successful action is performed for efficiency purposes
@@ -403,15 +404,17 @@ struct optionSelector {
 		return false;
 	}
 
+private: 
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const = 0;
 };
 
 // A sliding bar to select values
-class slidingBar : public optionSelector
+class SlidingBar : public OptionSelector
 {
 	// Sprites to draw
-	sfRectangleAtHome bar;
-	vector<sfRectangleAtHome> nodes;
-	vector<sfTextAtHome> valuesText;
+	SfRectangleAtHome bar;
+	vector<SfRectangleAtHome> nodes;
+	vector<SfTextAtHome> valuesText;
 	sf::CircleShape cursor;
 
 	// Data to handle
@@ -419,18 +422,27 @@ class slidingBar : public optionSelector
 	int nodeCount;
 	int cursorIndex;
 	bool cursorPressed;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(bar, states);
+		for (int i = 0; i < nodeCount; i++) {
+			target.draw(nodes[i], states);
+			target.draw(valuesText[i], states);
+		}
+		target.draw(cursor);
+	}
 public:
-	slidingBar(float length, vector<string> values, sf::Font& font) {
+	SlidingBar(float length, vector<string> values, sf::Font& font) {
 		nodeCount = values.size();
 		this->values = values;
 
 		// Create bar. Width is specified but height is fixed.
-		bar = sfRectangleAtHome(WHITE, { length, BARHEIGHT }, { 0, 0 - BARHEIGHT / 2 }, false, BLACK, 1);
+		bar = SfRectangleAtHome(WHITE, { length, BARHEIGHT }, { 0, 0 - BARHEIGHT / 2 }, false, BLACK, 1);
 
 		// Create nodes
 		for (int i = 0; i < nodeCount; i++) {
-			nodes.push_back(sfRectangleAtHome(WHITE, { NODEWIDTH, NODEHEIGHT }, { 0 + i * length / (nodeCount - 1), 0 }, true, BLACK, 1));
-			valuesText.push_back(sfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { 0 + i * length / (nodeCount - 1), NODEHEIGHT }, true, false, true, true));
+			nodes.push_back(SfRectangleAtHome(WHITE, { NODEWIDTH, NODEHEIGHT }, { 0 + i * length / (nodeCount - 1), 0 }, true, BLACK, 1));
+			valuesText.push_back(SfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { 0 + i * length / (nodeCount - 1), NODEHEIGHT }, true, false, true, true));
 		}
 
 		// Create circle cursor
@@ -440,15 +452,6 @@ public:
 		cursor.setOrigin(BAR_CURSOR_RADIUS, BAR_CURSOR_RADIUS);
 		cursor.setOutlineColor(BLACK);
 		cursor.setOutlineThickness(1);
-	}
-	// Draw all sprites
-	void draw(sf::RenderWindow& window) {
-		window.draw(bar);
-		for (int i = 0; i < nodeCount; i++) {
-			window.draw(nodes[i]);
-			window.draw(valuesText[i]);
-		}
-		window.draw(cursor);
 	}
 	// Returns the value at the cursor
 	string getValue(){
@@ -491,19 +494,30 @@ public:
 	// Move all sprites
 	void move(float offsetX, float offsetY) {
 		bar.move(offsetX, offsetY);
-		for (sfRectangleAtHome& node : nodes)
+		for (SfRectangleAtHome& node : nodes)
 			node.move(offsetX, offsetY);
-		for (sfTextAtHome& text : valuesText)
+		for (SfTextAtHome& text : valuesText)
 			text.move(offsetX, offsetY);
 		cursor.move(offsetX, offsetY);
+	}
+	// Click nodes to select option
+	bool clickNodes(int mouseX, int mouseY) {
+		for (SfRectangleAtHome node : nodes) {
+			node.setScale(3, 2); // Scale the copy of the node for a bigger collision box
+			if (node.contains(mouseX, mouseY)) {
+				setCursorPressed(true);
+				return moveCursor(mouseX);
+			}
+		}
+		return false;
 	}
 	bool processMouseMove(int mouseX, int mouseY) {
 		return moveCursor(mouseX);
 	}
 	bool processMouseClick(int mouseX, int mouseY) {
-		if (getCursorBounds().contains(mouseX, mouseY))
+		if (getCursorBounds().contains(mouseX, mouseY)) 
 			return setCursorPressed(true);
-		return false;
+		return clickNodes(mouseX, mouseY);
 	}
 	bool processMouseRelease() {
 		return setCursorPressed(false);
@@ -515,38 +529,39 @@ class onOffSwitch {
 
 };
 
-class settingsTab {
-	sfRectangleAtHome tabRect;
-	sfTextAtHome tabText;
+class SettingsTab : public sf::Drawable{
+	SfRectangleAtHome tabRect;
+	SfTextAtHome tabText;
 	sf::FloatRect tabBounds; // Used to align tab rectangle and text
 	int index; // First tab has index of 0
 	bool tabSelected; // The currently selected tab is violet and taller, otherwise gray
 
-	vector<sfTextAtHome> settingsTexts;
-	vector<optionSelector*> settingSelectors;
+	vector<SfTextAtHome> settingsTexts;
+	vector<OptionSelector*> settingSelectors;
 	int settingCount;
-public:
-	settingsTab(sf::Font& font, string name, int index) {
-		// Rect origin is set at 0, 0 and text origin is centered
-		tabRect = sfRectangleAtHome(GRAY, { 0, 0 }, { 0, 0 }, false, BLACK, 2);
-		tabText = sfTextAtHome(font, WHITE, name, MENUTEXTSIZE, { 0, 0 }, true, false, true, true);
-		this->index = index;
-		tabSelected = false;
-		settingCount = 0;
-	}
-	void draw(sf::RenderWindow& window) {
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
 		// Always draw the tab itself
-		window.draw(tabRect);
-		window.draw(tabText);
+		target.draw(tabRect, states);
+		target.draw(tabText, states);
 
 		// Draw contents if current tab is selected
 		if (tabSelected) {
 			for (int i = 0; i < settingCount; i++)
 			{
-				window.draw(settingsTexts[i]);
-				settingSelectors[i]->draw(window);
+				target.draw(settingsTexts[i], states);
+				target.draw(*settingSelectors[i], states);
 			}
 		}
+	}
+public:
+	SettingsTab(sf::Font& font, string name, int index) {
+		// Rect origin is set at 0, 0 and text origin is centered
+		tabRect = SfRectangleAtHome(GRAY, { 0, 0 }, { 0, 0 }, false, BLACK, 2);
+		tabText = SfTextAtHome(font, WHITE, name, MENUTEXTSIZE, { 0, 0 }, true, false, true, true);
+		this->index = index;
+		tabSelected = false;
+		settingCount = 0;
 	}
 	// Set tab size and position based on float rect
 	void setBounds(float left, float top, float width, float height) {
@@ -580,7 +595,7 @@ public:
 		return tabBounds;
 	}
 	// Add a setting option and its selection mechanism. True to place mechanism to the right of text, false for below.
-	void addSetting(string text, optionSelector* selector, bool selectorPositionRight, sf::Font& font) {
+	void addSetting(string text, OptionSelector* selector, bool selectorPositionRight, sf::Font& font) {
 		// Determine sprite position based on setting count
 		float xPos, yPos;
 		if (settingCount < 7)
@@ -589,7 +604,7 @@ public:
 			xPos = SETTINGXPOS + 300;
 		yPos = SETTINGYPOS + settingCount * SETTINGSPACING;
 		
-		settingsTexts.push_back(sfTextAtHome(font, WHITE, text, MENUTEXTSIZE, { xPos, yPos }));
+		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, { xPos, yPos }));
 		settingSelectors.push_back(selector);
 		if (selectorPositionRight)
 			selector->move(xPos + SELECTORRIGHTSPACING, yPos);
@@ -599,32 +614,38 @@ public:
 	}
 	// Check all mechanisms on mouse click position
 	void processMouseMove(int mouseX, int mouseY) {
-		for (optionSelector* selector : settingSelectors)
+		for (OptionSelector* selector : settingSelectors)
 			if (selector->processMouseMove(mouseX, mouseY)) 
 				break; // Break after a successful action. Skips the need to check everything
 	}
 	void processMouseClick(int mouseX, int mouseY) {
-		for (optionSelector* selector : settingSelectors)
+		for (OptionSelector* selector : settingSelectors)
 			if (selector->processMouseClick(mouseX, mouseY))
 				break; // Since no sprites overlap, this saves the need to check all bounds;
 	}
 	void processMouseRelease() {
-		for (optionSelector* selector : settingSelectors)
+		for (OptionSelector* selector : settingSelectors)
 			selector->processMouseRelease();
 	}
 	
 };
-class settingsMenu {
-	vector<settingsTab> tabs;
+class SettingsMenu : public sf::Drawable{
+	vector<SettingsTab> tabs;
 	int tabCount;
 	int currentTabIndex;
+
+	// Draw all tabs
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		for (int i = 0; i < tabCount; i++)
+			target.draw(tabs[i], states);
+	}
 public:
-	settingsMenu() {
+	SettingsMenu() {
 		tabCount = 0;
 		currentTabIndex = 0;
 	}
 	void addTab(sf::Font& font, string name) {
-		tabs.push_back(settingsTab(font, name, tabCount++));
+		tabs.push_back(SettingsTab(font, name, tabCount++));
 		alignTabs();
 	}
 	// Align tab positions across top of screen based on number of tabs
@@ -632,11 +653,7 @@ public:
 		for (int i = 0; i < tabs.size(); i++)
 			tabs[i].setBounds(WIDTH * i / tabs.size() + 1.0f, TABTOP, WIDTH / tabs.size(), TABHEIGHT);
 	}
-	// Draw all tabs
-	void draw(sf::RenderWindow& window) {
-		for (settingsTab& tab : tabs)
-			tab.draw(window);
-	}
+	
 	// Select specific tab. Should be called once after creating tabs to select default
 	void selectTab(int index) {
 		for (int i = 0; i < tabCount; i++)
@@ -664,8 +681,9 @@ public:
 	void processMouseRelease() {
 		tabs[currentTabIndex].processMouseRelease();
 	}
-	settingsTab& operator[](int index) {
+	SettingsTab& operator[](int index) {
 		return tabs[index];
 	}
-
 };
+
+// Class for pause screen sprites

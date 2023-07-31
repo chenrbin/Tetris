@@ -6,12 +6,17 @@
 using namespace std;
 using namespace TetrisVariables;
 
-class Tile {
+class Tile : public sf::Drawable{
 	bool hasBlock; // For blocks that have dropped
 	bool hasMovingBlock; // For blocks that are still in control
 	bool hasPreviewBlock; // For block ghost piece
 	sf::Sprite sprite;
 	float xPos, yPos;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		if (hasMovingBlock || hasBlock || hasPreviewBlock)
+			target.draw(sprite, states);
+	}
 public:
 	Tile(sf::Texture& texture, float xPos, float yPos) {
 		this->xPos = xPos;
@@ -62,10 +67,6 @@ public:
 	void setPreviewBlock(bool value, sf::Color& blockColor) { // Overload to toggle drawing block and set color
 		hasPreviewBlock = value;
 		sprite.setColor(blockColor);
-	}
-	void draw(sf::RenderWindow* window) {
-		if (hasMovingBlock || hasBlock || hasPreviewBlock) 
-			window->draw(sprite);
 	}
 	sf::Sprite& getSprite() {
 		return sprite;

@@ -44,7 +44,7 @@ class Screen {
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
-	garbageStack* garbStack; // Visuals for garbage
+	GarbageStack* garbStack; // Visuals for garbage
 	int garbLastCol; // Stores location of garbage for randomness settings
 	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
 
@@ -80,7 +80,7 @@ public:
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 
 		deathAnimation = new DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
-		garbStack = new garbageStack({ gameBounds.left, gameBounds.top });
+		garbStack = new GarbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
 		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
 
@@ -636,7 +636,7 @@ public:
 	void drawScreen() {
 		for (int i = 1; i < REALNUMROWS; i++) {
 			for (int j = 0; j < NUMCOLS; j++) {
-				board[i][j].draw(window);
+				window->draw(board[i][j]);
 			}
 		}
 		for (sf::Sprite& sprite : heldSprite)
@@ -647,11 +647,11 @@ public:
 
 		// Enable death animation if game is over
 		if (gameOver)
-			deathAnimation->draw(*window);
+			deathAnimation->drawAnimation(*window);
 
 		// Draw garbage stack if game mode is sandbox or PVP
 		if (gameMode != CLASSIC)
-			garbStack->draw(*window);
+			window->draw(*garbStack);
 	}
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() {

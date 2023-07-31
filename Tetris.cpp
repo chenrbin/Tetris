@@ -175,11 +175,11 @@ void drawVector(sf::RenderWindow& window, vector<sf::Text>& vec) {
 }
 void drawVector(sf::RenderWindow& window, vector<FadeText>& vec) {
 	for (FadeText& animation : vec)
-		animation.draw(window);
+		animation.drawAnimation(window);
 }
 void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 	for (Animation* animation : vec)
-		animation->draw(window);
+		animation->drawAnimation(window);
 }
 
 int main(){
@@ -209,7 +209,7 @@ int main(){
 	sf::CircleShape cursor(15.f, 3); // Triangle shaped cursor
 	cursor.rotate(90.f);
 	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
-	clickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, cursor);
+	ClickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, cursor);
 
 	// Game sprites in a vector and constructed in a separate method to keep main clean
 	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
@@ -267,18 +267,18 @@ int main(){
 	sf::Text pauseText2 = generateText(font, WHITE, "Press ESC to resume", 20, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3 }, true, false, true);
 
 	// Set up settings sprites
-	settingsMenu gameSettings;
+	SettingsMenu gameSettings;
 	gameSettings.addTab(font, "Gameplay");
 	gameSettings.addTab(font, "Controls");
 	gameSettings.addTab(font, "Graphics");
 	gameSettings.selectTab(0);
 
-	slidingBar difficultySlider(250, { "Easy", "Normal", "Hard"}, font);
+	SlidingBar difficultySlider(250, { "Easy", "Normal", "Hard"}, font);
 	gameSettings[0].addSetting("Difficulty", &difficultySlider, true, font);
-	slidingBar lockTimerSlider(250, { "10", "20", "50", "100" }, font);
+	SlidingBar lockTimerSlider(250, { "10", "20", "50", "100" }, font);
 	gameSettings[0].addSetting("Lock Delay", &lockTimerSlider, true, font);
 	
-
+	ClickableButton butt({ 300, 100 }, { 300, 300 }, font, "Test");
 	// Game loop
 	while (window.isOpen())
 	{
@@ -286,7 +286,8 @@ int main(){
 		if (currentScreen == MAINMENU) {
 			window.clear(BLUE);
 			window.draw(titleText);
-			gameMenu.draw(window);
+			window.draw(butt);
+			window.draw(gameMenu);
 
 			bool modeSelected = false;
 
@@ -455,7 +456,7 @@ int main(){
 			drawVector(window, gameText);
 			drawVector(window, sandboxText);
 			for (auto box : sandboxes)
-				box->draw(window);
+				window.draw(*box);
 			
 			// In-game timer events
 			screen.doTimeStuff();
@@ -672,7 +673,7 @@ int main(){
 		}
 		else if (currentScreen == SETTINGSCREEN) {
 			window.clear(BLUE);
-			gameSettings.draw(window);
+			window.draw(gameSettings);
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)
