@@ -151,34 +151,34 @@ map<sf::Keyboard::Key, string> getKeyStrings() {
 
 // Following functions are made for reuseability and requires specific parameters passed in.
 // Functionality of the toggles in sandbox mode. 
-void toggleGravity(Checkbox& autoFallBox, Screen* screen) {
-	if (autoFallBox.getChecked()) {
-		autoFallBox.setChecked(false);
+void toggleGravity(Checkbox* autoFallBox, Screen* screen) {
+	if (autoFallBox->getChecked()) {
+		autoFallBox->setChecked(false);
 		screen->setAutoFall(false);
 	}
 	else {
-		autoFallBox.setChecked(true);
+		autoFallBox->setChecked(true);
 		screen->setAutoFall(true);
 	}
 }
-void decrementGravity(Checkbox& gravityBox, Checkbox& autoFallBox, Screen* screen) {
-	gravityBox.decrement();
-	screen->setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
+void decrementGravity(IncrementalBox* gravityBox, Checkbox* autoFallBox, Screen* screen) {
+	gravityBox->decrement();
+	screen->setGravity(GRAVITYSPEEDS[gravityBox->getCurrentNum() - 1]);
 }
-void incrementGravity(Checkbox& gravityBox, Checkbox& autoFallBox, Screen* screen) {
-	gravityBox.increment();
-	screen->setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
+void incrementGravity(IncrementalBox* gravityBox, Checkbox* autoFallBox, Screen* screen) {
+	gravityBox->increment();
+	screen->setGravity(GRAVITYSPEEDS[gravityBox->getCurrentNum() - 1]);
 }
-void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen* screen) {
-	if (creativeModeBox.getChecked()) { // If box is already checked, turn off
-		creativeModeBox.setChecked(false);
-		autoFallBox.setChecked(true);
+void toggleCreative(Checkbox* creativeModeBox, Checkbox* autoFallBox, Screen* screen) {
+	if (creativeModeBox->getChecked()) { // If box is already checked, turn off
+		creativeModeBox->setChecked(false);
+		autoFallBox->setChecked(true);
 		screen->setAutoFall(true);
 		screen->endCreativeMode();
 	}
 	else { // If box isn't checked, turn on
-		creativeModeBox.setChecked(true);
-		autoFallBox.setChecked(false);
+		creativeModeBox->setChecked(true);
+		autoFallBox->setChecked(false);
 		screen->setAutoFall(false);
 		screen->startCreativeMode();
 	}
@@ -240,12 +240,12 @@ int main(){
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
-	vector<Checkbox*> sandboxes; // { autoFallBox, gravityBox, creativeModeBox, resetBox, quitBox }
-	sandboxes.push_back(new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font));
-	sandboxes.push_back(new IncrementalBox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font));
-	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font));
-	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font));
-	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font));
+	Checkbox*  autoFallBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
+	IncrementalBox* gravityBox = new IncrementalBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font);
+	Checkbox* creativeModeBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
+	Checkbox* resetBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
+	Checkbox* quitBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
+	vector<Checkbox*> sandboxes = { autoFallBox, gravityBox, creativeModeBox, resetBox, quitBox };
 	bool creativeModeOn = false;
 
 	// Text for loss screen
@@ -394,9 +394,9 @@ int main(){
 					gameText[2].setString("Sandbox Mode");
 					screen->setGameMode(SANDBOX);
 					// Reset sandbox settings
-					sandboxes[0]->setChecked(true);
-					sandboxes[1]->setValue(sandboxes[1]->getMin());
-					sandboxes[2]->setChecked(false);
+					autoFallBox->setChecked(true);
+					gravityBox->setValue(gravityBox->getMin());
+					creativeModeBox->setChecked(false);
 					screen->setAutoFall(true);
 					screen->endCreativeMode();
 					bag.resetQueue();
@@ -542,13 +542,13 @@ int main(){
 						screen->spawnPiece(6);
 						// Hot keys for sandbox controls
 					else if (event.key.code == sf::Keyboard::Q)
-						toggleGravity(*sandboxes[0], screen);
+						toggleGravity(autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::W)
-						decrementGravity(*sandboxes[1], *sandboxes[0], screen);
+						decrementGravity(gravityBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::S)
-						incrementGravity(*sandboxes[1], *sandboxes[0], screen);
+						incrementGravity(gravityBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::E)
-						toggleCreative(*sandboxes[2], *sandboxes[0], screen);
+						toggleCreative(creativeModeBox, autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::R) {
 						bag.resetQueue();
 						screen->resetBoard();
@@ -569,21 +569,21 @@ int main(){
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
 					if (event.mouseButton.button == sf::Mouse::Left) {
-						if (sandboxes[0]->getBounds().contains(clickPos))  // Turn off gravity
-							toggleGravity(*sandboxes[0], screen);
-						else if (sandboxes[1]->getLeftBound().contains(clickPos))  // Speed arrows
-							decrementGravity(*sandboxes[1], *sandboxes[0], screen);
-						else if (sandboxes[1]->getRightBound().contains(clickPos))
-							incrementGravity(*sandboxes[1], *sandboxes[0], screen);
-						else if (sandboxes[2]->getBounds().contains(clickPos)) // Click creative mode
-							toggleCreative(*sandboxes[2], *sandboxes[0], screen);
+						if (autoFallBox->getBounds().contains(clickPos))  // Turn off gravity
+							toggleGravity(autoFallBox, screen);
+						else if (gravityBox->getLeftBound().contains(clickPos))  // Speed arrows
+							decrementGravity(gravityBox, autoFallBox, screen);
+						else if (gravityBox->getRightBound().contains(clickPos))
+							incrementGravity(gravityBox, autoFallBox, screen);
+						else if (creativeModeBox->getBounds().contains(clickPos))
+							toggleCreative(creativeModeBox, autoFallBox, screen);
 						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
 							screen->clickBlock(clickPos); // Will do nothing if creative mode isn't on
-						else if (sandboxes[3]->getBounds().contains(clickPos)) {
+						else if (resetBox->getBounds().contains(clickPos)) {
 							bag.resetQueue();
 							screen->resetBoard();
 						}
-						else if (sandboxes[4]->getBounds().contains(clickPos)) // Return to menu
+						else if (quitBox->getBounds().contains(clickPos)) // Return to menu
 							currentScreen = MAINMENU;
 					}
 					else if (event.mouseButton.button == sf::Mouse::Right && gameScreenBounds[0].contains(clickPos)) {

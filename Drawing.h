@@ -107,13 +107,13 @@ public:
 	}
 
 	// Unused functions for polymorphism
-	virtual void setValue(int num) {}
+	/*virtual void setValue(int num) {}
 	virtual int getMin() { return 0; }
 	virtual sf::FloatRect getLeftBound() { return sf::FloatRect(0, 0, 0, 0); }
 	virtual sf::FloatRect getRightBound() { return sf::FloatRect(0, 0, 0, 0); }
 	virtual void increment() {	}
 	void decrement() { };
-	virtual int getCurrentNum() { return 0; }
+	virtual int getCurrentNum() { return 0; }*/
 };
 
 // Inherited from checkbox. Has two clickable arrows. Text is a range of numbers
