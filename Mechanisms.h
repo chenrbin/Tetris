@@ -173,16 +173,16 @@ public:
 	}
 	template<typename T>
 	// Handles movement with auto-repeat (DAS). 
-	void checkKeyPress(T& screen) { // Doesn't work if parameter type is Screen& for some reason. Needs template
+	void checkKeyPress(T screen) { // Doesn't work if parameter type is Screen& for some reason. Needs template
 		if (sf::Keyboard::isKeyPressed(keySet->getLeft())) {
 			if (leftKey.press())
-				screen.movePiece(0);
+				screen->movePiece(0);
 		}
 		else if (sf::Keyboard::isKeyPressed(keySet->getRight()) && (rightKey.press()))
-			screen.movePiece(2);
+			screen->movePiece(2);
 		// The code above prioritizes the left key if both left and right are held.
 		if (sf::Keyboard::isKeyPressed(keySet->getDown()) && (downKey.press()))
-			screen.movePiece(1);
+			screen->movePiece(1);
 	}
 	void releaseKey(sf::Keyboard::Key& event) {
 		if (event == keySet->getLeft())

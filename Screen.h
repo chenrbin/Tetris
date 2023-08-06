@@ -50,6 +50,12 @@ class Screen {
 
 	bool paused;
 	DeathAnimation* deathAnimation;
+
+	// Customizable game settings
+	float lockDelay, superLockDelay;
+	int nextPieceCount;
+	bool ghostPieceEnabled;
+
 #pragma endregion
 
 public:
@@ -61,6 +67,13 @@ public:
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
 		this->bag = bag;
+
+		// Set game settings to their default values
+		lockDelay = LOCKDELAY;
+		superLockDelay = SUPERLOCKDELAY;
+		nextPieceCount = NEXTPIECECOUNT;
+		ghostPieceEnabled = true;
+
 		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0;
 		heldPiece = nullptr;
@@ -69,12 +82,13 @@ public:
 		gameMode = MAINMENU; // Gamemode will be set whenever a mode is selected from the main menu
 		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
+
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // Piece codes allow for specified piece spawns
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, SCALE));
 		}
-		for (int i = 0; i < NEXTPIECECOUNT; i++) // Initialize next pieces sprites
+		for (int i = 0; i < nextPieceCount; i++) // Initialize next pieces sprites
 			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
@@ -119,7 +133,7 @@ public:
 				lockTimerStarted = true;
 			}
 			else
-				if (lockTimer.getTimeSeconds() >= LOCKDELAY) 
+				if (lockTimer.getTimeSeconds() >= lockDelay) 
 					setPiece();
 		}
 		else {
@@ -132,7 +146,7 @@ public:
 		// Handles super lock timer. Resets only when a new piece is dropped. 
 		if (!checkBelow()) {
 			superLockTimer.resume();
-			if (superLockTimer.getTimeSeconds() >= SUPERLOCKDELAY)
+			if (superLockTimer.getTimeSeconds() >= superLockDelay)
 				setPiece();
 		}
 		else
@@ -557,6 +571,18 @@ public:
 	void setGameMode(const int MODE) {
 		gameMode = MODE;
 	}
+	void setLockDelay(float val) {
+		lockDelay = val;
+	}
+	void setSuperLockDelay(float val) {
+		superLockDelay = val;
+	}
+	void setNextPieceCount(int val) {
+		nextPieceCount = val;
+	}
+	void setGhostPieceEnabled(bool val) {
+		ghostPieceEnabled = val;
+	}
 	int getLinesCleared() {
 		return totalLinesCleared;
 	}
@@ -676,7 +702,10 @@ public:
 					pos.x++;
 		}
 		sf::Color previewColor = currentPiece->color;
-		previewColor.a = PREVIEWTRANSPARENCY;
+		if (ghostPieceEnabled)
+			previewColor.a = PREVIEWTRANSPARENCY;
+		else
+			previewColor.a = 0;
 		setPreviewBlocks(previewPositions, true, previewColor);
 	}
 	void setBlocks(vector<sf::Vector2i>& positions, bool value) {

@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: review parameter types, optimize setting xPos, pause screen class, setting contents, custom keybinds
+	// Todo: pause screen menu, setting contents, setting file, sound, online, reading keys from file
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -100,9 +100,13 @@ namespace TetrisVariables {
 	// Settings Tab
 	const int TABTOP = 0, TABHEIGHT = 50, TABHEIGHTGROWTH = 10;
 	// Tab items
-	const int SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 100;
-	const int SELECTORRIGHTSPACING = 200, SELECTORDOWNSPACING = 40;
-
+	const int SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 50;
+	const int SELECTORRIGHTSPACING = 220, SELECTORDOWNSPACING = 40;
+	// Clickable button
+	const int BUTTONTEXTSIZE = 22;
+	// On-Off Switch
+	const int SWITCHWIDTH = 90, SWITCHHEIGHT = 30;
+	
 	// Print stuff for debug
 	template <typename T>
 	void print(T var) {

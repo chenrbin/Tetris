@@ -6,6 +6,7 @@
 #include "Mechanisms.h"
 using namespace TetrisVariables;
 
+#pragma region Sf Sprites At Home
 // Class for easy sf::Text generation. Replaces the setText function
 class SfTextAtHome : public sf::Text {
 public:
@@ -58,7 +59,9 @@ public:
 		return getGlobalBounds().contains(x, y);
 	}
 };
+#pragma endregion
 
+#pragma region Sandbox Checkboxes
 // Class to organize drawable sprites of a checkbox. Purely visual functionality.
 class Checkbox : public sf::Drawable{
 protected:
@@ -102,6 +105,15 @@ public:
 	sf::FloatRect& getBounds() {
 		return bounds;
 	}
+
+	// Unused functions for polymorphism
+	virtual void setValue(int num) {}
+	virtual int getMin() { return 0; }
+	virtual sf::FloatRect getLeftBound() { return sf::FloatRect(0, 0, 0, 0); }
+	virtual sf::FloatRect getRightBound() { return sf::FloatRect(0, 0, 0, 0); }
+	virtual void increment() {	}
+	void decrement() { };
+	virtual int getCurrentNum() { return 0; }
 };
 
 // Inherited from checkbox. Has two clickable arrows. Text is a range of numbers
@@ -142,10 +154,10 @@ public:
 	void updateString() {
 		check.setString(to_string(currentNum));
 	}
-	sf::FloatRect& getLeftBound() {
+	sf::FloatRect getLeftBound() {
 		return leftBound;
 	}
-	sf::FloatRect& getRightBound() {
+	sf::FloatRect getRightBound() {
 		return rightBound;
 	}
 	int getCurrentNum() {
@@ -174,7 +186,9 @@ public:
 		updateString();
 	}
 };
+#pragma endregion
 
+#pragma region Animations
 // Animations are meant to be each created once and restarted when played
 class Animation { 
 protected:
@@ -273,8 +287,9 @@ public:
 		return startTime.getTimeSeconds() > duration + endDuration;
 	}
 };
+#pragma endregion
 
-// Class to display garbage bin
+// Class to display garbage bin. Actual mechanism is in Mechanisms.h
 class GarbageStack : public sf::Drawable{
 	vector<sf::RectangleShape> stack;
 
@@ -327,6 +342,9 @@ class ClickableMenu : public sf::Drawable{
 		target.draw(cursor, states);
 	}
 public:
+	ClickableMenu(){
+		cursorPos = 0;
+	}
 	ClickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
 		for (int i = 0; i < menuText.size(); i++)
 			texts.push_back(SfTextAtHome(font, color, menuText[i], textSize, { startPos.x, startPos.y + spacing * i }));
@@ -377,17 +395,30 @@ class ClickableButton : public sf::Drawable{
 		target.draw(text, states);
 	}
 public:
-	ClickableButton(sf::Vector2f buttonSize, sf::Vector2f position, sf::Font& font, string message, const sf::Color& buttonColor = BLACK, const sf::Color& textColor = WHITE) {
+	ClickableButton() {}
+	ClickableButton(sf::Vector2f buttonSize, sf::Vector2f position, sf::Font& font, string message, int textSize, const sf::Color& buttonColor = BLACK, const sf::Color& textColor = WHITE) {
 		button = SfRectangleAtHome(buttonColor, { buttonSize.x, buttonSize.y }, { position.x, position.y }, true, BLACK, 1);
-		text = SfTextAtHome(font, textColor, message, buttonSize.y, position, true, false, true);
-		text.move(0, -text.getGlobalBounds().height / 2);
+		text = SfTextAtHome(font, textColor, message, textSize, position, true, false, true, true);
+		text.setOrigin(text.getOrigin().x, 0);
+		text.setPosition(position.x, button.getGlobalBounds().top);
+	}
+	bool checkClick(int mouseX, int mouseY) {
+		return button.contains(mouseX, mouseY);
+	}
+	void setFillColor(const sf::Color& color) {
+		button.setFillColor(color);
+	}
+	void move(float offsetX, float offsetY) {
+		button.move(offsetX, offsetY);
+		text.move(offsetX, offsetY);
 	}
 };
 
-// Base class for game setting
+#pragma region Option Selectors
+// Base class for game setting. All selectors are initialized with position 0 and move as they are added to tabs
 struct OptionSelector : public sf::Drawable {
 	OptionSelector() {};
-	// Values return as a string and will need to be manually converted to numbers.
+	// Since selectors will hold all kinds of data, they will be returned as strings and manually converted
 	virtual string getValue() = 0;
 	// Move all sprites
 	virtual void move(float offsetX, float offsetY) = 0;
@@ -500,6 +531,12 @@ public:
 			text.move(offsetX, offsetY);
 		cursor.move(offsetX, offsetY);
 	}
+	// Go to a specific node based on its index
+	void goToIndex(int index) {
+		setCursorPressed(true);
+		moveCursor(nodes[index].getGlobalBounds().left);
+		setCursorPressed(false);
+	}
 	// Click nodes to select option
 	bool clickNodes(int mouseX, int mouseY) {
 		for (SfRectangleAtHome node : nodes) {
@@ -525,9 +562,106 @@ public:
 };
 
 // A switch that can be turned on or off
-class onOffSwitch {
+class OnOffSwitch : public OptionSelector {
+	ClickableButton switchBase;
+	SfRectangleAtHome switchCover;
+	bool isOn;
 
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(switchBase, states);
+		target.draw(switchCover, states);
+	}
+public:
+	// Switch is set to true by default
+	OnOffSwitch(sf::Font& font) {
+		switchBase = ClickableButton({ SWITCHWIDTH, SWITCHHEIGHT }, {0, 0}, font, "OFF ON ", SWITCHHEIGHT * 2 / 3.0f, GREEN);
+		switchCover = SfRectangleAtHome(GRAY, { SWITCHWIDTH / 2.0f, SWITCHHEIGHT }, {-SWITCHWIDTH / 4.0f, 0}, true, BLACK, 1);
+		move(SWITCHWIDTH / 2.0f, SWITCHHEIGHT / 2.0f); // Initial movement to offset the origin change used to center the text
+		isOn = true;
+	}
+	virtual string getValue() {
+		return to_string(isOn);
+	}
+	// Move all sprites
+	virtual void move(float offsetX, float offsetY) {
+		switchBase.move(offsetX, offsetY);
+		switchCover.move(offsetX, offsetY);
+	}
+	// Process clicking the button
+	bool clickButton(int mouseX, int mouseY) {
+		if (switchBase.checkClick(mouseX, mouseY))
+		{
+			if (isOn) {
+				switchBase.setFillColor(RED);
+				switchCover.move(switchCover.getGlobalBounds().width, 0);
+			}
+			else {
+				switchBase.setFillColor(GREEN);
+				switchCover.move(-switchCover.getGlobalBounds().width, 0);
+			}
+			isOn = !isOn;
+			return true;
+		}
+		return false;
+	}
+	virtual bool processMouseMove(int mouseX, int mouseY) {
+		return false;
+	}
+	virtual bool processMouseClick(int mouseX, int mouseY) {
+		return clickButton(mouseX, mouseY);
+	}
+	virtual bool processMouseRelease() {
+		return false;
+	}
 };
+
+// Class to store custom keybinds
+class KeyRecorder : public OptionSelector {
+	// Sprites
+	SfRectangleAtHome rect;
+	SfTextAtHome text;
+
+	sf::Keyboard::Key key; // Key object to detect
+	map<sf::Keyboard::Key, string>* keyStrings; // Map for nontext key strings
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(rect, states);
+		target.draw(text, states);
+	}
+public:
+	KeyRecorder(map<sf::Keyboard::Key, string>* keyStrings, sf::Font& font) {
+		this->keyStrings = keyStrings;
+		rect = SfRectangleAtHome(GRAY, { 64, 32 }, { 300, 300 }, true, BLACK, 1);
+		text = SfTextAtHome(font, WHITE, "A", BUTTONTEXTSIZE, { 300, 290 }, true, false, true, true);
+	}
+	// Reads the key for text characters. Cannot read nontext characters like control and shift
+	void readKey(sf::Uint32 unicode) {
+		// Ignores if enter, tab or space is entered. They count as blank spaces
+		if (unicode != 9 && unicode != 13 && unicode != 32)
+			updateString(string(1, (char)toupper(unicode)));
+	}
+	// Reads the key for nontext characters and records the key itself
+	void readKey(sf::Keyboard::Key key) {
+		auto iter = keyStrings->begin();
+		for (; iter != keyStrings->end(); iter++)
+			if (key == iter->first)
+				updateString(iter->second);
+		this->key = key;
+	}
+	string getValue() {
+		return text.getString();
+	}
+	void move(float offsetX, float offsetY) {
+		rect.move(offsetX, offsetY);
+		text.move(offsetX, offsetY);
+	}
+	void updateString(string str) {
+		text.setString(str);
+		text.alignCenter();
+		text.setPosition(300, 290);
+	}
+};
+#pragma endregion
 
 class SettingsTab : public sf::Drawable{
 	SfRectangleAtHome tabRect;
@@ -594,22 +728,11 @@ public:
 	sf::FloatRect getTabBounds() {
 		return tabBounds;
 	}
-	// Add a setting option and its selection mechanism. True to place mechanism to the right of text, false for below.
-	void addSetting(string text, OptionSelector* selector, bool selectorPositionRight, sf::Font& font) {
-		// Determine sprite position based on setting count
-		float xPos, yPos;
-		if (settingCount < 7)
-			xPos = SETTINGXPOS;
-		else // Next column
-			xPos = SETTINGXPOS + 300;
-		yPos = SETTINGYPOS + settingCount * SETTINGSPACING;
-		
-		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, { xPos, yPos }));
+	// Add a setting option and its selection mechanism.
+	void addSetting(string text, sf::Vector2f textPosition, OptionSelector* selector, sf::Vector2f selectorPosition, sf::Font& font) {
+		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, textPosition));
 		settingSelectors.push_back(selector);
-		if (selectorPositionRight)
-			selector->move(xPos + SELECTORRIGHTSPACING, yPos);
-		else
-			selector->move(xPos, yPos + SELECTORDOWNSPACING);
+		selector->move(selectorPosition.x, selectorPosition.y);
 		settingCount++;
 	}
 	// Check all mechanisms on mouse click position
@@ -676,6 +799,7 @@ public:
 		tabs[currentTabIndex].processMouseMove(mouseX, mouseY);
 	}
 	void processMouseClick(int mouseX, int mouseY) {
+		clickTab(mouseX, mouseY);
 		tabs[currentTabIndex].processMouseClick(mouseX, mouseY);
 	}
 	void processMouseRelease() {
@@ -686,4 +810,26 @@ public:
 	}
 };
 
-// Class for pause screen sprites
+// Class for pause screen sprites. Varies based on mode
+class pauseScreen : public sf::Drawable {
+	// All Rectangles and shapes needed to construct the screen
+	vector<SfRectangleAtHome> rectangles;
+	vector<SfTextAtHome> texts;
+	ClickableMenu menu;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		for (int i = 0; i < rectangles.size(); i++)
+			target.draw(rectangles[i], states);
+		for (int i = 0; i < texts.size(); i++)
+			target.draw(texts[i], states);
+	}
+public:
+	pauseScreen(sf::Vector2f gamePos, sf::Font& font) {
+		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, {gamePos.x, gamePos.y - TOPROWPIXELS}, false, WHITE, LINEWIDTH));
+		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+
+		texts.push_back(SfTextAtHome(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true));
+		texts.push_back(SfTextAtHome(font, WHITE, "Press ESC to resume", 20, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3 }, true, false, true));
+	}
+};

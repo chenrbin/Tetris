@@ -9,7 +9,7 @@
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
-// Line count as of 7/25/2023: 2958
+// Line count as of 7/31/2023: 3118
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
 sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
@@ -46,9 +46,9 @@ vector<sf::RectangleShape> getGameRects(sf::Vector2f gamePos) {
 	vector<sf::RectangleShape> rects;
 	rects.push_back(generateRectangle({ GAMEWIDTH, GAMEHEIGHT }, BLACK,
 		gamePos, { 0, 0 }, WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle({ GAMEWIDTH / 2.5, GAMEHEIGHT / 5 }, BLACK,
-		{ gamePos.x - GAMEWIDTH / 2.5f - LINEWIDTH - TILESIZE / 2, gamePos.y + LINEWIDTH }, { 0,  0 }, WHITE, LINEWIDTH));
-	rects.push_back(generateRectangle({ GAMEWIDTH / 2.5, GAMEHEIGHT / 9 * NEXTPIECECOUNT },
+	rects.push_back(generateRectangle({ TILESIZE * 4, TILESIZE * 4  }, BLACK,
+		{ gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, { 0,  0 }, WHITE, LINEWIDTH));
+	rects.push_back(generateRectangle({ TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT },
 		BLACK, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, { 0, 0 }, WHITE, LINEWIDTH));
 	rects.push_back(generateRectangle({ TILESIZE / 2, GAMEHEIGHT - LINEWIDTH }, BLACK,
 		{ gamePos.x - TILESIZE / 2 - LINEWIDTH, gamePos.y + LINEWIDTH }, { 0, 0 }, WHITE, LINEWIDTH));
@@ -129,38 +129,58 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 	return bounds;
 }
 
+// Generate a map between nontext keys that can be used as keybinds and their strings 
+map<sf::Keyboard::Key, string> getKeyStrings() {
+	map<sf::Keyboard::Key, string> keyStrings;
+	keyStrings[sf::Keyboard::LShift] = "LShift";
+	keyStrings[sf::Keyboard::RShift] = "RShift";
+	keyStrings[sf::Keyboard::Left] = "Left";
+	keyStrings[sf::Keyboard::Up] = "Up";
+	keyStrings[sf::Keyboard::Down] = "Down";
+	keyStrings[sf::Keyboard::Right] = "Right";
+	keyStrings[sf::Keyboard::LControl] = "LControl";
+	keyStrings[sf::Keyboard::RControl] = "RControl";
+	keyStrings[sf::Keyboard::LAlt] = "LAlt";
+	keyStrings[sf::Keyboard::RAlt] = "RAlt";
+	keyStrings[sf::Keyboard::Tab] = "Tab";
+	keyStrings[sf::Keyboard::Enter] = "Enter";
+	keyStrings[sf::Keyboard::Space] = "Space";
+	return keyStrings;
+}
+
+
 // Following functions are made for reuseability and requires specific parameters passed in.
 // Functionality of the toggles in sandbox mode. 
-void toggleGravity(Checkbox& autoFallBox, Screen& screen) {
+void toggleGravity(Checkbox& autoFallBox, Screen* screen) {
 	if (autoFallBox.getChecked()) {
 		autoFallBox.setChecked(false);
-		screen.setAutoFall(false);
+		screen->setAutoFall(false);
 	}
 	else {
 		autoFallBox.setChecked(true);
-		screen.setAutoFall(true);
+		screen->setAutoFall(true);
 	}
 }
-void decrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen) {
+void decrementGravity(Checkbox& gravityBox, Checkbox& autoFallBox, Screen* screen) {
 	gravityBox.decrement();
-	screen.setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
+	screen->setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
 }
-void incrementGravity(IncrementalBox& gravityBox, Checkbox& autoFallBox, Screen& screen) {
+void incrementGravity(Checkbox& gravityBox, Checkbox& autoFallBox, Screen* screen) {
 	gravityBox.increment();
-	screen.setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
+	screen->setGravity(GRAVITYSPEEDS[gravityBox.getCurrentNum() - 1]);
 }
-void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen& screen) {
+void toggleCreative(Checkbox& creativeModeBox, Checkbox& autoFallBox, Screen* screen) {
 	if (creativeModeBox.getChecked()) { // If box is already checked, turn off
 		creativeModeBox.setChecked(false);
 		autoFallBox.setChecked(true);
-		screen.setAutoFall(true);
-		screen.endCreativeMode();
+		screen->setAutoFall(true);
+		screen->endCreativeMode();
 	}
 	else { // If box isn't checked, turn on
 		creativeModeBox.setChecked(true);
 		autoFallBox.setChecked(false);
-		screen.setAutoFall(false);
-		screen.startCreativeMode();
+		screen->setAutoFall(false);
+		screen->startCreativeMode();
 	}
 }
 
@@ -220,12 +240,12 @@ int main(){
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
-	Checkbox autoFallBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
-	IncrementalBox gravityBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font);
-	Checkbox creativeModeBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
-	Checkbox resetBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
-	Checkbox quitBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
-	vector<Checkbox*> sandboxes = { &autoFallBox, &gravityBox, &creativeModeBox, &resetBox, &quitBox };
+	vector<Checkbox*> sandboxes; // { autoFallBox, gravityBox, creativeModeBox, resetBox, quitBox }
+	sandboxes.push_back(new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font));
+	sandboxes.push_back(new IncrementalBox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font));
+	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font));
+	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font));
+	sandboxes.push_back(new Checkbox (TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font));
 	bool creativeModeOn = false;
 
 	// Text for loss screen
@@ -233,7 +253,7 @@ int main(){
 
 	// Initiate animation classes
 	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
-	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
+	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font); 
 
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
@@ -257,14 +277,12 @@ int main(){
 	pieceBag bag;
 	
 	// Set up game screen
-	Screen screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
-	Screen screenP2(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
+	Screen* screen = new Screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
+	Screen* screenP2 = new Screen(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
 	// WIP Pause screen sprites
-	sf::RectangleShape pauseRect = generateRectangle({ GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, BLACK, { GAMEXPOS, GAMEYPOS - TOPROWPIXELS });
-	sf::Text pauseText = generateText(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true);
-	sf::Text pauseText2 = generateText(font, WHITE, "Press ESC to resume", 20, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3 }, true, false, true);
+	pauseScreen classicPause(GAMEPOS, font);
 
 	// Set up settings sprites
 	SettingsMenu gameSettings;
@@ -273,12 +291,37 @@ int main(){
 	gameSettings.addTab(font, "Graphics");
 	gameSettings.selectTab(0);
 
-	SlidingBar difficultySlider(250, { "Easy", "Normal", "Hard"}, font);
-	gameSettings[0].addSetting("Difficulty", &difficultySlider, true, font);
-	SlidingBar lockTimerSlider(250, { "10", "20", "50", "100" }, font);
-	gameSettings[0].addSetting("Lock Delay", &lockTimerSlider, true, font);
+	vector<sf::Vector2f> settingPositions;
+	vector<OptionSelector*> selectors;
+	vector<sf::Vector2f> selectorPositions;
+	for (float i = 0; i < 7; i++) {
+		settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
+		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
+	}
+	selectors.push_back(new SlidingBar(250, { "Easy", "Normal", "Hard", "Custom"}, font));
+	gameSettings[0].addSetting("Difficulty", settingPositions[0], selectors[0], selectorPositions[0], font);
 	
-	ClickableButton butt({ 300, 100 }, { 300, 300 }, font, "Test");
+	selectors.push_back(new SlidingBar(250, { "10", "20", "50", "100" }, font));
+	gameSettings[0].addSetting("Lock Delay", settingPositions[1], selectors[1], selectorPositions[1], font);
+	
+	selectors.push_back(new SlidingBar (250, { "0", "1", "2", "3", "4", "5", "6"}, font));
+	gameSettings[0].addSetting("Piece Preview", settingPositions[2], selectors[2], selectorPositions[2], font);
+
+	selectors.push_back(new OnOffSwitch(font));
+	gameSettings[0].addSetting("Ghost Piece", settingPositions[3], selectors[3], selectorPositions[3], font);
+
+	ClickableButton defaultSettingsButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED);
+	ClickableButton saveQuitSettingsButton({ 230, 40 }, { 400, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED);
+	ClickableButton discardQuitSettingsButton({ 230, 40 }, { 650, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED);	
+	
+	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
+
+	KeyRecorder ke(&keyStrings, font);
+	printLine(&windowSettings);
+	printLine(&linesClearedText);
+	printLine(&creativeModeOn);
+	printLine(&screen);
+	printLine(&ke);
 	// Game loop
 	while (window.isOpen())
 	{
@@ -286,8 +329,8 @@ int main(){
 		if (currentScreen == MAINMENU) {
 			window.clear(BLUE);
 			window.draw(titleText);
-			window.draw(butt);
 			window.draw(gameMenu);
+			window.draw(ke);
 
 			bool modeSelected = false;
 
@@ -301,6 +344,7 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
+					ke.readKey(event.key.code);
 					if (event.key.code == sf::Keyboard::Down) 
 						gameMenu.moveDown();
 					else if (event.key.code == sf::Keyboard::Up) 
@@ -321,6 +365,11 @@ int main(){
 				case sf::Event::MouseButtonReleased: {
 					break;
 				}
+				case sf::Event::TextEntered: {
+					// Prevents entering characters that require shift like '!'. Event.key.shift does not seem to work.
+					if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+						ke.readKey(event.text.unicode);
+				}
 				default:
 					break;
 				}
@@ -333,40 +382,40 @@ int main(){
 				{
 				case 0: // Classic mode
 					currentScreen = CLASSIC;
-					screen.setGameMode(CLASSIC);
+					screen->setGameMode(CLASSIC);
 					gameText[2].setString("Classic Mode");
-					screen.setAutoFall(true);
-					screen.endCreativeMode();
+					screen->setAutoFall(true);
+					screen->endCreativeMode();
 					bag.resetQueue();
-					screen.resetBoard();
+					screen->resetBoard();
 					break;
 				case 1: // Sandbox mode
 					currentScreen = SANDBOX;
 					gameText[2].setString("Sandbox Mode");
-					screen.setGameMode(SANDBOX);
+					screen->setGameMode(SANDBOX);
 					// Reset sandbox settings
-					autoFallBox.setChecked(true);
-					gravityBox.setValue(gravityBox.getMin());
-					creativeModeBox.setChecked(false);
-					screen.setAutoFall(true);
-					screen.endCreativeMode();
+					sandboxes[0]->setChecked(true);
+					sandboxes[1]->setValue(sandboxes[1]->getMin());
+					sandboxes[2]->setChecked(false);
+					screen->setAutoFall(true);
+					screen->endCreativeMode();
 					bag.resetQueue();
-					screen.resetBoard();
+					screen->resetBoard();
 					break;
 				case 2: // PVP mode
 					currentScreen = MULTIPLAYER;
 					window.setSize({ WIDTH * 2, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH * 2, HEIGHT)));
 					window.setPosition({ 100, 100 });
-					screen.setGameMode(MULTIPLAYER);
+					screen->setGameMode(MULTIPLAYER);
 					gameText[2].setString("");
-					screen.setAutoFall(true);
-					screen.endCreativeMode();
+					screen->setAutoFall(true);
+					screen->endCreativeMode();
 					bag.resetQueue();
-					screen.resetBoard();
+					screen->resetBoard();
 
-					screenP2.setGameMode(MULTIPLAYER);
-					screenP2.resetBoard();
+					screenP2->setGameMode(MULTIPLAYER);
+					screenP2->resetBoard();
 					break;
 				case 3: // Settings
 					currentScreen = SETTINGSCREEN;
@@ -384,26 +433,22 @@ int main(){
 			window.clear(BLUE);
 			drawVector(window, gameScreenRectangles);
 			drawVector(window, lines);
-			screen.drawScreen();
+			screen->drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
 			drawVector(window, clearAnimations);
 
 			// This is only shown in classic mode
-			linesClearedText.setString("Lines: " + to_string(screen.getLinesCleared()));
+			linesClearedText.setString("Lines: " + to_string(screen->getLinesCleared()));
 			window.draw(linesClearedText);
 			
-			if (screen.getPaused())
-			{
-				window.draw(pauseRect);
-				window.draw(pauseText);
-				window.draw(pauseText2);
-			}
+			if (screen->getPaused() && !screen->getGameOver())
+				window.draw(classicPause);
 			// In-game timer events
-			screen.doTimeStuff();
+			screen->doTimeStuff();
 
 			// Check for game over
-			if (screen.getGameOver() && screen.isDeathAnimationOver()) {
+			if (screen->getGameOver() && screen->isDeathAnimationOver()) {
 				currentScreen = LOSESCREEN;
 				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 			}
@@ -422,15 +467,15 @@ int main(){
 				case sf::Event::KeyPressed:
 				{
 					if (event.key.code == playerSoloKeys.getUp())
-						screen.movePiece(3);
+						screen->movePiece(3);
 					else if (event.key.code == playerSoloKeys.getSpinCCW())
-						screen.spinPiece(false);
+						screen->spinPiece(false);
 					else if (event.key.code == playerSoloKeys.getSpinCW())
-						screen.spinPiece(true);
+						screen->spinPiece(true);
 					else if (event.key.code == playerSoloKeys.getHold())
-						screen.holdPiece();
+						screen->holdPiece();
 					else if (event.key.code == sf::Keyboard::Escape)
-						screen.doPauseResume();
+						screen->doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -451,7 +496,7 @@ int main(){
 				window.draw(gameScreenRectangles[i]);
 			drawVector(window, gameScreenRectangles);
 			drawVector(window, lines);
-			screen.drawScreen();
+			screen->drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
 			drawVector(window, sandboxText);
@@ -459,7 +504,7 @@ int main(){
 				window.draw(*box);
 			
 			// In-game timer events
-			screen.doTimeStuff();
+			screen->doTimeStuff();
 			// Handles movement with auto-repeat (DAS)
 			playerSoloDAS.checkKeyPress(screen);
 
@@ -474,48 +519,48 @@ int main(){
 				case sf::Event::KeyPressed:
 				{
 					if (event.key.code == playerSoloKeys.getUp())
-						screen.movePiece(3);
+						screen->movePiece(3);
 					else if (event.key.code == playerSoloKeys.getSpinCCW())
-						screen.spinPiece(false);
+						screen->spinPiece(false);
 					else if (event.key.code == playerSoloKeys.getSpinCW())
-						screen.spinPiece(true);
+						screen->spinPiece(true);
 					else if (event.key.code == playerSoloKeys.getHold())
-						screen.holdPiece();
+						screen->holdPiece();
 					else if (event.key.code == sf::Keyboard::Num1)
-						screen.spawnPiece(0);
+						screen->spawnPiece(0);
 					else if (event.key.code == sf::Keyboard::Num2)
-						screen.spawnPiece(1);
+						screen->spawnPiece(1);
 					else if (event.key.code == sf::Keyboard::Num3)
-						screen.spawnPiece(2);
+						screen->spawnPiece(2);
 					else if (event.key.code == sf::Keyboard::Num4)
-						screen.spawnPiece(3);
+						screen->spawnPiece(3);
 					else if (event.key.code == sf::Keyboard::Num5)
-						screen.spawnPiece(4);
+						screen->spawnPiece(4);
 					else if (event.key.code == sf::Keyboard::Num6)
-						screen.spawnPiece(5);
+						screen->spawnPiece(5);
 					else if (event.key.code == sf::Keyboard::Num7)
-						screen.spawnPiece(6);
+						screen->spawnPiece(6);
 						// Hot keys for sandbox controls
 					else if (event.key.code == sf::Keyboard::Q)
-						toggleGravity(autoFallBox, screen);
+						toggleGravity(*sandboxes[0], screen);
 					else if (event.key.code == sf::Keyboard::W)
-						decrementGravity(gravityBox, autoFallBox, screen);
+						decrementGravity(*sandboxes[1], *sandboxes[0], screen);
 					else if (event.key.code == sf::Keyboard::S)
-						incrementGravity(gravityBox, autoFallBox, screen);
+						incrementGravity(*sandboxes[1], *sandboxes[0], screen);
 					else if (event.key.code == sf::Keyboard::E)
-						toggleCreative(creativeModeBox, autoFallBox, screen);
+						toggleCreative(*sandboxes[2], *sandboxes[0], screen);
 					else if (event.key.code == sf::Keyboard::R) {
 						bag.resetQueue();
-						screen.resetBoard();
+						screen->resetBoard();
 					}
 					else if (event.key.code == sf::Keyboard::T)
 						currentScreen = MAINMENU;
 					else if (event.key.code == sf::Keyboard::G) 
-						screen.receiveGarbage(1);
+						screen->receiveGarbage(1);
 					else if (event.key.code == sf::Keyboard::H) 
-						screen.receiveGarbage(4);
+						screen->receiveGarbage(4);
 					else if (event.key.code == sf::Keyboard::Escape)
-						screen.doPauseResume();
+						screen->doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -524,25 +569,25 @@ int main(){
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
 					if (event.mouseButton.button == sf::Mouse::Left) {
-						if (autoFallBox.getBounds().contains(clickPos))  // Turn off gravity
-							toggleGravity(autoFallBox, screen);
-						else if (gravityBox.getLeftBound().contains(clickPos))  // Speed arrows
-							decrementGravity(gravityBox, autoFallBox, screen);
-						else if (gravityBox.getRightBound().contains(clickPos))
-							incrementGravity(gravityBox, autoFallBox, screen);
-						else if (creativeModeBox.getBounds().contains(clickPos))
-							toggleCreative(creativeModeBox, autoFallBox, screen);
+						if (sandboxes[0]->getBounds().contains(clickPos))  // Turn off gravity
+							toggleGravity(*sandboxes[0], screen);
+						else if (sandboxes[1]->getLeftBound().contains(clickPos))  // Speed arrows
+							decrementGravity(*sandboxes[1], *sandboxes[0], screen);
+						else if (sandboxes[1]->getRightBound().contains(clickPos))
+							incrementGravity(*sandboxes[1], *sandboxes[0], screen);
+						else if (sandboxes[2]->getBounds().contains(clickPos)) // Click creative mode
+							toggleCreative(*sandboxes[2], *sandboxes[0], screen);
 						else if (gameScreenBounds[0].contains(clickPos))  // Creative mode click
-							screen.clickBlock(clickPos); // Will do nothing if creative mode isn't on
-						else if (resetBox.getBounds().contains(clickPos)) {
+							screen->clickBlock(clickPos); // Will do nothing if creative mode isn't on
+						else if (sandboxes[3]->getBounds().contains(clickPos)) {
 							bag.resetQueue();
-							screen.resetBoard();
+							screen->resetBoard();
 						}
-						else if (quitBox.getBounds().contains(clickPos)) // Return to menu
+						else if (sandboxes[4]->getBounds().contains(clickPos)) // Return to menu
 							currentScreen = MAINMENU;
 					}
 					else if (event.mouseButton.button == sf::Mouse::Right && gameScreenBounds[0].contains(clickPos)) {
-						screen.clickRow(clickPos); // Creative mode right click
+						screen->clickRow(clickPos); // Creative mode right click
 					}
 					break;
 				}
@@ -560,41 +605,41 @@ int main(){
 			window.clear(BLUE);
 			drawVector(window, gameScreenRectangles);
 			drawVector(window, lines);
-			screen.drawScreen();
+			screen->drawScreen();
 			window.draw(gameScreenRectangles.back()); // Redraw last rectangle
 			drawVector(window, gameText);
 			drawVector(window, clearAnimations);
 
 			drawVector(window, gameScreenRectanglesP2);
 			drawVector(window, linesP2);
-			screenP2.drawScreen();
+			screenP2->drawScreen();
 			window.draw(gameScreenRectanglesP2.back());
 			drawVector(window, gameTextP2);
 			drawVector(window, clearAnimationsP2);
 
 
 			// In-game timer events
-			screen.doTimeStuff();
-			screenP2.doTimeStuff();
+			screen->doTimeStuff();
+			screenP2->doTimeStuff();
 			// Process garbage exchange
-			screen.receiveGarbage(screenP2.getOutGarbage());
-			screenP2.receiveGarbage(screen.getOutGarbage());
+			screen->receiveGarbage(screenP2->getOutGarbage());
+			screenP2->receiveGarbage(screen->getOutGarbage());
 
 			// Check for game over
-			if (screen.getGameOver()) {
-				screenP2.pauseGame();
-				if (screen.isDeathAnimationOver()) {
+			if (screen->getGameOver()) {
+				screenP2->pauseGame();
+				if (screen->isDeathAnimationOver()) {
 					window.setSize({ WIDTH, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					currentScreen = LOSESCREEN;
 					lossText[0] = generateText(font, WHITE, "PLAYER 2 WINS!", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
-					if (screenP2.getGameOver() && screenP2.isDeathAnimationOver()) // Rare event if both players lose at the same time
+					if (screenP2->getGameOver() && screenP2->isDeathAnimationOver()) // Rare event if both players lose at the same time
 						lossText[0] = generateText(font, WHITE, "DRAW!", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
 				}
 			}
-			else if (screenP2.getGameOver()) {
-				screen.pauseGame();
-				if (screenP2.isDeathAnimationOver()) {
+			else if (screenP2->getGameOver()) {
+				screen->pauseGame();
+				if (screenP2->isDeathAnimationOver()) {
 					window.setSize({ WIDTH, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
 					currentScreen = LOSESCREEN;
@@ -617,24 +662,24 @@ int main(){
 				case sf::Event::KeyPressed:
 				{
 					if (event.key.code == player1Keys.getUp())
-						screen.movePiece(3);
+						screen->movePiece(3);
 					else if (event.key.code == player1Keys.getSpinCCW())
-						screen.spinPiece(false);
+						screen->spinPiece(false);
 					else if (event.key.code == player1Keys.getSpinCW())
-						screen.spinPiece(true);
+						screen->spinPiece(true);
 					else if (event.key.code == player1Keys.getHold())
-						screen.holdPiece();
+						screen->holdPiece();
 					else if (event.key.code == player2Keys.getUp())
-						screenP2.movePiece(3);
+						screenP2->movePiece(3);
 					else if (event.key.code == player2Keys.getSpinCCW())
-						screenP2.spinPiece(false);
+						screenP2->spinPiece(false);
 					else if (event.key.code == player2Keys.getSpinCW())
-						screenP2.spinPiece(true);
+						screenP2->spinPiece(true);
 					else if (event.key.code == player2Keys.getHold())
-						screenP2.holdPiece();
+						screenP2->holdPiece();
 					else if (event.key.code == sf::Keyboard::Escape) {
-						screen.doPauseResume();
-						screenP2.doPauseResume();
+						screen->doPauseResume();
+						screenP2->doPauseResume();
 					}
 					break;
 				}
@@ -674,6 +719,9 @@ int main(){
 		else if (currentScreen == SETTINGSCREEN) {
 			window.clear(BLUE);
 			window.draw(gameSettings);
+			window.draw(defaultSettingsButton);
+			window.draw(saveQuitSettingsButton);
+			window.draw(discardQuitSettingsButton);
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)
@@ -687,8 +735,9 @@ int main(){
 					gameSettings.processMouseMove(event.mouseMove.x, event.mouseMove.y);
 					break;
 				case sf::Event::MouseButtonPressed:
-					gameSettings.clickTab((float)event.mouseButton.x, (float)event.mouseButton.y);
 					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
+					if (discardQuitSettingsButton.checkClick(event.mouseButton.x, event.mouseButton.y))
+						currentScreen = MAINMENU;
 					break;
 				case sf::Event::MouseButtonReleased:
 					gameSettings.processMouseRelease();
