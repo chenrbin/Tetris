@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: pause screen menu, setting contents, setting file, sound, online, reading keys from file
+	// Todo: organize keybind code pause screen menu, setting contents, setting file, sound, online, reading keys from file
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -39,7 +39,7 @@ namespace TetrisVariables {
 	const sf::Vector2f GAMEPOS(GAMEXPOS, GAMEYPOS);
 	const sf::Vector2f GAMEPOSP2(GAMEXPOS + WIDTH, GAMEYPOS);
 	const sf::Vector2f SANDBOXMENUPOS(GAMEXPOS + GAMEWIDTH + LINEWIDTH * 2, GAMEYPOS + GAMEHEIGHT / 1.5f);
-
+	const sf::Vector2f ORIGIN(0, 0);
 	// Game screen state codes
 	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5, SETTINGSCREEN = 6;
 	

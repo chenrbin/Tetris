@@ -103,6 +103,7 @@ class KeySet {
 	sf::Keyboard::Key spinCW;
 	sf::Keyboard::Key spinCCW;
 	sf::Keyboard::Key hold;
+	vector<sf::Keyboard::Key*> setPointers;
 public:
 	KeySet(sf::Keyboard::Key left, sf::Keyboard::Key right, sf::Keyboard::Key up,
 		sf::Keyboard::Key down, sf::Keyboard::Key spinCW, sf::Keyboard::Key spinCCW, sf::Keyboard::Key hold) {
@@ -113,6 +114,8 @@ public:
 		this->spinCW = spinCW;
 		this->spinCCW = spinCCW;
 		this->hold = hold;
+
+		setPointers = { &up, &left, &down, &right, &spinCW, &spinCCW, &hold };
 	}
 	void setLeft(sf::Keyboard::Key key) {
 		left = key;
@@ -155,6 +158,10 @@ public:
 	}
 	sf::Keyboard::Key getHold() {
 		return hold;
+	}
+	// Return a series of pointers to the keybinds
+	vector<sf::Keyboard::Key*> getSet() {
+		return { &up, &left, &down, &right, &spinCW, &spinCCW, &hold };
 	}
 };
 

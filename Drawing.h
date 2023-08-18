@@ -565,7 +565,7 @@ class OnOffSwitch : public OptionSelector {
 public:
 	// Switch is set to true by default
 	OnOffSwitch(sf::Font& font) {
-		switchBase = ClickableButton({ SWITCHWIDTH, SWITCHHEIGHT }, {0, 0}, font, "OFF ON ", SWITCHHEIGHT * 2 / 3.0f, GREEN);
+		switchBase = ClickableButton({ SWITCHWIDTH, SWITCHHEIGHT }, ORIGIN, font, "OFF ON ", SWITCHHEIGHT * 2 / 3.0f, GREEN);
 		switchCover = SfRectangleAtHome(GRAY, { SWITCHWIDTH / 2.0f, SWITCHHEIGHT }, {-SWITCHWIDTH / 4.0f, 0}, true, BLACK, 1);
 		move(SWITCHWIDTH / 2.0f, SWITCHHEIGHT / 2.0f); // Initial movement to offset the origin change used to center the text
 		isOn = true;
@@ -627,7 +627,7 @@ public:
 	KeyRecorder(map<sf::Keyboard::Key, string>* keyStrings, sf::Font& font) {
 		this->keyStrings = keyStrings;
 		rect = SfRectangleAtHome(GRAY, { 64, 32 }, { 16, 16 }, true, BLACK, 1);
-		text = SfTextAtHome(font, WHITE, "A", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
+		text = SfTextAtHome(font, WHITE, "B", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
 		isSelected = false;
 		tempString = "";
 	}
@@ -649,13 +649,16 @@ public:
 		for (; iter != keyStrings->end(); iter++)
 			if (key == iter->first) {
 				updateString(iter->second);
-				this->key = key;
 				isSelected = false;
 				break;
 			}	
+		this->key = key;
 	}
 	string getValue() {
 		return text.getString();
+	}
+	sf::Keyboard::Key* getKey() {
+		return &key;
 	}
 	void move(float offsetX, float offsetY) {
 		rect.move(offsetX, offsetY);
@@ -769,6 +772,7 @@ public:
 		selector->move(selectorPosition.x, selectorPosition.y);
 		settingCount++;
 	}
+	
 	// Add a setting option while storing a keybind for extra operations
 	void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
 		keybinds.push_back(new KeyRecorder(keyStrings, font));
@@ -787,6 +791,17 @@ public:
 		for (KeyRecorder* keyRec : keybinds)
 			keyRec->readKey(key);
 	}
+	vector<KeyRecorder*>& getKeybinds() {
+		return keybinds;
+	}
+	void setKey(int index, sf::Keyboard::Key key) {
+		keybinds[index]->setSelect(true);
+		keybinds[index]->readKey(key);
+	}
+	void setKey(int index, sf::Uint32 unicode) {
+		keybinds[index]->setSelect(true);
+		keybinds[index]->readKey(unicode);
+	}
 	// Check all mechanisms on mouse click position
 	void processMouseMove(int mouseX, int mouseY) {
 		for (OptionSelector* selector : settingSelectors)
@@ -804,6 +819,7 @@ public:
 	}
 	
 };
+
 class SettingsMenu : public sf::Drawable{
 	vector<SettingsTab> tabs;
 	int tabCount;
