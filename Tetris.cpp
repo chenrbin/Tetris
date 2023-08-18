@@ -9,24 +9,24 @@
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
-// Line count as of 7/31/2023: 3118
+// Line count as of 7/31/2023: 3328
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
-sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
-	sf::Text text;
-	text.setFont(font);
-	text.setFillColor(color);
-	text.setString(message);
-	text.setCharacterSize(textSize);
-	const sf::FloatRect box = text.getLocalBounds();
+sf::Text& generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
+	sf::Text* text = new sf::Text(); // Store on the heap.
+	text->setFont(font);
+	text->setFillColor(color);
+	text->setString(message);
+	text->setCharacterSize(textSize);
+	const sf::FloatRect box = text->getLocalBounds();
 	if (centered)
-		text.setOrigin(box.width / 2.0f, box.height / 2.0f);
-	text.setPosition(coords);
+		text->setOrigin(box.width / 2.0f, box.height / 2.0f);
+	text->setPosition(coords);
 	if (bold)
-		text.setStyle(sf::Text::Bold);
+		text->setStyle(sf::Text::Bold);
 	if (underlined)
-		text.setStyle(sf::Text::Underlined);
-	return text;
+		text->setStyle(sf::Text::Underlined);
+	return *text;
 }
 // Generate rectangle entity. Can specify dimensions, color, position, origin, outline
 sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = { 0, 0 }, sf::Color outlineColor = sf::Color(), float outlineThickness = 0)
@@ -224,19 +224,19 @@ int main(){
 	}
 
 	// Title screen sprites
-	sf::Text titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
+	sf::Text& titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
 
-	sf::CircleShape cursor(15.f, 3); // Triangle shaped cursor
-	cursor.rotate(90.f);
+	sf::CircleShape* cursor = new sf::CircleShape(15.f, 3); // Triangle shaped cursor
+	cursor->rotate(90.f);
 	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
-	ClickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, cursor);
+	ClickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, *cursor);
 
 	// Game sprites in a vector and constructed in a separate method to keep main clean
 	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
-	sf::Text linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
+	sf::Text& linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
 
 	// Sandbox mode exclusive sprites
 	vector<sf::Text> sandboxText = getSandboxText(font);
@@ -264,14 +264,14 @@ int main(){
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
 
 	// Initialize controls.
-	KeySet playerSoloKeys(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
-	KeySet player1Keys(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
-	KeySet player2Keys(LEFT2, RIGHT2, UP2, DOWN2, SPINCW2, SPINCCW2, HOLD2);
+	KeySet* playerSoloKeys = new KeySet(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
+	KeySet* player1Keys = new KeySet(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
+	KeySet* player2Keys = new KeySet(LEFT2, RIGHT2, UP2, DOWN2, SPINCW2, SPINCCW2, HOLD2);
 
 	// Initiate DAS keys
-	KeyDAS playerSoloDAS(170, 50, &playerSoloKeys);
-	KeyDAS player1DAS(170, 50, &player1Keys);
-	KeyDAS player2DAS(170, 50, &player2Keys);
+	KeyDAS* playerSoloDAS = new KeyDAS(170, 50, playerSoloKeys);
+	KeyDAS* player1DAS = new KeyDAS(170, 50, player1Keys);
+	KeyDAS* player2DAS = new KeyDAS(170, 50, player2Keys);
 
 	// Initiate piece rng
 	pieceBag bag;
@@ -298,6 +298,7 @@ int main(){
 		settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
 		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
 	}
+
 	selectors.push_back(new SlidingBar(250, { "Easy", "Normal", "Hard", "Custom"}, font));
 	gameSettings[0].addSetting("Difficulty", settingPositions[0], selectors[0], selectorPositions[0], font);
 	
@@ -310,18 +311,15 @@ int main(){
 	selectors.push_back(new OnOffSwitch(font));
 	gameSettings[0].addSetting("Ghost Piece", settingPositions[3], selectors[3], selectorPositions[3], font);
 
-	ClickableButton defaultSettingsButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED);
-	ClickableButton saveQuitSettingsButton({ 230, 40 }, { 400, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED);
-	ClickableButton discardQuitSettingsButton({ 230, 40 }, { 650, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED);	
-	
+	vector<ClickableButton> clickableButtons; // { Reset, Save, Discard }
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
 	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
 
-	KeyRecorder ke(&keyStrings, font);
-	printLine(&windowSettings);
-	printLine(&linesClearedText);
-	printLine(&creativeModeOn);
-	printLine(&screen);
-	printLine(&ke);
+	gameSettings[1].addKeybind("Left", settingPositions[0], &keyStrings, selectorPositions[0], font);
+	gameSettings[1].addKeybind("Down", settingPositions[1], &keyStrings, selectorPositions[1], font);
+
 	// Game loop
 	while (window.isOpen())
 	{
@@ -330,7 +328,6 @@ int main(){
 			window.clear(BLUE);
 			window.draw(titleText);
 			window.draw(gameMenu);
-			window.draw(ke);
 
 			bool modeSelected = false;
 
@@ -344,7 +341,6 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					ke.readKey(event.key.code);
 					if (event.key.code == sf::Keyboard::Down) 
 						gameMenu.moveDown();
 					else if (event.key.code == sf::Keyboard::Up) 
@@ -366,9 +362,7 @@ int main(){
 					break;
 				}
 				case sf::Event::TextEntered: {
-					// Prevents entering characters that require shift like '!'. Event.key.shift does not seem to work.
-					if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
-						ke.readKey(event.text.unicode);
+					break;
 				}
 				default:
 					break;
@@ -454,7 +448,7 @@ int main(){
 			}
 
 			// Handles movement with auto-repeat (DAS)
-			playerSoloDAS.checkKeyPress(screen);
+			playerSoloDAS->checkKeyPress(screen);
 
 			// Event handler for game screen
 			sf::Event event;
@@ -466,20 +460,20 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == playerSoloKeys.getUp())
+					if (event.key.code == playerSoloKeys->getUp())
 						screen->movePiece(3);
-					else if (event.key.code == playerSoloKeys.getSpinCCW())
+					else if (event.key.code == playerSoloKeys->getSpinCCW())
 						screen->spinPiece(false);
-					else if (event.key.code == playerSoloKeys.getSpinCW())
+					else if (event.key.code == playerSoloKeys->getSpinCW())
 						screen->spinPiece(true);
-					else if (event.key.code == playerSoloKeys.getHold())
+					else if (event.key.code == playerSoloKeys->getHold())
 						screen->holdPiece();
 					else if (event.key.code == sf::Keyboard::Escape)
 						screen->doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					playerSoloDAS.releaseKey(event.key.code);
+					playerSoloDAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					break;
@@ -506,7 +500,7 @@ int main(){
 			// In-game timer events
 			screen->doTimeStuff();
 			// Handles movement with auto-repeat (DAS)
-			playerSoloDAS.checkKeyPress(screen);
+			playerSoloDAS->checkKeyPress(screen);
 
 			// Event handler for game screen
 			sf::Event event;
@@ -518,13 +512,13 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == playerSoloKeys.getUp())
+					if (event.key.code == playerSoloKeys->getUp())
 						screen->movePiece(3);
-					else if (event.key.code == playerSoloKeys.getSpinCCW())
+					else if (event.key.code == playerSoloKeys->getSpinCCW())
 						screen->spinPiece(false);
-					else if (event.key.code == playerSoloKeys.getSpinCW())
+					else if (event.key.code == playerSoloKeys->getSpinCW())
 						screen->spinPiece(true);
-					else if (event.key.code == playerSoloKeys.getHold())
+					else if (event.key.code == playerSoloKeys->getHold())
 						screen->holdPiece();
 					else if (event.key.code == sf::Keyboard::Num1)
 						screen->spawnPiece(0);
@@ -564,7 +558,7 @@ int main(){
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					playerSoloDAS.releaseKey(event.key.code);
+					playerSoloDAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					sf::Vector2f clickPos(event.mouseButton.x, event.mouseButton.y);
@@ -648,8 +642,8 @@ int main(){
 			}
 
 			// Handles movement with auto-repeat (DAS)
-			player1DAS.checkKeyPress(screen);
-			player2DAS.checkKeyPress(screenP2);
+			player1DAS->checkKeyPress(screen);
+			player2DAS->checkKeyPress(screenP2);
 
 			// Event handler for game screen
 			sf::Event event;
@@ -661,21 +655,21 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == player1Keys.getUp())
+					if (event.key.code == player1Keys->getUp())
 						screen->movePiece(3);
-					else if (event.key.code == player1Keys.getSpinCCW())
+					else if (event.key.code == player1Keys->getSpinCCW())
 						screen->spinPiece(false);
-					else if (event.key.code == player1Keys.getSpinCW())
+					else if (event.key.code == player1Keys->getSpinCW())
 						screen->spinPiece(true);
-					else if (event.key.code == player1Keys.getHold())
+					else if (event.key.code == player1Keys->getHold())
 						screen->holdPiece();
-					else if (event.key.code == player2Keys.getUp())
+					else if (event.key.code == player2Keys->getUp())
 						screenP2->movePiece(3);
-					else if (event.key.code == player2Keys.getSpinCCW())
+					else if (event.key.code == player2Keys->getSpinCCW())
 						screenP2->spinPiece(false);
-					else if (event.key.code == player2Keys.getSpinCW())
+					else if (event.key.code == player2Keys->getSpinCW())
 						screenP2->spinPiece(true);
-					else if (event.key.code == player2Keys.getHold())
+					else if (event.key.code == player2Keys->getHold())
 						screenP2->holdPiece();
 					else if (event.key.code == sf::Keyboard::Escape) {
 						screen->doPauseResume();
@@ -684,8 +678,8 @@ int main(){
 					break;
 				}
 				case sf::Event::KeyReleased: {
-					player1DAS.releaseKey(event.key.code);
-					player2DAS.releaseKey(event.key.code);
+					player1DAS->releaseKey(event.key.code);
+					player2DAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
 					break;
@@ -719,9 +713,8 @@ int main(){
 		else if (currentScreen == SETTINGSCREEN) {
 			window.clear(BLUE);
 			window.draw(gameSettings);
-			window.draw(defaultSettingsButton);
-			window.draw(saveQuitSettingsButton);
-			window.draw(discardQuitSettingsButton);
+			for (ClickableButton& button : clickableButtons)
+				window.draw(button);
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)
@@ -730,17 +723,21 @@ int main(){
 					window.close();
 					break;
 				case sf::Event::KeyPressed:
+					gameSettings[1].readKeys(event.key.code);
 					break;
 				case sf::Event::MouseMoved:
 					gameSettings.processMouseMove(event.mouseMove.x, event.mouseMove.y);
 					break;
 				case sf::Event::MouseButtonPressed:
 					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
-					if (discardQuitSettingsButton.checkClick(event.mouseButton.x, event.mouseButton.y))
+					if (clickableButtons[2].checkClick(event.mouseButton.x, event.mouseButton.y))
 						currentScreen = MAINMENU;
 					break;
 				case sf::Event::MouseButtonReleased:
 					gameSettings.processMouseRelease();
+					break;
+				case sf::Event::TextEntered:
+					gameSettings[1].readKeys(event.text.unicode);
 					break;
 				default:
 					break;

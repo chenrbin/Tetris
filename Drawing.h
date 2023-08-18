@@ -105,15 +105,6 @@ public:
 	sf::FloatRect& getBounds() {
 		return bounds;
 	}
-
-	// Unused functions for polymorphism
-	/*virtual void setValue(int num) {}
-	virtual int getMin() { return 0; }
-	virtual sf::FloatRect getLeftBound() { return sf::FloatRect(0, 0, 0, 0); }
-	virtual sf::FloatRect getRightBound() { return sf::FloatRect(0, 0, 0, 0); }
-	virtual void increment() {	}
-	void decrement() { };
-	virtual int getCurrentNum() { return 0; }*/
 };
 
 // Inherited from checkbox. Has two clickable arrows. Text is a range of numbers
@@ -623,6 +614,10 @@ class KeyRecorder : public OptionSelector {
 
 	sf::Keyboard::Key key; // Key object to detect
 	map<sf::Keyboard::Key, string>* keyStrings; // Map for nontext key strings
+	
+	// Selection mechanism
+	bool isSelected;
+	string tempString; // Used to update the correct string after selecting a recorder
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
 		target.draw(rect, states);
@@ -631,22 +626,33 @@ class KeyRecorder : public OptionSelector {
 public:
 	KeyRecorder(map<sf::Keyboard::Key, string>* keyStrings, sf::Font& font) {
 		this->keyStrings = keyStrings;
-		rect = SfRectangleAtHome(GRAY, { 64, 32 }, { 300, 300 }, true, BLACK, 1);
-		text = SfTextAtHome(font, WHITE, "A", BUTTONTEXTSIZE, { 300, 290 }, true, false, true, true);
+		rect = SfRectangleAtHome(GRAY, { 64, 32 }, { 16, 16 }, true, BLACK, 1);
+		text = SfTextAtHome(font, WHITE, "A", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
+		isSelected = false;
+		tempString = "";
 	}
 	// Reads the key for text characters. Cannot read nontext characters like control and shift
 	void readKey(sf::Uint32 unicode) {
+		if (!isSelected)
+			return;
 		// Ignores if enter, tab or space is entered. They count as blank spaces
-		if (unicode != 9 && unicode != 13 && unicode != 32)
+		if (unicode != 9 && unicode != 13 && unicode != 32) {
 			updateString(string(1, (char)toupper(unicode)));
+			isSelected = false;
+		}
 	}
 	// Reads the key for nontext characters and records the key itself
 	void readKey(sf::Keyboard::Key key) {
+		if (!isSelected) 
+			return;
 		auto iter = keyStrings->begin();
 		for (; iter != keyStrings->end(); iter++)
-			if (key == iter->first)
+			if (key == iter->first) {
 				updateString(iter->second);
-		this->key = key;
+				this->key = key;
+				isSelected = false;
+				break;
+			}	
 	}
 	string getValue() {
 		return text.getString();
@@ -658,7 +664,34 @@ public:
 	void updateString(string str) {
 		text.setString(str);
 		text.alignCenter();
-		text.setPosition(300, 290);
+		text.setPosition(rect.getPosition().x, rect.getPosition().y - 10);
+	}
+	bool getSelected() {
+		return isSelected;
+	}
+	void setSelect(bool val) {
+		if (isSelected == val)
+			return;
+		if (val) {
+			isSelected = true;
+			tempString = text.getString();
+			updateString("___");
+		}
+		else {
+			isSelected = false;
+			updateString(tempString);
+		}
+	}
+	
+	virtual bool processMouseMove(int mouseX, int mouseY) {
+		return false;
+	}
+	virtual bool processMouseClick(int mouseX, int mouseY) {
+		setSelect(rect.contains(mouseX, mouseY));
+		return false;
+	}
+	virtual bool processMouseRelease() {
+		return false;
 	}
 };
 #pragma endregion
@@ -672,6 +705,7 @@ class SettingsTab : public sf::Drawable{
 
 	vector<SfTextAtHome> settingsTexts;
 	vector<OptionSelector*> settingSelectors;
+	vector<KeyRecorder*> keybinds; // Keybinds stored separately from selectors
 	int settingCount;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -734,6 +768,24 @@ public:
 		settingSelectors.push_back(selector);
 		selector->move(selectorPosition.x, selectorPosition.y);
 		settingCount++;
+	}
+	// Add a setting option while storing a keybind for extra operations
+	void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
+		keybinds.push_back(new KeyRecorder(keyStrings, font));
+		addSetting(text, textPosition, keybinds[keybinds.size() - 1], selectorPosition, font);
+	}
+	// Reads the key for text characters. Cannot read nontext characters like control and shift
+	void readKeys(sf::Uint32 unicode) {
+		for (KeyRecorder* keyRec: keybinds)
+			// Prevents entering characters that require shift like '!'.
+			if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+				keyRec->readKey(unicode);
+	}
+	// Reads the key for nontext characters and records the key itself. 
+	// NOTE: keyPressed event always processes before textEntered
+	void readKeys(sf::Keyboard::Key key) {
+		for (KeyRecorder* keyRec : keybinds)
+			keyRec->readKey(key);
 	}
 	// Check all mechanisms on mouse click position
 	void processMouseMove(int mouseX, int mouseY) {
@@ -804,6 +856,13 @@ public:
 	}
 	void processMouseRelease() {
 		tabs[currentTabIndex].processMouseRelease();
+	}
+	// Processes mechanism for key recorder on tab 2.
+	void processKeyPressed() {
+
+	}
+	void processTextEntered() {
+
 	}
 	SettingsTab& operator[](int index) {
 		return tabs[index];
