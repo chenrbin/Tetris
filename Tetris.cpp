@@ -132,6 +132,18 @@ vector<sf::FloatRect> getBoxBounds(vector<sf::RectangleShape>& rects) {
 // Generate a map between nontext keys that can be used as keybinds and their strings 
 map<sf::Keyboard::Key, string> getKeyStrings() {
 	map<sf::Keyboard::Key, string> keyStrings;
+	keyStrings[sf::Keyboard::Menu] = "Menu";
+	keyStrings[sf::Keyboard::LBracket] = "[";
+	keyStrings[sf::Keyboard::RBracket] = "]";
+	keyStrings[sf::Keyboard::Semicolon] = ";";
+	keyStrings[sf::Keyboard::Comma] = ",";
+	keyStrings[sf::Keyboard::Period] = ".";
+	keyStrings[sf::Keyboard::Quote] = "'";
+	keyStrings[sf::Keyboard::Slash] = "/";
+	keyStrings[sf::Keyboard::Backslash] = "\\";
+	keyStrings[sf::Keyboard::Tilde] = "`";
+	keyStrings[sf::Keyboard::Equal] = "=";
+	keyStrings[sf::Keyboard::Hyphen] = "-";
 	keyStrings[sf::Keyboard::LShift] = "LShift";
 	keyStrings[sf::Keyboard::RShift] = "RShift";
 	keyStrings[sf::Keyboard::Left] = "Left";
@@ -145,9 +157,24 @@ map<sf::Keyboard::Key, string> getKeyStrings() {
 	keyStrings[sf::Keyboard::Tab] = "Tab";
 	keyStrings[sf::Keyboard::Enter] = "Enter";
 	keyStrings[sf::Keyboard::Space] = "Space";
+	keyStrings[sf::Keyboard::Backspace] = "Backspace";
+	keyStrings[sf::Keyboard::PageUp] = "PageUp";
+	keyStrings[sf::Keyboard::PageDown] = "PageDown";
+	keyStrings[sf::Keyboard::End] = "End";
+	keyStrings[sf::Keyboard::Home] = "Home";
+	keyStrings[sf::Keyboard::Insert] = "Insert";
+	keyStrings[sf::Keyboard::Delete] = "Delete";
+	// Procedurally generate alphabet, num, numpad, and Fnum maps for cleaner code
+	for (int i = 0; i <= 25; i++)
+		keyStrings[sf::Keyboard::Key(i)] = string(1, i + 65);
+	for (int i = 26; i <= 35; i++)
+		keyStrings[sf::Keyboard::Key(i)] = "Num" + to_string(i - 26);
+	for (int i = 75; i <= 84; i++)
+		keyStrings[sf::Keyboard::Key(i)] = "Numpad" + to_string(i - 75);
+	for (int i = 85; i <= 99; i++)
+		keyStrings[sf::Keyboard::Key(i)] = "F" + to_string(i - 84);
 	return keyStrings;
 }
-
 
 // Following functions are made for reuseability and requires specific parameters passed in.
 // Functionality of the toggles in sandbox mode. 
@@ -202,6 +229,39 @@ void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 		animation->drawAnimation(window);
 }
 
+// Function to contain contents of settings menu
+void generateSettingsContent(SettingsMenu& gameSettings, sf::Font& font) {
+	gameSettings.addTab(font, "Gameplay");
+	gameSettings.addTab(font, "Controls");
+	gameSettings.addTab(font, "Graphics");
+	gameSettings.selectTab(0);
+
+	vector<sf::Vector2f> settingPositions;
+	vector<OptionSelector*> selectors;
+	vector<sf::Vector2f> selectorPositions;
+	for (float i = 0; i < 7; i++) {
+		settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
+		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
+	}
+
+	selectors.push_back(new SlidingBar(250, { "Easy", "Normal", "Hard", "Custom" }, font));
+	gameSettings[0].addSetting("Difficulty", settingPositions[0], selectors[0], selectorPositions[0], font);
+
+	selectors.push_back(new SlidingBar(250, { "10", "20", "50", "100" }, font));
+	gameSettings[0].addSetting("Lock Delay", settingPositions[1], selectors[1], selectorPositions[1], font);
+
+	selectors.push_back(new SlidingBar(250, { "0", "1", "2", "3", "4", "5", "6" }, font));
+	gameSettings[0].addSetting("Piece Preview", settingPositions[2], selectors[2], selectorPositions[2], font);
+
+	selectors.push_back(new OnOffSwitch(font));
+	gameSettings[0].addSetting("Ghost Piece", settingPositions[3], selectors[3], selectorPositions[3], font);
+}
+
+// Update keybind configurations from setting tab entries
+void updateKeybinds(vector<KeySet*>& keySets, vector<KeyRecorder*> newKeybinds) {
+	for (int i = 0; i < newKeybinds.size(); i++) // Update keybind controls
+		*keySets[i / 7]->getSet()[i % 7] = *newKeybinds[i]->getKey();
+}
 int main(){
 	srand(time(NULL));
 	
@@ -250,10 +310,6 @@ int main(){
 	// Text for loss screen
 	vector<sf::Text> lossText = getLossText(font);
 
-	// Initiate animation classes
-	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
-	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font); 
-
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
 	vector<sf::FloatRect> gameScreenBoundsP2 = getGameBounds(gameScreenRectanglesP2);
@@ -261,6 +317,11 @@ int main(){
 	vector<sf::Text> gameTextP2 = getGameText(gameScreenBoundsP2, font);
 	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
+	
+	// Initiate animation classes
+	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
+	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
+
 
 	// Initialize controls with default keybinds
 	KeySet* playerSoloKeys = new KeySet(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
@@ -281,40 +342,18 @@ int main(){
 	Screen* screenP2 = new Screen(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
 	int currentScreen = MAINMENU;
 
-	// WIP Pause screen sprites
-	pauseScreen classicPause(GAMEPOS, font);
+	// Pause screen sprites
+	vector<string> pauseMenuText = { "Continue", "Restart", "Quit" };
+	pauseScreen pause(GAMEPOS, pauseMenuText, font);
 
 	// Set up settings sprites
 	SettingsMenu gameSettings;
-	gameSettings.addTab(font, "Gameplay");
-	gameSettings.addTab(font, "Controls");
-	gameSettings.addTab(font, "Graphics");
-	gameSettings.selectTab(0);
-
-	vector<sf::Vector2f> settingPositions;
-	vector<OptionSelector*> selectors;
-	vector<sf::Vector2f> selectorPositions;
-	for (float i = 0; i < 7; i++) {
-		settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
-		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
-	}
-
-	selectors.push_back(new SlidingBar(250, { "Easy", "Normal", "Hard", "Custom"}, font));
-	gameSettings[0].addSetting("Difficulty", settingPositions[0], selectors[0], selectorPositions[0], font);
-	
-	selectors.push_back(new SlidingBar(250, { "10", "20", "50", "100" }, font));
-	gameSettings[0].addSetting("Lock Delay", settingPositions[1], selectors[1], selectorPositions[1], font);
-	
-	selectors.push_back(new SlidingBar (250, { "0", "1", "2", "3", "4", "5", "6"}, font));
-	gameSettings[0].addSetting("Piece Preview", settingPositions[2], selectors[2], selectorPositions[2], font);
-
-	selectors.push_back(new OnOffSwitch(font));
-	gameSettings[0].addSetting("Ghost Piece", settingPositions[3], selectors[3], selectorPositions[3], font);
-
+	generateSettingsContent(gameSettings, font);
 	vector<ClickableButton> clickableButtons; // { Reset, Save, Discard }
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
+	
 	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
 
 	// Generate positions for 21 keybinds
@@ -322,58 +361,29 @@ int main(){
 	for (int i = 0; i < keySets.size(); i++) 
 		for (int j = 0; j < 7; j++) 
 			keybindPositions.push_back(sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING * (i + 1), SETTINGYPOS + SETTINGSPACING * (j + 1)));
+	// Add key recorders to settings tab
 	for (sf::Vector2f& vec : keybindPositions)
 		gameSettings[1].addKeybind("", ORIGIN, &keyStrings, vec, font);
+	vector<string> controlsText = { "Up", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold", "Solo", "PVP P1", "PVP P2"};
+	for (int i = 0; i < 7; i++) {
+		gameSettings[1].addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
+	}
+	for (int i = 7; i < 10; i++)
+	{
+		gameSettings[1].addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING * (i - 6), SETTINGYPOS), true, false, true));
+	}
+
 	// Set key recorders to default configuration
 	int counter = 0;
 	for (KeySet* set : keySets) {
 		for (sf::Keyboard::Key* key : set->getSet()) {
 			gameSettings[1].setKey(counter, *key);
-			switch (*key) // Enter default text keys manually
-			{
-			case sf::Keyboard::Z:
-				gameSettings[1].setKey(counter, 90);
-				break;
-			case sf::Keyboard::X:
-				gameSettings[1].setKey(counter, 88);
-				break;
-			case sf::Keyboard::C:
-				gameSettings[1].setKey(counter, 67);
-				break;
-			case sf::Keyboard::V:
-				gameSettings[1].setKey(counter, 86);
-				break;
-			case sf::Keyboard::W:
-				gameSettings[1].setKey(counter, 87);
-				break;
-			case sf::Keyboard::A:
-				gameSettings[1].setKey(counter, 65);
-				break;
-			case sf::Keyboard::S:
-				gameSettings[1].setKey(counter, 83);
-				break;
-			case sf::Keyboard::D:
-				gameSettings[1].setKey(counter, 68);
-				break;
-			case sf::Keyboard::Comma:
-				gameSettings[1].setKey(counter, 44);
-				break;
-			case sf::Keyboard::Period:
-				gameSettings[1].setKey(counter, 46);
-				break;
-			default:
-				break;
-			}
 			counter++;
 		}
 	}
 
-	// update keySet with new keybinds
+	// Store new keybinds
 	vector<KeyRecorder*>& newKeybinds = gameSettings[1].getKeybinds();
-	for (KeyRecorder* rec : newKeybinds)
-	{
-		printLine(*rec->getKey());
-	}
 
 	print(sf::Keyboard::A == sf::Keyboard::Key(0));
 	string str = ".";
@@ -418,12 +428,6 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseButtonReleased: {
-					for (KeySet* set : keySets) {
-						for (sf::Keyboard::Key* key : set->getSet()) {
-							printLine(*key);
-						}
-						cout << endl;
-					}
 					break;
 				}
 				case sf::Event::TextEntered: {
@@ -432,7 +436,6 @@ int main(){
 				default:
 					break;
 				}
-
 			}
 
 			// Select menu option if modeSelected is true
@@ -486,6 +489,7 @@ int main(){
 				default:
 					break;
 				}
+				gameMenu.resetCursorPos();
 			}
 		}
 		// Run on classic mode
@@ -503,7 +507,9 @@ int main(){
 			window.draw(linesClearedText);
 			
 			if (screen->getPaused() && !screen->getGameOver())
-				window.draw(classicPause);
+				window.draw(pause);
+			bool modeSelected = false; // For pause screen
+
 			// In-game timer events
 			screen->doTimeStuff();
 
@@ -526,27 +532,66 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == playerSoloKeys->getUp())
-						screen->movePiece(3);
-					else if (event.key.code == playerSoloKeys->getSpinCCW())
-						screen->spinPiece(false);
-					else if (event.key.code == playerSoloKeys->getSpinCW())
-						screen->spinPiece(true);
-					else if (event.key.code == playerSoloKeys->getHold())
-						screen->holdPiece();
-					else if (event.key.code == sf::Keyboard::Escape)
+					if (screen->getPaused()) { // Pause screen
+						if (event.key.code == sf::Keyboard::Down)
+							pause.getMenu().moveDown();
+						else if (event.key.code == sf::Keyboard::Up)
+							pause.getMenu().moveUp();
+						else if (event.key.code == sf::Keyboard::Z)
+							modeSelected = true;
+					}
+					else { // Game controls
+						if (event.key.code == playerSoloKeys->getUp())
+							screen->movePiece(3);
+						else if (event.key.code == playerSoloKeys->getSpinCCW())
+							screen->spinPiece(false);
+						else if (event.key.code == playerSoloKeys->getSpinCW())
+							screen->spinPiece(true);
+						else if (event.key.code == playerSoloKeys->getHold())
+							screen->holdPiece();
+					}
+					if (event.key.code == sf::Keyboard::Escape) {
 						screen->doPauseResume();
+						pause.getMenu().resetCursorPos();
+					}
 					break;
 				}
 				case sf::Event::KeyReleased: {
 					playerSoloDAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
+					if (screen->getPaused() && pause.getMenu().updateMouse(event.mouseButton.x, event.mouseButton.y))
+						modeSelected = true;
+					break;
+				}
+				case sf::Event::MouseMoved: {
+					if(screen->getPaused())
+						pause.getMenu().updateMouse(event.mouseMove.x, event.mouseMove.y);
 					break;
 				}
 				default:
 					break;
 				}
+			}
+			// Select menu option if modeSelected is true
+			if (modeSelected) {
+				switch (pause.getMenu().getCursorPos())
+				{
+				case 0: // Continue
+					screen->doPauseResume();
+					break;
+				case 1: // Restart
+					bag.resetQueue();
+					screen->resetBoard();
+					break;
+				case 2: // Quit
+					currentScreen = MAINMENU;
+					break;
+				default:
+					break;
+				}
+				modeSelected = false;
+				pause.getMenu().resetCursorPos();
 			}
 		}
 		// Run on sandbox mode
@@ -601,7 +646,7 @@ int main(){
 					else if (event.key.code == sf::Keyboard::Num7)
 						screen->spawnPiece(6);
 						// Hot keys for sandbox controls
-					else if (event.key.code == sf::Keyboard::Q)
+					else if (event.key.code == sf::Keyboard::Q || event.key.code == sf::Keyboard::Escape)
 						toggleGravity(autoFallBox, screen);
 					else if (event.key.code == sf::Keyboard::W)
 						decrementGravity(gravityBox, autoFallBox, screen);
@@ -619,8 +664,6 @@ int main(){
 						screen->receiveGarbage(1);
 					else if (event.key.code == sf::Keyboard::H) 
 						screen->receiveGarbage(4);
-					else if (event.key.code == sf::Keyboard::Escape)
-						screen->doPauseResume();
 					break;
 				}
 				case sf::Event::KeyReleased: {
@@ -677,6 +720,9 @@ int main(){
 			drawVector(window, gameTextP2);
 			drawVector(window, clearAnimationsP2);
 
+			if (screen->getPaused() && !screen->getGameOver() && !screenP2->getGameOver())
+				window.draw(pause);
+			bool modeSelected = false; // For pause screen
 
 			// In-game timer events
 			screen->doTimeStuff();
@@ -721,25 +767,36 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == player1Keys->getUp())
-						screen->movePiece(3);
-					else if (event.key.code == player1Keys->getSpinCCW())
-						screen->spinPiece(false);
-					else if (event.key.code == player1Keys->getSpinCW())
-						screen->spinPiece(true);
-					else if (event.key.code == player1Keys->getHold())
-						screen->holdPiece();
-					else if (event.key.code == player2Keys->getUp())
-						screenP2->movePiece(3);
-					else if (event.key.code == player2Keys->getSpinCCW())
-						screenP2->spinPiece(false);
-					else if (event.key.code == player2Keys->getSpinCW())
-						screenP2->spinPiece(true);
-					else if (event.key.code == player2Keys->getHold())
-						screenP2->holdPiece();
-					else if (event.key.code == sf::Keyboard::Escape) {
+					if (screen->getPaused()) { // Pause screen
+						if (event.key.code == sf::Keyboard::Down)
+							pause.getMenu().moveDown();
+						else if (event.key.code == sf::Keyboard::Up)
+							pause.getMenu().moveUp();
+						else if (event.key.code == sf::Keyboard::Z)
+							modeSelected = true;
+					}
+					else {
+						if (event.key.code == player1Keys->getUp())
+							screen->movePiece(3);
+						else if (event.key.code == player1Keys->getSpinCCW())
+							screen->spinPiece(false);
+						else if (event.key.code == player1Keys->getSpinCW())
+							screen->spinPiece(true);
+						else if (event.key.code == player1Keys->getHold())
+							screen->holdPiece();
+						else if (event.key.code == player2Keys->getUp())
+							screenP2->movePiece(3);
+						else if (event.key.code == player2Keys->getSpinCCW())
+							screenP2->spinPiece(false);
+						else if (event.key.code == player2Keys->getSpinCW())
+							screenP2->spinPiece(true);
+						else if (event.key.code == player2Keys->getHold())
+							screenP2->holdPiece();
+					}
+					if (event.key.code == sf::Keyboard::Escape) {
 						screen->doPauseResume();
 						screenP2->doPauseResume();
+						pause.getMenu().resetCursorPos();
 					}
 					break;
 				}
@@ -748,11 +805,43 @@ int main(){
 					player2DAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
+					if (screen->getPaused() && pause.getMenu().updateMouse(event.mouseButton.x, event.mouseButton.y))
+						modeSelected = true;
+					break;
+				}
+				case sf::Event::MouseMoved: {
+					if (screen->getPaused())
+						pause.getMenu().updateMouse(event.mouseMove.x, event.mouseMove.y);
 					break;
 				}
 				default:
 					break;
 				}
+			}
+
+			// Select menu option if modeSelected is true
+			if (modeSelected) {
+				switch (pause.getMenu().getCursorPos())
+				{
+				case 0: // Continue
+					screen->doPauseResume();
+					screenP2->doPauseResume();
+					break;
+				case 1: // Restart
+					bag.resetQueue();
+					screen->resetBoard();
+					screenP2->resetBoard();
+					break;
+				case 2: // Quit
+					window.setSize({ WIDTH, HEIGHT });
+					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
+					currentScreen = MAINMENU;
+					break;
+				default:
+					break;
+				}
+				modeSelected = false;
+				pause.getMenu().resetCursorPos();
 			}
 		}
 		else if (currentScreen == LOSESCREEN) {
@@ -796,17 +885,13 @@ int main(){
 					break;
 				case sf::Event::MouseButtonPressed:
 					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
-					if (clickableButtons[2].checkClick(event.mouseButton.x, event.mouseButton.y)) {
+					if (clickableButtons[1].checkClick(event.mouseButton.x, event.mouseButton.y)) {
 						currentScreen = MAINMENU;
-						for (int i = 0; i < newKeybinds.size(); i++) // Update keybind controls
-							*keySets[i / 7]->getSet()[i % 7] = *newKeybinds[i]->getKey();
+						updateKeybinds(keySets, newKeybinds);
 					}
 					break;
 				case sf::Event::MouseButtonReleased:
 					gameSettings.processMouseRelease();
-					break;
-				case sf::Event::TextEntered:
-					gameSettings[1].readKeys(event.text.unicode);
 					break;
 				default:
 					break;

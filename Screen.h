@@ -830,15 +830,4 @@ public:
 		return deathAnimation->isOver();
 	}
 #pragma endregion
-
-	// Pause for a specified amount of time. Has hard limit of 10 seconds to avoid possible bugs
-	void wait(float seconds) {
-		sf::Clock cooldown;
-		while (cooldown.getElapsedTime().asSeconds() < seconds && cooldown.getElapsedTime().asSeconds() < 10)
-			continue;
-	}
-	// Calls the garbage bin's printBin function for debugging
-	void printBin() {
-		bin.printBin();
-	}
 };

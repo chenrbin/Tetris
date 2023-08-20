@@ -374,6 +374,10 @@ public:
 	int getCursorPos() {
 		return cursorPos;
 	}
+	void resetCursorPos() {
+		cursorPos = 0;
+		updateCursor();
+	}
 };
 
 // Class for a button that can be clicked
@@ -626,33 +630,21 @@ class KeyRecorder : public OptionSelector {
 public:
 	KeyRecorder(map<sf::Keyboard::Key, string>* keyStrings, sf::Font& font) {
 		this->keyStrings = keyStrings;
-		rect = SfRectangleAtHome(GRAY, { 64, 32 }, { 16, 16 }, true, BLACK, 1);
+		rect = SfRectangleAtHome(GRAY, { 128, 32 }, { 16, 16 }, true, BLACK, 1);
 		text = SfTextAtHome(font, WHITE, "B", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
 		isSelected = false;
 		tempString = "";
 	}
-	// Reads the key for text characters. Cannot read nontext characters like control and shift
-	void readKey(sf::Uint32 unicode) {
-		if (!isSelected)
-			return;
-		// Ignores if enter, tab or space is entered. They count as blank spaces
-		if (unicode != 9 && unicode != 13 && unicode != 32) {
-			updateString(string(1, (char)toupper(unicode)));
-			isSelected = false;
-		}
-	}
-	// Reads the key for nontext characters and records the key itself
+	// Reads and records the key
 	void readKey(sf::Keyboard::Key key) {
-		if (!isSelected) 
+		if (!isSelected || key == -1) // -1 is any invalid key
 			return;
-		auto iter = keyStrings->begin();
-		for (; iter != keyStrings->end(); iter++)
-			if (key == iter->first) {
-				updateString(iter->second);
-				isSelected = false;
-				break;
-			}	
-		this->key = key;
+		auto iter = keyStrings->find(key);
+		if (iter != keyStrings->end()) {
+			updateString(iter->second);
+			isSelected = false;
+			this->key = key;
+		}
 	}
 	string getValue() {
 		return text.getString();
@@ -711,6 +703,8 @@ class SettingsTab : public sf::Drawable{
 	vector<KeyRecorder*> keybinds; // Keybinds stored separately from selectors
 	int settingCount;
 
+	vector<sf::Text> extraText; // Any additional text to draw
+
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
 		// Always draw the tab itself
 		target.draw(tabRect, states);
@@ -723,7 +717,10 @@ class SettingsTab : public sf::Drawable{
 				target.draw(settingsTexts[i], states);
 				target.draw(*settingSelectors[i], states);
 			}
+			for (int i = 0; i < extraText.size(); i++)
+				target.draw(extraText[i], states);
 		}
+		
 	}
 public:
 	SettingsTab(sf::Font& font, string name, int index) {
@@ -773,20 +770,17 @@ public:
 		settingCount++;
 	}
 	
+	// Add additional text to draw
+	void addExtraText(sf::Text text) {
+		extraText.push_back(text);
+	}
+
 	// Add a setting option while storing a keybind for extra operations
 	void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
 		keybinds.push_back(new KeyRecorder(keyStrings, font));
 		addSetting(text, textPosition, keybinds[keybinds.size() - 1], selectorPosition, font);
 	}
-	// Reads the key for text characters. Cannot read nontext characters like control and shift
-	void readKeys(sf::Uint32 unicode) {
-		for (KeyRecorder* keyRec: keybinds)
-			// Prevents entering characters that require shift like '!'.
-			if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && !sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
-				keyRec->readKey(unicode);
-	}
-	// Reads the key for nontext characters and records the key itself. 
-	// NOTE: keyPressed event always processes before textEntered
+	// Reads and records the key
 	void readKeys(sf::Keyboard::Key key) {
 		for (KeyRecorder* keyRec : keybinds)
 			keyRec->readKey(key);
@@ -797,10 +791,6 @@ public:
 	void setKey(int index, sf::Keyboard::Key key) {
 		keybinds[index]->setSelect(true);
 		keybinds[index]->readKey(key);
-	}
-	void setKey(int index, sf::Uint32 unicode) {
-		keybinds[index]->setSelect(true);
-		keybinds[index]->readKey(unicode);
 	}
 	// Check all mechanisms on mouse click position
 	void processMouseMove(int mouseX, int mouseY) {
@@ -817,7 +807,6 @@ public:
 		for (OptionSelector* selector : settingSelectors)
 			selector->processMouseRelease();
 	}
-	
 };
 
 class SettingsMenu : public sf::Drawable{
@@ -873,13 +862,6 @@ public:
 	void processMouseRelease() {
 		tabs[currentTabIndex].processMouseRelease();
 	}
-	// Processes mechanism for key recorder on tab 2.
-	void processKeyPressed() {
-
-	}
-	void processTextEntered() {
-
-	}
 	SettingsTab& operator[](int index) {
 		return tabs[index];
 	}
@@ -897,14 +879,28 @@ class pauseScreen : public sf::Drawable {
 			target.draw(rectangles[i], states);
 		for (int i = 0; i < texts.size(); i++)
 			target.draw(texts[i], states);
+		target.draw(menu, states);
 	}
 public:
-	pauseScreen(sf::Vector2f gamePos, sf::Font& font) {
+	pauseScreen(sf::Vector2f gamePos, vector<string>& menuText, sf::Font& font) {
 		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, {gamePos.x, gamePos.y - TOPROWPIXELS}, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
 
+		// Offscreen rectangles for player two. Will have no text
+		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, { gamePos.x + WIDTH, gamePos.y - TOPROWPIXELS }, false, WHITE, LINEWIDTH));
+		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x + WIDTH - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + WIDTH + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+
+
 		texts.push_back(SfTextAtHome(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true));
-		texts.push_back(SfTextAtHome(font, WHITE, "Press ESC to resume", 20, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH * 2 / 3 }, true, false, true));
+	
+		sf::CircleShape* cursor = new sf::CircleShape(15.f, 3); // Triangle shaped cursor
+		cursor->rotate(90.f);
+		menu = ClickableMenu(font, WHITE, menuText, MENUTEXTSIZE, { gamePos.x + GAMEWIDTH / 4, gamePos.y + GAMEWIDTH * 2 / 3 }, MENUSPACING, *cursor);
+	}
+	// Return a reference to the menu
+	ClickableMenu& getMenu() {
+		return menu;
 	}
 };
