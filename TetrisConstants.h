@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: keySet repeats, pause screen menu, setting contents, setting file, sound, online, reading keys from file
+	// Todo: random piece vs bag, keySet repeats, setting contents, setting file, sound, online, default settings in online matches
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -24,12 +24,15 @@ namespace TetrisVariables {
 	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
 	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
-	const int GRAVITYTIERLINES[] = { 0, 20, 40, 60, 80, 100, 120 };
+	const int GRAVITYTIERLINES[] = { 0, 20, 40, 70, 100, 140, 180 };
 	const float GRAVITYSPEEDS[] = { 1, 0.5f, 0.25f, 0.1f, 0.05f, 0.02f, 0.01f };
 	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
-	const float DEFAULTGARBAGEPROBABILITY = 0.2f; // Chance for a gauaranteed repeat garbage column
+	const float DEFAULTGARBAGEPROBABILITY = 0.2f; // Chance for a guaranteed repeat garbage column
+	const float DEFAULTGARBAGEMULTIPLIER = 1;
+
+	const float DASDELAY = 170, DASSPEED = 50;
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
@@ -101,7 +104,7 @@ namespace TetrisVariables {
 	const int TABTOP = 0, TABHEIGHT = 50, TABHEIGHTGROWTH = 10;
 	// Tab items
 	const int SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 50;
-	const int SELECTORRIGHTSPACING = 210, SELECTORDOWNSPACING = 40;
+	const int SELECTORRIGHTSPACING = 300, SELECTORDOWNSPACING = 40;
 	// Clickable button
 	const int BUTTONTEXTSIZE = 22;
 	// On-Off Switch

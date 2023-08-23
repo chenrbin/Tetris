@@ -46,7 +46,7 @@ class Screen {
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
 	GarbageStack* garbStack; // Visuals for garbage
 	int garbLastCol; // Stores location of garbage for randomness settings
-	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
+	
 
 	bool paused;
 	DeathAnimation* deathAnimation;
@@ -54,7 +54,9 @@ class Screen {
 	// Customizable game settings
 	float lockDelay, superLockDelay;
 	int nextPieceCount;
-	bool ghostPieceEnabled;
+	bool holdEnabled, ghostPieceEnabled, SRS_Enabled, bagEnabled;
+	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
+	float garbageMultiplier; // Scalar for garbage exchange, rounded up
 
 #pragma endregion
 
@@ -72,7 +74,10 @@ public:
 		lockDelay = LOCKDELAY;
 		superLockDelay = SUPERLOCKDELAY;
 		nextPieceCount = NEXTPIECECOUNT;
-		ghostPieceEnabled = true;
+		holdEnabled = true, ghostPieceEnabled = true, SRS_Enabled = true, bagEnabled = true;
+		startingGravity = DEFAULTGRAVITY;
+		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
+		garbageMultiplier = 1;
 
 		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0;
@@ -80,7 +85,6 @@ public:
 		hasHeld = false, lockTimerStarted = false, touchedGround = false, backToBack = false;
 		creativeMode = false, autoFall = true, gameOver = false, canDump = true, paused = false;
 		gameMode = MAINMENU; // Gamemode will be set whenever a mode is selected from the main menu
-		startingGravity = DEFAULTGRAVITY; // REVIEW. May allow starting gravity to be customized
 		gravity = startingGravity;
 
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
@@ -96,7 +100,7 @@ public:
 		deathAnimation = new DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
 		garbStack = new GarbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
-		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
+		
 
 		// Generate board
 		for (int i = 0; i < REALNUMROWS; i++) {
@@ -162,8 +166,17 @@ public:
 			delete currentPiece;
 		}
 		if (pieceCode == -1) { // Generate random piece
-			pieceCode = bag->getPiece(playerIndex);
-			nextPieceQueue = bag->getNextPieces(playerIndex, NEXTPIECECOUNT);
+			if (bagEnabled) {
+				pieceCode = bag->getPiece(playerIndex);
+				nextPieceQueue = bag->getNextPieces(playerIndex, NEXTPIECECOUNT);
+			}
+			else {
+				if (nextPieceQueue.size() < 7) // Replenish queue
+					for (int i = 0; i < 7; i++)
+						nextPieceQueue.push_back(rand() % 7);
+				pieceCode = nextPieceQueue[0];
+				nextPieceQueue.erase(nextPieceQueue.begin());
+			}
 			for (int i = 0; i < nextPieceSprites.size(); i++) { // Display queue
 				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
 					queueBounds.left + TILESIZE * SCALE,
@@ -254,6 +267,8 @@ public:
 				lastMoveSpin = true;
 				break;
 			}
+			if (!SRS_Enabled)
+				break; // Break after first iteration
 		}
 		if (!spinSuccessful) // If spin fails, return piece to original position
 			if (clockwise)
@@ -265,8 +280,8 @@ public:
 	}
 	// Can hold piece once every time a piece is set
 	void holdPiece() {
-		// Disable if paused
-		if (paused)
+		// Do nothing if paused or disabled
+		if (paused || !holdEnabled)
 			return;
 		if (hasHeld) // hasHeld is true after a successful hold, and false after a piece sets
 			return;
@@ -451,7 +466,7 @@ public:
 		heldPiece = nullptr;
 		heldSprite.clear();
 		if (gameMode != SANDBOX) // Reset gravity if not in sandbox mode
-			setGravity();
+			resetGravity();
 		gravityTimer.restart(), lockTimer.restart(), superLockTimer.restart();
 		bag->resetPosition(playerIndex);
 		hasHeld = false, gameOver = false, paused = false;
@@ -489,7 +504,7 @@ public:
 		for (; iter != gravityTiers.end() && iter->second >= gravity; iter++);
 		if (iter == gravityTiers.end())
 			return;
-		if (totalLinesCleared >= iter->first) {
+		if (totalLinesCleared >= iter->first && gravity >= iter->second) {
 			setGravity(iter->second);
 			(*clearAnimations)[0].restart();
 		}
@@ -499,7 +514,7 @@ public:
 #pragma region Garbage Interaction
 	// When clearing lines, send garbage to the opponent or cancel out incoming garbage
 	void sendGarbage(int lineCount) {
-		outGarbage += bin.clearGarbage(lineCount);
+		outGarbage += bin.clearGarbage(ceil(lineCount * garbageMultiplier));
 	}
 	// Add incoming garbage with a timer. // Does nothing if count is 0;
 	void receiveGarbage(int lineCount) {
@@ -563,9 +578,12 @@ public:
 		gravity = speed;
 		gravityTimer.restart();
 	}
-	void setGravity() {
+	void resetGravity() {
 		gravity = startingGravity;
 		gravityTimer.restart();
+	}
+	void setStartingGravity(float val) {
+		startingGravity = val;
 	}
 	// Set game mode with a constant int code defined in TetrisConstants
 	void setGameMode(const int MODE) {
@@ -580,8 +598,20 @@ public:
 	void setNextPieceCount(int val) {
 		nextPieceCount = val;
 	}
+	void setHoldEnabled(bool val) {
+		holdEnabled = val;
+	}
 	void setGhostPieceEnabled(bool val) {
 		ghostPieceEnabled = val;
+	}
+	void setSRS(bool val) {
+		SRS_Enabled = val;
+	}
+	void setGarbRepeatProbability(float val) {
+		garbRepeatProbability = val;
+	}
+	void setGarbageMultiplier(float val) {
+		garbageMultiplier = val;
 	}
 	int getLinesCleared() {
 		return totalLinesCleared;
@@ -704,7 +734,7 @@ public:
 		sf::Color previewColor = currentPiece->color;
 		if (ghostPieceEnabled)
 			previewColor.a = PREVIEWTRANSPARENCY;
-		else
+		else // Disable ghost piece
 			previewColor.a = 0;
 		setPreviewBlocks(previewPositions, true, previewColor);
 	}

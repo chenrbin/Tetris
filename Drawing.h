@@ -413,8 +413,10 @@ public:
 // Base class for game setting. All selectors are initialized with position 0 and move as they are added to tabs
 struct OptionSelector : public sf::Drawable {
 	OptionSelector() {};
-	// Since selectors will hold all kinds of data, they will be returned as strings and manually converted
-	virtual string getValue() = 0;
+	// Return an index used for storing in files and reading
+	virtual int getValue() = 0;
+	// Set the status/index/position of the selector
+	virtual void setIndex(int index) = 0;
 	// Move all sprites
 	virtual void move(float offsetX, float offsetY) = 0;
 
@@ -480,8 +482,8 @@ public:
 		cursor.setOutlineThickness(1);
 	}
 	// Returns the value at the cursor
-	string getValue(){
-		return values[cursorIndex];
+	int getValue(){
+		return cursorIndex;
 	}
 	// Move the cursor based on mouse x position to select a node
 	bool moveCursor(float xPosition) {
@@ -527,10 +529,18 @@ public:
 		cursor.move(offsetX, offsetY);
 	}
 	// Go to a specific node based on its index
-	void goToIndex(int index) {
-		setCursorPressed(true);
-		moveCursor(nodes[index].getGlobalBounds().left);
-		setCursorPressed(false);
+	void setIndex(int index) {
+		if (index < nodes.size())
+		{
+			setCursorPressed(true);
+			moveCursor(nodes[index].getGlobalBounds().left);
+			setCursorPressed(false);
+		}
+		else
+		{
+			cout << "Error, invalid index for sliding bar.\n";
+			throw exception();
+		}
 	}
 	// Click nodes to select option
 	bool clickNodes(int mouseX, int mouseY) {
@@ -574,8 +584,17 @@ public:
 		move(SWITCHWIDTH / 2.0f, SWITCHHEIGHT / 2.0f); // Initial movement to offset the origin change used to center the text
 		isOn = true;
 	}
-	virtual string getValue() {
-		return to_string(isOn);
+	int getValue() {
+		return isOn;
+	}
+	// Set switch to false (0) or true (1)
+	void setIndex(int index) {
+		if (index != 0 && index != 1) {
+			cout << "Error, invalid index for on/off switch.\n";
+			throw exception();
+		}
+		if ((index == 0 && isOn) || (index == 1 && !isOn))
+			clickButton(switchCover.getGlobalBounds().left, switchCover.getGlobalBounds().top);
 	}
 	// Move all sprites
 	virtual void move(float offsetX, float offsetY) {
@@ -646,8 +665,12 @@ public:
 			this->key = key;
 		}
 	}
-	string getValue() {
-		return text.getString();
+	int getValue() {
+		return key;
+	}
+	// Set key to key code
+	void setIndex(int index) {
+		readKey(sf::Keyboard::Key(index));
 	}
 	sf::Keyboard::Key* getKey() {
 		return &key;
@@ -762,6 +785,12 @@ public:
 	sf::FloatRect getTabBounds() {
 		return tabBounds;
 	}
+	vector<int> getValues() {
+		vector<int> val;
+		for (OptionSelector* selector : settingSelectors)
+			val.push_back(selector->getValue());
+		return val;
+	}
 	// Add a setting option and its selection mechanism.
 	void addSetting(string text, sf::Vector2f textPosition, OptionSelector* selector, sf::Vector2f selectorPosition, sf::Font& font) {
 		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, textPosition));
@@ -769,18 +798,17 @@ public:
 		selector->move(selectorPosition.x, selectorPosition.y);
 		settingCount++;
 	}
-	
-	// Add additional text to draw
+		// Add additional text to draw
 	void addExtraText(sf::Text text) {
 		extraText.push_back(text);
 	}
-
 	// Add a setting option while storing a keybind for extra operations
 	void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
 		keybinds.push_back(new KeyRecorder(keyStrings, font));
 		addSetting(text, textPosition, keybinds[keybinds.size() - 1], selectorPosition, font);
 	}
 	// Reads and records the key
+	
 	void readKeys(sf::Keyboard::Key key) {
 		for (KeyRecorder* keyRec : keybinds)
 			keyRec->readKey(key);
@@ -791,6 +819,10 @@ public:
 	void setKey(int index, sf::Keyboard::Key key) {
 		keybinds[index]->setSelect(true);
 		keybinds[index]->readKey(key);
+	}
+	
+	OptionSelector& operator[](int index) {
+		return *settingSelectors[index];
 	}
 	// Check all mechanisms on mouse click position
 	void processMouseMove(int mouseX, int mouseY) {

@@ -55,10 +55,10 @@ public:
 // Class to handle auto repeat / DAS
 class KeyTimer {
 	sf::Clock startTimer, holdTimer;
-	int startDelay, holdDelay; // In milliseconds
+	float startDelay, holdDelay; // In milliseconds
 	bool startOn, holdOn;
 public:
-	KeyTimer(int startDelay = 0, int holdDelay = 0) {
+	KeyTimer(float startDelay = 0, float holdDelay = 0) {
 		this->startDelay = startDelay;
 		this->holdDelay = holdDelay;
 		startOn = false;
@@ -91,6 +91,12 @@ public:
 	void release() {
 		holdOn = false;
 		startOn = false;
+	}
+	void setStartDelay(float val) {
+		startDelay = val;
+	}
+	void setHoldDelay(float val) {
+		holdDelay = val;
 	}
 };
 
@@ -198,6 +204,16 @@ public:
 			downKey.release();
 		else if (event == keySet->getRight())
 			rightKey.release();
+	}
+	void setStartDelay(float val) {
+		leftKey.setStartDelay(val);
+		rightKey.setStartDelay(val);
+		downKey.setStartDelay(val);
+	}
+	void setHoldDelay(float val) {
+		leftKey.setHoldDelay(val);
+		rightKey.setHoldDelay(val);
+		downKey.setHoldDelay(val);
 	}
 };
 

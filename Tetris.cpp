@@ -9,7 +9,7 @@
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
-// Line count as of 7/31/2023: 3328
+// Line count as of 8/20/2023: 3563
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
 sf::Text& generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
@@ -233,28 +233,76 @@ void drawVector(sf::RenderWindow& window, vector<Animation*>& vec) {
 void generateSettingsContent(SettingsMenu& gameSettings, sf::Font& font) {
 	gameSettings.addTab(font, "Gameplay");
 	gameSettings.addTab(font, "Controls");
-	gameSettings.addTab(font, "Graphics");
+	gameSettings.addTab(font, "Graphics (WIP)");
 	gameSettings.selectTab(0);
 
 	vector<sf::Vector2f> settingPositions;
 	vector<OptionSelector*> selectors;
 	vector<sf::Vector2f> selectorPositions;
-	for (float i = 0; i < 7; i++) {
+	vector<string> settingText;
+
+	// Set up text, selectors, and positions
+	for (float i = 0; i < 11; i++) { // Positions 
 		settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
 		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
 	}
+	settingText = { "Starting Speed","Next Piece Count", "Piece Holding", "Ghost Piece", "Auto Shift Delay", "Auto Shift Speed",
+		"Piece RNG", "Rotation Style", "Garbage Timer", "Garbage Multiplier", "Garbage Randomness"};
 
-	selectors.push_back(new SlidingBar(250, { "Easy", "Normal", "Hard", "Custom" }, font));
-	gameSettings[0].addSetting("Difficulty", settingPositions[0], selectors[0], selectorPositions[0], font);
-
-	selectors.push_back(new SlidingBar(250, { "10", "20", "50", "100" }, font));
-	gameSettings[0].addSetting("Lock Delay", settingPositions[1], selectors[1], selectorPositions[1], font);
-
-	selectors.push_back(new SlidingBar(250, { "0", "1", "2", "3", "4", "5", "6" }, font));
-	gameSettings[0].addSetting("Piece Preview", settingPositions[2], selectors[2], selectorPositions[2], font);
-
+	selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
+	selectors.push_back(new SlidingBar(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
 	selectors.push_back(new OnOffSwitch(font));
-	gameSettings[0].addSetting("Ghost Piece", settingPositions[3], selectors[3], selectorPositions[3], font);
+	selectors.push_back(new OnOffSwitch(font));
+	selectors.push_back(new SlidingBar(270, { "Long", "Normal", "Short", "Instant" }, font));
+	selectors.push_back(new SlidingBar(270, { "Slow", "Normal", "Fast", "Instant" }, font));
+	selectors.push_back(new SlidingBar(150, { "Random", "7-Bag"}, font));
+	selectors.push_back(new SlidingBar(150, { "Classic", "Modern" }, font));
+	selectors.push_back(new SlidingBar(270, { "5s", "3s", "1s", "Instant" }, font));
+	selectors.push_back(new SlidingBar(270, { "0.5x", "1x", "1.5x" }, font));
+	selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
+
+	// Add settings to tab
+	for (int i = 0; i < selectors.size(); i++)
+		gameSettings[0].addSetting(settingText[i], settingPositions[i], selectors[i], selectorPositions[i], font);
+
+	// Set starting/defualt values
+	gameSettings[0][0].setIndex(1);
+	gameSettings[0][1].setIndex(6);
+	gameSettings[0][2].setIndex(1);
+	gameSettings[0][3].setIndex(1);
+	gameSettings[0][4].setIndex(1);
+	gameSettings[0][5].setIndex(1);
+	gameSettings[0][6].setIndex(1);
+	gameSettings[0][7].setIndex(1);
+	gameSettings[0][8].setIndex(1);
+	gameSettings[0][9].setIndex(1);
+	gameSettings[0][10].setIndex(1);
+}
+
+// Generate player control keybinds on second setting tab 
+void generateKeybinds(vector<KeySet*>& keySets, SettingsTab& tab, map<sf::Keyboard::Key, string>& keyStrings, sf::Font& font) {
+	// Generate positions for 21 keybinds
+	vector<sf::Vector2f> keybindPositions;
+	for (int i = 0; i < keySets.size(); i++)
+		for (int j = 0; j < 7; j++)
+			keybindPositions.push_back(sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i + 1), SETTINGYPOS + SETTINGSPACING * (j + 1)));
+	// Add key recorders to settings tab
+	for (sf::Vector2f& vec : keybindPositions)
+		tab.addKeybind("", ORIGIN, &keyStrings, vec, font);
+	vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold", "Solo", "PVP P1", "PVP P2" };
+	for (int i = 0; i < 7; i++) 
+		tab.addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
+	for (int i = 7; i < 10; i++)
+		tab.addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i - 6), SETTINGYPOS), true, false, true));
+
+	// Set key recorders to default configuration
+	int counter = 0;
+	for (KeySet* set : keySets) {
+		for (sf::Keyboard::Key* key : set->getSet()) {
+			tab.setKey(counter, *key);
+			counter++;
+		}
+	}
 }
 
 // Update keybind configurations from setting tab entries
@@ -262,6 +310,7 @@ void updateKeybinds(vector<KeySet*>& keySets, vector<KeyRecorder*> newKeybinds) 
 	for (int i = 0; i < newKeybinds.size(); i++) // Update keybind controls
 		*keySets[i / 7]->getSet()[i % 7] = *newKeybinds[i]->getKey();
 }
+
 int main(){
 	srand(time(NULL));
 	
@@ -289,7 +338,7 @@ int main(){
 	cursor->rotate(90.f);
 	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
 	ClickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, *cursor);
-
+	
 	// Game sprites in a vector and constructed in a separate method to keep main clean
 	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
@@ -322,7 +371,6 @@ int main(){
 	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
 	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
 
-
 	// Initialize controls with default keybinds
 	KeySet* playerSoloKeys = new KeySet(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
 	KeySet* player1Keys = new KeySet(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
@@ -330,9 +378,9 @@ int main(){
 	vector<KeySet*> keySets = { playerSoloKeys, player1Keys, player2Keys };
 
 	// Initiate DAS keys
-	KeyDAS* playerSoloDAS = new KeyDAS(170, 50, playerSoloKeys);
-	KeyDAS* player1DAS = new KeyDAS(170, 50, player1Keys);
-	KeyDAS* player2DAS = new KeyDAS(170, 50, player2Keys);
+	KeyDAS* playerSoloDAS = new KeyDAS(DASDELAY, DASSPEED, playerSoloKeys);
+	KeyDAS* player1DAS = new KeyDAS(DASDELAY, DASSPEED, player1Keys);
+	KeyDAS* player2DAS = new KeyDAS(DASDELAY, DASSPEED, player2Keys);
 
 	// Initiate piece rng
 	pieceBag bag;
@@ -349,45 +397,16 @@ int main(){
 	// Set up settings sprites
 	SettingsMenu gameSettings;
 	generateSettingsContent(gameSettings, font);
-	vector<ClickableButton> clickableButtons; // { Reset, Save, Discard }
+	vector<ClickableButton> clickableButtons; // { Reset, Discard, Save }
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
-	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
-	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
 	
 	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
-
-	// Generate positions for 21 keybinds
-	vector<sf::Vector2f> keybindPositions;
-	for (int i = 0; i < keySets.size(); i++) 
-		for (int j = 0; j < 7; j++) 
-			keybindPositions.push_back(sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING * (i + 1), SETTINGYPOS + SETTINGSPACING * (j + 1)));
-	// Add key recorders to settings tab
-	for (sf::Vector2f& vec : keybindPositions)
-		gameSettings[1].addKeybind("", ORIGIN, &keyStrings, vec, font);
-	vector<string> controlsText = { "Up", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold", "Solo", "PVP P1", "PVP P2"};
-	for (int i = 0; i < 7; i++) {
-		gameSettings[1].addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
-	}
-	for (int i = 7; i < 10; i++)
-	{
-		gameSettings[1].addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING * (i - 6), SETTINGYPOS), true, false, true));
-	}
-
-	// Set key recorders to default configuration
-	int counter = 0;
-	for (KeySet* set : keySets) {
-		for (sf::Keyboard::Key* key : set->getSet()) {
-			gameSettings[1].setKey(counter, *key);
-			counter++;
-		}
-	}
+	generateKeybinds(keySets, gameSettings[1], keyStrings, font);
 
 	// Store new keybinds
 	vector<KeyRecorder*>& newKeybinds = gameSettings[1].getKeybinds();
-
-	print(sf::Keyboard::A == sf::Keyboard::Key(0));
-	string str = ".";
-	print((int)str[0]);
 
 	// Game loop
 	while (window.isOpen())
