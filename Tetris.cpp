@@ -1,5 +1,6 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "Screen.h"
 #include "TetrisConstants.h"
 #include <map>
@@ -247,7 +248,7 @@ void generateSettingsContent(SettingsMenu& gameSettings, sf::Font& font) {
 		selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
 	}
 	settingText = { "Starting Speed","Next Piece Count", "Piece Holding", "Ghost Piece", "Auto Shift Delay", "Auto Shift Speed",
-		"Piece RNG", "Rotation Style", "Garbage Timer", "Garbage Multiplier", "Garbage Randomness"};
+		"Piece RNG", "Rotation Style", "Garbage Timer", "Garbage Multiplier", "Garbage RNG"};
 
 	selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
 	selectors.push_back(new SlidingBar(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
@@ -305,32 +306,77 @@ void generateKeybinds(vector<KeySet*>& keySets, SettingsTab& tab, map<sf::Keyboa
 	}
 }
 
+// Update gameplay settings based on int vector
+void updateGameSettings(vector<int> values, Screen* screen, KeyDAS* dasSettings, sf::RectangleShape& queueRect, sf::RectangleShape& holdRect) {
+	// Starting speed. Will not take effect in sandbox mode
+	screen->setStartingGravity(GRAVITYSPEEDS[values[0]]); 
+	
+	// Next piece count
+	screen->setNextPieceCount(values[1]);
+	// Update queue rectangle size. values[1] / values[1] hides the outline when rectangle has zero size
+	queueRect.setSize(sf::Vector2f{ TILESIZE * 4.0f * values[1] / values[1], GAMEHEIGHT / 9.0f * values[1] });
+
+	// Piece holding
+	screen->setHoldEnabled(values[2]);
+	// Update hold rectangle size
+	holdRect.setSize(sf::Vector2f{ TILESIZE * 4.0f * values[2], TILESIZE * 4.0f * values[2] });
+
+	// Ghost piece
+	screen->setGhostPieceEnabled(values[3]);
+	// DAS delay
+	dasSettings->setStartDelay(DASDELAYVALUES[values[4]]);
+	// DAS speed
+	dasSettings->setHoldDelay(DASSPEEDVALUES[values[5]]);
+	// 7-bag
+	screen->setBagEnabled(values[6]);
+	// Rotation style
+	screen->setSRS(values[7]);
+	// Garbage timer
+	screen->setGarbageTimer(GARBAGETIMERS[values[8]]);
+	// Garbage multiplier
+	screen->setGarbageMultiplier(GARBAGEMULTIPLIERS[values[9]]);
+	// Garbage repeat probability
+	screen->setGarbRepeatProbability(GARBAGEREPEATPROBABILITIES[values[10]]);
+
+}
+
 // Update keybind configurations from setting tab entries
 void updateKeybinds(vector<KeySet*>& keySets, vector<KeyRecorder*> newKeybinds) {
 	for (int i = 0; i < newKeybinds.size(); i++) // Update keybind controls
 		*keySets[i / 7]->getSet()[i % 7] = *newKeybinds[i]->getKey();
 }
 
+// Play a sound starting at a time point
+void playSound(sf::Sound& sound, float seconds) {
+	sound.play();
+	sound.setPlayingOffset(sf::seconds(seconds));
+}
 int main(){
 	srand(time(NULL));
-	
 	// Set SFML objects
+	sf::Font font;
+	if (!font.loadFromFile("font.ttf"))
+		return -1;
+	sf::Texture texture;
+	if (!texture.loadFromFile("images/tile_hidden.png"))
+		return -1;
+	sf::SoundBuffer buffer;
+	if (!buffer.loadFromFile("sound-effects.ogg"))
+		return -1;
+	SoundManager* soundFX = new SoundManager("sound-effects.ogg");
+	soundFX->addEffect(MEDIUMBEEP);
+	soundFX->addEffect(HIGHBEEP);
+	soundFX->addEffect(LIGHTTAP);
+	soundFX->addEffect(HIGHHIGHBEEP);
+	soundFX->addEffect(LOWBEEP);
+	soundFX->addEffect(LOWTHUD);
+	soundFX->setVolume(20);
+
 	sf::ContextSettings windowSettings;
 	windowSettings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, windowSettings);
 	window.setFramerateLimit(FPS);
 	window.setKeyRepeatEnabled(false);
-	sf::Font font;
-	if (!font.loadFromFile("font.ttf")) {
-		cout << "Font not found\n";
-		throw exception();
-	}
-	sf::Texture texture;
-	if (!texture.loadFromFile("images/tile_hidden.png"))
-	{
-		cout << "File not found\n";
-		throw exception();
-	}
 
 	// Title screen sprites
 	sf::Text& titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
@@ -386,8 +432,8 @@ int main(){
 	pieceBag bag;
 	
 	// Set up game screen
-	Screen* screen = new Screen(window, gameScreenBounds, texture, &clearAnimations, &bag);
-	Screen* screenP2 = new Screen(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag);
+	Screen* screen = new Screen(window, gameScreenBounds, texture, &clearAnimations, &bag, soundFX);
+	Screen* screenP2 = new Screen(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag, soundFX);
 	int currentScreen = MAINMENU;
 
 	// Pause screen sprites
@@ -398,16 +444,15 @@ int main(){
 	SettingsMenu gameSettings;
 	generateSettingsContent(gameSettings, font);
 	vector<ClickableButton> clickableButtons; // { Reset, Discard, Save }
-	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 700 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
-	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 700 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
-	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 700 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 725 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 725 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
+	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 725 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
 	
 	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
 	generateKeybinds(keySets, gameSettings[1], keyStrings, font);
 
 	// Store new keybinds
 	vector<KeyRecorder*>& newKeybinds = gameSettings[1].getKeybinds();
-
 	// Game loop
 	while (window.isOpen())
 	{
@@ -417,8 +462,11 @@ int main(){
 			window.draw(titleText);
 			window.draw(gameMenu);
 
-			bool modeSelected = false;
+			// Manage audio
+			soundFX->checkTimers();
 
+			bool modeSelected = false;
+			
 			// Event handler for menu screen
 			sf::Event event;
 			while (window.pollEvent(event)) {
@@ -429,11 +477,15 @@ int main(){
 					break;
 				case sf::Event::KeyPressed:
 				{
-					if (event.key.code == sf::Keyboard::Down) 
+					if (event.key.code == sf::Keyboard::Down) {
+						soundFX->play(LIGHTTAP);
 						gameMenu.moveDown();
-					else if (event.key.code == sf::Keyboard::Up) 
+					}
+					else if (event.key.code == sf::Keyboard::Up) {
+						soundFX->play(LIGHTTAP);
 						gameMenu.moveUp();
-					else if (event.key.code == sf::Keyboard::Z) 
+					}
+					else if (event.key.code == sf::Keyboard::Z)
 						modeSelected = true;
 					break;
 				}
@@ -442,8 +494,9 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y))
+					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y)) 
 						modeSelected = true;
+					
 					break;
 				}
 				case sf::Event::MouseButtonReleased: {
@@ -459,6 +512,7 @@ int main(){
 
 			// Select menu option if modeSelected is true
 			if (modeSelected) {
+				soundFX->play(HIGHBEEP);
 				switch (gameMenu.getCursorPos())
 				{
 				case 0: // Classic mode
@@ -528,6 +582,9 @@ int main(){
 			if (screen->getPaused() && !screen->getGameOver())
 				window.draw(pause);
 			bool modeSelected = false; // For pause screen
+
+			// Manage audio
+			soundFX->checkTimers();
 
 			// In-game timer events
 			screen->doTimeStuff();
@@ -627,6 +684,9 @@ int main(){
 			for (auto box : sandboxes)
 				window.draw(*box);
 			
+			// Manage audio
+			soundFX->checkTimers();
+
 			// In-game timer events
 			screen->doTimeStuff();
 			// Handles movement with auto-repeat (DAS)
@@ -742,6 +802,9 @@ int main(){
 			if (screen->getPaused() && !screen->getGameOver() && !screenP2->getGameOver())
 				window.draw(pause);
 			bool modeSelected = false; // For pause screen
+
+			// Manage audio
+			soundFX->checkTimers();
 
 			// In-game timer events
 			screen->doTimeStuff();
@@ -866,6 +929,10 @@ int main(){
 		else if (currentScreen == LOSESCREEN) {
 			window.clear(BLACK);
 			drawVector(window, lossText);
+
+			// Manage audio
+			soundFX->checkTimers();
+
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)
@@ -889,6 +956,10 @@ int main(){
 			window.draw(gameSettings);
 			for (ClickableButton& button : clickableButtons)
 				window.draw(button);
+
+			// Manage audio
+			soundFX->checkTimers();
+
 			sf::Event event;
 			while (window.pollEvent(event)) {
 				switch (event.type)
@@ -907,6 +978,13 @@ int main(){
 					if (clickableButtons[1].checkClick(event.mouseButton.x, event.mouseButton.y)) {
 						currentScreen = MAINMENU;
 						updateKeybinds(keySets, newKeybinds);
+
+						// Update gameplay settings for two screens and three DAS sets
+						vector<int> values = gameSettings[0].getValues();
+						updateGameSettings(values, screen, player1DAS, gameScreenRectangles[2], gameScreenRectangles[1]);
+						updateGameSettings(values, screenP2, player2DAS, gameScreenRectanglesP2[2], gameScreenRectanglesP2[1]);
+						playerSoloDAS->setStartDelay(DASDELAYVALUES[values[4]]);
+						playerSoloDAS->setHoldDelay(DASSPEEDVALUES[values[5]]);
 					}
 					break;
 				case sf::Event::MouseButtonReleased:

@@ -1,9 +1,10 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <map>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: random piece vs bag, keySet repeats, setting contents, setting file, sound, online, default settings in online matches
+	// Todo: setting file, BGM, online, default settings in online matches
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -29,10 +30,17 @@ namespace TetrisVariables {
 	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
-	const float DEFAULTGARBAGEPROBABILITY = 0.2f; // Chance for a guaranteed repeat garbage column
+	const float DEFAULTGARBAGEPROBABILITY = 0.6f; // Chance for a guaranteed repeat garbage column
 	const float DEFAULTGARBAGEMULTIPLIER = 1;
+	vector<float> GARBAGETIMERS = { 5, 3, 1, 0 };
+	vector<float> GARBAGEMULTIPLIERS = { 0.5, 1, 1.5 };
+	vector<float> GARBAGEREPEATPROBABILITIES = { 0.9, 0.6, 0.2 };
+
+
 
 	const float DASDELAY = 170, DASSPEED = 50;
+	vector<float> DASDELAYVALUES{ 340, 170, 50, 0 };
+	vector<float> DASSPEEDVALUES{ 100, 50, 25, 0 };
 
 	// Rectangle positions
 	const float MENUXPOS = WIDTH / 1.7f, MENUYPOS = HEIGHT / 2 - 40;
@@ -92,6 +100,12 @@ namespace TetrisVariables {
 	sf::Keyboard::Key SPINCW2 = sf::Keyboard::Period;
 	sf::Keyboard::Key SPINCCW2 = sf::Keyboard::Comma;
 	sf::Keyboard::Key HOLD2 = sf::Keyboard::RShift;
+
+	// Audio timestamps for tetris-effects.ogg
+	const float CLIPDURATION = 0.5;
+	const float LIGHTTAP = 3.655, MEDIUMBEEP = 1.8, HIGHBEEP = 3.628;
+	const float HIGHHIGHBEEP = 5.4, LOWBEEP = 7.2, LOWTHUD = 9;
+	
 
 	// Constants for sprite classes
 

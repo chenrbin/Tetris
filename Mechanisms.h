@@ -1,12 +1,12 @@
 #pragma once
 #include <iostream>
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include "TetrisConstants.h"
 using namespace TetrisVariables;
 
 // Modified sf::Clock for ease of use and pausing
-class sfClockAtHome {
-	sf::Clock clock;
+class sfClockAtHome : public sf::Clock{
 	sf::Time storage; // For pausing and resuming the clock;
 	bool paused;
 public:
@@ -16,7 +16,7 @@ public:
 
 	// Restarts both clock and storage
 	void restart() {
-		clock.restart();
+		sf::Clock::restart();
 		storage = sf::Time();
 		paused = false;
 	}
@@ -24,15 +24,15 @@ public:
 	void pause() {
 		if (paused)
 			return;
-		storage += clock.getElapsedTime();
-		clock.restart();
+		storage += sf::Clock::getElapsedTime();
+		sf::Clock::restart();
 		paused = true;
 	}
 	// Resets current clock only
 	void resume() {
 		if (!paused)
 			return;
-		clock.restart();
+		sf::Clock::restart();
 		paused = false;
 	}
 	// Returns paused status
@@ -41,13 +41,13 @@ public:
 	}
 	// Returns time values that include stored time from pausing
 	sf::Time getElapsedTime() {
-		return clock.getElapsedTime() + storage;
+		return sf::Clock::getElapsedTime() + storage;
 	}
 	float getTimeSeconds() {
-		return clock.getElapsedTime().asSeconds() + storage.asSeconds();
+		return sf::Clock::getElapsedTime().asSeconds() + storage.asSeconds();
 	}
 	sf::Int32 getTimeMilliseconds() {
-		return clock.getElapsedTime().asMilliseconds() + storage.asMilliseconds();
+		return sf::Clock::getElapsedTime().asMilliseconds() + storage.asMilliseconds();
 	}
 
 };
@@ -381,3 +381,60 @@ public:
 	}
 };
 
+// Class for sound clips coming from a "soundboard" file
+class SoundEffect : public sf::Sound {
+	float startTime; // In seconds
+	float duration; // In seconds
+public:
+	SoundEffect(sf::SoundBuffer& buffer, float startTime, float duration) {
+		setBuffer(buffer);
+		this->startTime = startTime;
+		this->duration = duration;
+	}
+	void play() {
+		sf::Sound::play();
+		setPlayingOffset(sf::seconds(startTime));
+	}
+	// Check when the sound has met the duration and stop it.
+	bool checkSound() {
+		if (getPlayingOffset().asSeconds() > startTime + duration) {
+			stop();
+			return true;
+		}
+		return false;
+	}
+};
+
+// Class for managing sound effects from a single buffer and keeping checks across classes
+class SoundManager {
+	vector<SoundEffect> soundEffects;
+	sf::SoundBuffer buffer;
+	map<float, int> timestamps; // For easier play function calls
+public:
+	SoundManager(string fileName) {
+		if (!buffer.loadFromFile(fileName))
+			cout << "Missing audio file";
+	}
+	void addEffect(float startTime) {
+		timestamps.emplace(startTime, soundEffects.size());
+		soundEffects.push_back(SoundEffect(buffer, startTime, CLIPDURATION));
+	}
+	void checkTimers() {
+		for (SoundEffect& fx : soundEffects)
+			fx.checkSound();
+	}
+	SoundEffect& operator[](int index) {
+		return soundEffects[index];
+	}
+	void play(float time) {
+		soundEffects[timestamps[time]].play();
+	}
+	void setVolume(float volume) {
+		for (SoundEffect& fx : soundEffects)
+			fx.setVolume(volume);
+	}
+	void pauseAll() {
+		for (SoundEffect& fx : soundEffects)
+			fx.pause();
+	}
+};

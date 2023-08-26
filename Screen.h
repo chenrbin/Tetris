@@ -32,7 +32,7 @@ class Screen {
 	vector<int> nextPieceQueue;
 	vector<sf::Sprite> heldSprite;
 
-	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver;
+	bool hasHeld, lockTimerStarted, touchedGround, creativeMode, autoFall, gameOver, paused;
 	bool lastMoveSpin; // For checking T-spins
 	sfClockAtHome gravityTimer, lockTimer, superLockTimer; // Timer to track gravity and locking
 
@@ -46,9 +46,7 @@ class Screen {
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
 	GarbageStack* garbStack; // Visuals for garbage
 	int garbLastCol; // Stores location of garbage for randomness settings
-	
 
-	bool paused;
 	DeathAnimation* deathAnimation;
 
 	// Customizable game settings
@@ -58,10 +56,11 @@ class Screen {
 	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
 	float garbageMultiplier; // Scalar for garbage exchange, rounded up
 
+	SoundManager* soundFX;
 #pragma endregion
 
 public:
-	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag) {
+	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag, SoundManager* soundFX) {
 		this->window = &window;
 		this->gameBounds = gameScreenBounds[0];
 		this->holdBounds = gameScreenBounds[1];
@@ -69,6 +68,7 @@ public:
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
 		this->bag = bag;
+		this->soundFX = soundFX;
 
 		// Set game settings to their default values
 		lockDelay = LOCKDELAY;
@@ -137,8 +137,10 @@ public:
 				lockTimerStarted = true;
 			}
 			else
-				if (lockTimer.getTimeSeconds() >= lockDelay) 
+				if (lockTimer.getTimeSeconds() >= lockDelay) {
+					soundFX->play(MEDIUMBEEP);
 					setPiece();
+				}
 		}
 		else {
 			if (touchedGround) { // Restarts gravity timer if piece leaves ground
@@ -208,6 +210,7 @@ public:
 				currentPiece->moveLeft();
 				lockTimer.restart();
 				lastMoveSpin = false;
+				soundFX->play(LIGHTTAP);
 			}
 			break;
 		case(1):
@@ -223,6 +226,7 @@ public:
 				currentPiece->moveRight();
 				lockTimer.restart();
 				lastMoveSpin = false;
+				soundFX->play(LIGHTTAP);
 			}
 			break;
 		case(3):
@@ -230,8 +234,10 @@ public:
 				movePiece(1);
 				movePiece(3);
 			}
-			else
+			else {
 				setPiece();
+				soundFX->play(HIGHBEEP);
+			}
 			break;
 		default:
 			break;
@@ -265,6 +271,7 @@ public:
 				lockTimer.restart();
 				spinSuccessful = true;
 				lastMoveSpin = true;
+				soundFX->play(LIGHTTAP);
 				break;
 			}
 			if (!SRS_Enabled)
@@ -298,6 +305,7 @@ public:
 		}
 		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0f * SCALE, SCALE);
 		hasHeld = true;
+		soundFX->play(MEDIUMBEEP);
 	}
 	// Sets the current piece and spawns a new piece
 	void setPiece() {
@@ -339,6 +347,8 @@ public:
 		canDump = !hasCleared; // For garbage
 		if (hasCleared) { // Execute when lines have been cleared
 			clearMovingSprites(); // Cleaning up sprite flags
+			soundFX->pauseAll();
+			soundFX->play(HIGHHIGHBEEP);
 
 			switch (linesCleared) // Process scoring
 			{
@@ -569,6 +579,7 @@ public:
 			board.insert(board.end(), newRow);
 		}
 		inGarbage = 0;
+		soundFX->play(LOWBEEP);
 	}
 #pragma endregion
 
@@ -604,8 +615,14 @@ public:
 	void setGhostPieceEnabled(bool val) {
 		ghostPieceEnabled = val;
 	}
+	void setBagEnabled(bool val) {
+		bagEnabled = val;
+	}
 	void setSRS(bool val) {
 		SRS_Enabled = val;
+	}
+	void setGarbageTimer(float val) {
+		bin.setDuration(val);
 	}
 	void setGarbRepeatProbability(float val) {
 		garbRepeatProbability = val;
@@ -697,8 +714,8 @@ public:
 		}
 		for (sf::Sprite& sprite : heldSprite)
 			window->draw(sprite);
-		for (vector<sf::Sprite> pieceSprite : nextPieceSprites)
-			for (sf::Sprite& sprite : pieceSprite)
+		for (int i = 0; i < nextPieceCount; i++)
+			for (sf::Sprite& sprite : nextPieceSprites[i])
 				window->draw(sprite);
 
 		// Enable death animation if game is over
@@ -790,6 +807,8 @@ public:
 	// NOTE: This will be called by main to avoid bugs with simultaneous loss in pvp
 	void playDeathAnimation() {
 		deathAnimation->restart();
+		soundFX->pauseAll();
+		soundFX->play(LOWTHUD);
 	}
 #pragma endregion
 
