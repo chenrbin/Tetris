@@ -361,12 +361,27 @@ public:
 		cursor.setPosition(texts[cursorPos].getPosition().x - 5, texts[cursorPos].getPosition().y);
 	}
 	// Update cursor based on mouse position. Return true if a text is selected
-	bool updateMouse(int x, int y) {
+	bool updateMouseClick(int x, int y) {
 		for (int i = 0; i < texts.size(); i++) {
 			if (texts[i].contains(x, y)) {
 				cursorPos = i;
 				updateCursor();
 				return true;
+			}
+		}
+		return false;
+	}
+	// Slightly different from mouse click. Needed for sound effect conditionals
+	bool updateMouseMove(int x, int y) {
+		for (int i = 0; i < texts.size(); i++) {
+			if (texts[i].contains(x, y)) {
+				if (cursorPos != i) {
+					cursorPos = i;
+					updateCursor();
+					return true;
+				}
+				else
+					return false;
 			}
 		}
 		return false;
@@ -654,16 +669,18 @@ public:
 		isSelected = false;
 		tempString = "";
 	}
-	// Reads and records the key
-	void readKey(sf::Keyboard::Key key) {
+	// Reads and records the key. Return true upon success
+	bool readKey(sf::Keyboard::Key key) {
 		if (!isSelected || key == -1) // -1 is any invalid key
-			return;
+			return false;
 		auto iter = keyStrings->find(key);
 		if (iter != keyStrings->end()) {
 			updateString(iter->second);
 			isSelected = false;
 			this->key = key;
+			return true;
 		}
+		return false;
 	}
 	int getValue() {
 		return key;
@@ -705,6 +722,7 @@ public:
 		return false;
 	}
 	virtual bool processMouseClick(int mouseX, int mouseY) {
+		// Has to iterate through every recorder to deselect on click.
 		setSelect(rect.contains(mouseX, mouseY));
 		return false;
 	}
@@ -728,6 +746,7 @@ class SettingsTab : public sf::Drawable{
 
 	vector<sf::Text> extraText; // Any additional text to draw
 
+	SoundManager* soundFX;
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
 		// Always draw the tab itself
 		target.draw(tabRect, states);
@@ -746,13 +765,14 @@ class SettingsTab : public sf::Drawable{
 		
 	}
 public:
-	SettingsTab(sf::Font& font, string name, int index) {
+	SettingsTab(sf::Font& font, string name, int index, SoundManager* soundFX) {
 		// Rect origin is set at 0, 0 and text origin is centered
 		tabRect = SfRectangleAtHome(GRAY, { 0, 0 }, { 0, 0 }, false, BLACK, 2);
 		tabText = SfTextAtHome(font, WHITE, name, MENUTEXTSIZE, { 0, 0 }, true, false, true, true);
 		this->index = index;
 		tabSelected = false;
 		settingCount = 0;
+		this->soundFX = soundFX;
 	}
 	// Set tab size and position based on float rect
 	void setBounds(float left, float top, float width, float height) {
@@ -813,8 +833,12 @@ public:
 	// Reads and records the key
 	
 	void readKeys(sf::Keyboard::Key key) {
-		for (KeyRecorder* keyRec : keybinds)
-			keyRec->readKey(key);
+		for (KeyRecorder* keyRec : keybinds) {
+			if (keyRec->getSelected() && keyRec->readKey(key)){
+				soundFX->play(LIGHTTAP);
+				break;
+			}
+		}
 	}
 	vector<KeyRecorder*>& getKeybinds() {
 		return keybinds;
@@ -835,8 +859,10 @@ public:
 	}
 	void processMouseClick(int mouseX, int mouseY) {
 		for (OptionSelector* selector : settingSelectors)
-			if (selector->processMouseClick(mouseX, mouseY))
+			if (selector->processMouseClick(mouseX, mouseY)) {
+				soundFX->play(LIGHTTAP);
 				break; // Since no sprites overlap, this saves the need to check all bounds;
+			}
 	}
 	void processMouseRelease() {
 		for (OptionSelector* selector : settingSelectors)
@@ -848,6 +874,7 @@ class SettingsMenu : public sf::Drawable{
 	vector<SettingsTab> tabs;
 	int tabCount;
 	int currentTabIndex;
+	SoundManager* soundFX;
 
 	// Draw all tabs
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -855,12 +882,13 @@ class SettingsMenu : public sf::Drawable{
 			target.draw(tabs[i], states);
 	}
 public:
-	SettingsMenu() {
+	SettingsMenu(SoundManager* soundFX) {
 		tabCount = 0;
 		currentTabIndex = 0;
+		this->soundFX = soundFX;
 	}
 	void addTab(sf::Font& font, string name) {
-		tabs.push_back(SettingsTab(font, name, tabCount++));
+		tabs.push_back(SettingsTab(font, name, tabCount++, soundFX));
 		alignTabs();
 	}
 	// Align tab positions across top of screen based on number of tabs
@@ -883,6 +911,7 @@ public:
 			if (tabs[i].getTabBounds().contains(xPos, yPos)) {
 				selectTab(i);
 				currentTabIndex = i;
+				soundFX->play(LIGHTTAP);
 				break;
 			}
 	}

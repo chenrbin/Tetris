@@ -385,6 +385,11 @@ int main(){
 	if (!texture.loadFromFile("images/tile_hidden.png"))
 		return -1;
 	SoundManager* soundFX = generateSoundManager();
+	sf::Music bgm;
+	if (!bgm.openFromFile("tetris-theme.ogg"))
+		return -1;
+	bgm.setVolume(5);
+	bgm.setLoop(true);
 
 	sf::ContextSettings windowSettings;
 	windowSettings.antialiasingLevel = 8;
@@ -464,7 +469,7 @@ int main(){
 	int currentScreen = MAINMENU;
 
 	// Set up settings sprites
-	SettingsMenu gameSettings;
+	SettingsMenu gameSettings(soundFX);
 	generateSettingsContent(gameSettings, font);
 
 	vector<ClickableButton> clickableButtons; // { Reset, Discard, Save }
@@ -522,11 +527,12 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					gameMenu.updateMouse(event.mouseMove.x, event.mouseMove.y);
+					if (gameMenu.updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+						soundFX->play(LIGHTTAP);
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (gameMenu.updateMouse(event.mouseButton.x, event.mouseButton.y)) 
+					if (gameMenu.updateMouseClick(event.mouseButton.x, event.mouseButton.y)) 
 						modeSelected = true;
 					
 					break;
@@ -555,6 +561,7 @@ int main(){
 					screen->endCreativeMode();
 					bag.resetQueue();
 					screen->resetBoard();
+					bgm.play();
 					break;
 				case 1: // Sandbox mode
 					currentScreen = SANDBOX;
@@ -568,6 +575,7 @@ int main(){
 					screen->endCreativeMode();
 					bag.resetQueue();
 					screen->resetBoard();
+					bgm.play();
 					break;
 				case 2: // PVP mode
 					currentScreen = MULTIPLAYER;
@@ -583,6 +591,7 @@ int main(){
 
 					screenP2->setGameMode(MULTIPLAYER);
 					screenP2->resetBoard();
+					bgm.play();
 					break;
 				case 3: // Settings
 					gameSettings.selectTab(0);
@@ -622,9 +631,12 @@ int main(){
 			screen->doTimeStuff();
 
 			// Check for game over
-			if (screen->getGameOver() && screen->isDeathAnimationOver()) {
-				currentScreen = LOSESCREEN;
-				lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
+			if (screen->getGameOver()) {
+				bgm.stop();
+				if (screen->isDeathAnimationOver()) {
+					currentScreen = LOSESCREEN;
+					lossText[0] = generateText(font, WHITE, "YOU LOST", GAMETEXTSIZE * 4, { WIDTH / 2, GAMEYPOS }, true, false, true);
+				}
 			}
 
 			// Handles movement with auto-repeat (DAS)
@@ -661,6 +673,7 @@ int main(){
 					if (event.key.code == sf::Keyboard::Escape) {
 						screen->doPauseResume();
 						pause.getMenu().resetCursorPos();
+						soundFX->play(MEDIUMBEEP);
 					}
 					break;
 				}
@@ -668,13 +681,14 @@ int main(){
 					playerSoloDAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (screen->getPaused() && pause.getMenu().updateMouse(event.mouseButton.x, event.mouseButton.y))
+					if (screen->getPaused() && pause.getMenu().updateMouseClick(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if(screen->getPaused())
-						pause.getMenu().updateMouse(event.mouseMove.x, event.mouseMove.y);
+					if (screen->getPaused())
+						if (pause.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+							soundFX->play(LIGHTTAP);
 					break;
 				}
 				default:
@@ -687,13 +701,17 @@ int main(){
 				{
 				case 0: // Continue
 					screen->doPauseResume();
+					soundFX->play(MEDIUMBEEP);
 					break;
 				case 1: // Restart
 					bag.resetQueue();
 					screen->resetBoard();
+					soundFX->play(HIGHBEEP);
 					break;
 				case 2: // Quit
+					bgm.stop();
 					currentScreen = MAINMENU;
+					soundFX->play(HIGHBEEP);
 					break;
 				default:
 					break;
@@ -769,8 +787,10 @@ int main(){
 						bag.resetQueue();
 						screen->resetBoard();
 					}
-					else if (event.key.code == sf::Keyboard::T)
+					else if (event.key.code == sf::Keyboard::T) {
+						bgm.stop();
 						currentScreen = MAINMENU;
+					}
 					else if (event.key.code == sf::Keyboard::G) 
 						screen->receiveGarbage(1);
 					else if (event.key.code == sf::Keyboard::H) 
@@ -797,8 +817,10 @@ int main(){
 							bag.resetQueue();
 							screen->resetBoard();
 						}
-						else if (quitBox->getBounds().contains(clickPos)) // Return to menu
+						else if (quitBox->getBounds().contains(clickPos)) { // Return to menu
+							bgm.stop();
 							currentScreen = MAINMENU;
+						}
 					}
 					else if (event.mouseButton.button == sf::Mouse::Right && gameScreenBounds[0].contains(clickPos)) {
 						screen->clickRow(clickPos); // Creative mode right click
@@ -847,6 +869,7 @@ int main(){
 
 			// Check for game over
 			if (screen->getGameOver()) {
+				bgm.stop();
 				screenP2->pauseGame();
 				if (screen->isDeathAnimationOver()) {
 					window.setSize({ WIDTH, HEIGHT });
@@ -858,6 +881,7 @@ int main(){
 				}
 			}
 			else if (screenP2->getGameOver()) {
+				bgm.stop();
 				screen->pauseGame();
 				if (screenP2->isDeathAnimationOver()) {
 					window.setSize({ WIDTH, HEIGHT });
@@ -867,7 +891,7 @@ int main(){
 				}
 			}
 
-			// Handles movement with auto-repeat (DAS)
+			// Handles movement with auto-shift (DAS)
 			player1DAS->checkKeyPress(screen);
 			player2DAS->checkKeyPress(screenP2);
 
@@ -908,9 +932,13 @@ int main(){
 							screenP2->holdPiece();
 					}
 					if (event.key.code == sf::Keyboard::Escape) {
-						screen->doPauseResume();
-						screenP2->doPauseResume();
-						pause.getMenu().resetCursorPos();
+						// Pause game and show menu. Disable during death animation for bug fix
+						if (!screen->getGameOver() && !screenP2->getGameOver()) {
+							soundFX->play(MEDIUMBEEP);
+							screen->doPauseResume();
+							screenP2->doPauseResume();
+							pause.getMenu().resetCursorPos();
+						}
 					}
 					break;
 				}
@@ -919,13 +947,13 @@ int main(){
 					player2DAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (screen->getPaused() && pause.getMenu().updateMouse(event.mouseButton.x, event.mouseButton.y))
+					if (screen->getPaused() && pause.getMenu().updateMouseClick(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
 					break;
 				}
 				case sf::Event::MouseMoved: {
 					if (screen->getPaused())
-						pause.getMenu().updateMouse(event.mouseMove.x, event.mouseMove.y);
+						pause.getMenu().updateMouseClick(event.mouseMove.x, event.mouseMove.y);
 					break;
 				}
 				default:
@@ -940,16 +968,20 @@ int main(){
 				case 0: // Continue
 					screen->doPauseResume();
 					screenP2->doPauseResume();
+					soundFX->play(MEDIUMBEEP);
 					break;
 				case 1: // Restart
 					bag.resetQueue();
 					screen->resetBoard();
 					screenP2->resetBoard();
+					soundFX->play(HIGHBEEP);
 					break;
 				case 2: // Quit
 					window.setSize({ WIDTH, HEIGHT });
 					window.setView(sf::View(sf::FloatRect(0, 0, WIDTH, HEIGHT)));
+					bgm.stop();
 					currentScreen = MAINMENU;
+					soundFX->play(HIGHBEEP);
 					break;
 				default:
 					break;
