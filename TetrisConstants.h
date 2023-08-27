@@ -4,7 +4,7 @@
 #include <map>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: setting file, BGM, online, default settings in online matches
+	// Todo: BGM, online, default settings in online matches
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -25,8 +25,8 @@ namespace TetrisVariables {
 	const float LOCKDELAY = 0.5f; // Delay before a piece sets in seconds
 	const float SUPERLOCKDELAY = 3; // Lock delay to prevent infinites
 	const int NEXTPIECECOUNT = 6; // Number of next pieces visible. Will crash if above 7.
-	const int GRAVITYTIERLINES[] = { 0, 20, 40, 70, 100, 140, 180 };
-	const float GRAVITYSPEEDS[] = { 1, 0.5f, 0.25f, 0.1f, 0.05f, 0.02f, 0.01f };
+	const int GRAVITYTIERLINES[] = { 0, 40, 80, 100, 120, 160, 220 }; // Lines required to set speed of the same index
+	const float GRAVITYSPEEDS[] = { 1, 0.6f, 0.25f, 0.1f, 0.05f, 0.02f, 0.01f }; // Time needed for a piece to fall once
 	const float DEFAULTGRAVITY = GRAVITYSPEEDS[0]; // Time between gravity movements in seconds
 	const int GRAVITYTIERCOUNT = 7;
 	const float BASEGARBAGETIMER = 3; 
@@ -35,8 +35,6 @@ namespace TetrisVariables {
 	vector<float> GARBAGETIMERS = { 5, 3, 1, 0 };
 	vector<float> GARBAGEMULTIPLIERS = { 0.5, 1, 1.5 };
 	vector<float> GARBAGEREPEATPROBABILITIES = { 0.9, 0.6, 0.2 };
-
-
 
 	const float DASDELAY = 170, DASSPEED = 50;
 	vector<float> DASDELAYVALUES{ 340, 170, 50, 0 };
@@ -75,31 +73,37 @@ namespace TetrisVariables {
 	// Default keybinds
 	
 	// Single player
-	sf::Keyboard::Key LEFT = sf::Keyboard::Left;
-	sf::Keyboard::Key RIGHT = sf::Keyboard::Right;
 	sf::Keyboard::Key UP = sf::Keyboard::Up;
+	sf::Keyboard::Key LEFT = sf::Keyboard::Left;
 	sf::Keyboard::Key DOWN = sf::Keyboard::Down;
+	sf::Keyboard::Key RIGHT = sf::Keyboard::Right;
 	sf::Keyboard::Key SPINCW = sf::Keyboard::X;
 	sf::Keyboard::Key SPINCCW = sf::Keyboard::Z;
 	sf::Keyboard::Key HOLD = sf::Keyboard::LShift;
 
 	// PvP player 1
-	sf::Keyboard::Key LEFT1 = sf::Keyboard::A;
-	sf::Keyboard::Key RIGHT1 = sf::Keyboard::D;
 	sf::Keyboard::Key UP1 = sf::Keyboard::W;
+	sf::Keyboard::Key LEFT1 = sf::Keyboard::A;
 	sf::Keyboard::Key DOWN1 = sf::Keyboard::S;
+	sf::Keyboard::Key RIGHT1 = sf::Keyboard::D;
 	sf::Keyboard::Key SPINCW1 = sf::Keyboard::V;
 	sf::Keyboard::Key SPINCCW1 = sf::Keyboard::C;
 	sf::Keyboard::Key HOLD1 = sf::Keyboard::LShift;
 
 	// Pvp player 2
-	sf::Keyboard::Key LEFT2 = sf::Keyboard::Left;
-	sf::Keyboard::Key RIGHT2 = sf::Keyboard::Right;
 	sf::Keyboard::Key UP2 = sf::Keyboard::Up;
+	sf::Keyboard::Key LEFT2 = sf::Keyboard::Left;
 	sf::Keyboard::Key DOWN2 = sf::Keyboard::Down;
+	sf::Keyboard::Key RIGHT2 = sf::Keyboard::Right;
 	sf::Keyboard::Key SPINCW2 = sf::Keyboard::Period;
 	sf::Keyboard::Key SPINCCW2 = sf::Keyboard::Comma;
 	sf::Keyboard::Key HOLD2 = sf::Keyboard::RShift;
+
+	const vector<int> DEFAULTSETTINGS{ 1, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	UP, LEFT, DOWN, RIGHT, SPINCW, SPINCCW, HOLD,
+	UP1, LEFT1, DOWN1, RIGHT1, SPINCW1, SPINCCW1, HOLD1,
+	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2 };
+	const string CONFIGFILENAME = "config.cfg";
 
 	// Audio timestamps for tetris-effects.ogg
 	const float CLIPDURATION = 0.5;
@@ -123,7 +127,6 @@ namespace TetrisVariables {
 	const int BUTTONTEXTSIZE = 22;
 	// On-Off Switch
 	const int SWITCHWIDTH = 90, SWITCHHEIGHT = 30;
-	// KeyRecorder
 
 	// Print stuff for debug
 	template <typename T>

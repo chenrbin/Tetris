@@ -215,6 +215,9 @@ public:
 		rightKey.setHoldDelay(val);
 		downKey.setHoldDelay(val);
 	}
+	KeySet* getKeySet() {
+		return keySet;
+	}
 };
 
 // Class to store random piece order to it is consistent across all players
@@ -436,5 +439,13 @@ public:
 	void pauseAll() {
 		for (SoundEffect& fx : soundEffects)
 			fx.pause();
+	}
+};
+
+// Custom exception for config file reading error
+class ConfigError : public exception {
+public:
+	const char* what() {
+		return "Config file is not formatted correctly or does not exist";
 	}
 };

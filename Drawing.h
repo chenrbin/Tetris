@@ -539,7 +539,7 @@ public:
 		else
 		{
 			cout << "Error, invalid index for sliding bar.\n";
-			throw exception();
+			throw ConfigError();
 		}
 	}
 	// Click nodes to select option
@@ -591,7 +591,7 @@ public:
 	void setIndex(int index) {
 		if (index != 0 && index != 1) {
 			cout << "Error, invalid index for on/off switch.\n";
-			throw exception();
+			throw ConfigError();
 		}
 		if ((index == 0 && isOn) || (index == 1 && !isOn))
 			clickButton(switchCover.getGlobalBounds().left, switchCover.getGlobalBounds().top);
@@ -650,7 +650,7 @@ public:
 	KeyRecorder(map<sf::Keyboard::Key, string>* keyStrings, sf::Font& font) {
 		this->keyStrings = keyStrings;
 		rect = SfRectangleAtHome(GRAY, { 128, 32 }, { 16, 16 }, true, BLACK, 1);
-		text = SfTextAtHome(font, WHITE, "B", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
+		text = SfTextAtHome(font, WHITE, "INVALID KEY", BUTTONTEXTSIZE, { 16, 6 }, true, false, true, true);
 		isSelected = false;
 		tempString = "";
 	}
@@ -791,6 +791,9 @@ public:
 			val.push_back(selector->getValue());
 		return val;
 	}
+	vector<OptionSelector*>& getSelectors() {
+		return settingSelectors;
+	}
 	// Add a setting option and its selection mechanism.
 	void addSetting(string text, sf::Vector2f textPosition, OptionSelector* selector, sf::Vector2f selectorPosition, sf::Font& font) {
 		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, textPosition));
@@ -896,6 +899,32 @@ public:
 	}
 	SettingsTab& operator[](int index) {
 		return tabs[index];
+	}
+	// Get a vector of integers that represent the setting contents
+	vector<int> getValues() {
+		vector<int> vec;
+		for (SettingsTab& tab : tabs)
+			for (int val : tab.getValues())
+				vec.push_back(val);
+		return vec;
+	}
+	// Configure settings based on int vector from config file
+	void applyConfig(vector<int> config) {
+		try {
+			int tab1Size = tabs[0].getSelectors().size(); // Index to separate tabs
+			for (int i = 0; i < tab1Size; i++) // First tab
+				tabs[0][i].setIndex(config[i]);
+			for (int i = 0; i < tabs[1].getSelectors().size(); i++) { // Second tab
+				tabs[1].setKey(i, sf::Keyboard::Key(config.at(i + tab1Size)));
+			}
+		}
+		catch (out_of_range err) {
+			cout << "applyConfig out of range. Restoring to default\n";
+			applyConfig(DEFAULTSETTINGS);
+		}
+		catch (ConfigError err) {
+			applyConfig(DEFAULTSETTINGS);
+		}
 	}
 };
 

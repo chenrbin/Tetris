@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include "Screen.h"
@@ -266,18 +267,6 @@ void generateSettingsContent(SettingsMenu& gameSettings, sf::Font& font) {
 	for (int i = 0; i < selectors.size(); i++)
 		gameSettings[0].addSetting(settingText[i], settingPositions[i], selectors[i], selectorPositions[i], font);
 
-	// Set starting/defualt values
-	gameSettings[0][0].setIndex(1);
-	gameSettings[0][1].setIndex(6);
-	gameSettings[0][2].setIndex(1);
-	gameSettings[0][3].setIndex(1);
-	gameSettings[0][4].setIndex(1);
-	gameSettings[0][5].setIndex(1);
-	gameSettings[0][6].setIndex(1);
-	gameSettings[0][7].setIndex(1);
-	gameSettings[0][8].setIndex(1);
-	gameSettings[0][9].setIndex(1);
-	gameSettings[0][10].setIndex(1);
 }
 
 // Generate player control keybinds on second setting tab 
@@ -295,49 +284,20 @@ void generateKeybinds(vector<KeySet*>& keySets, SettingsTab& tab, map<sf::Keyboa
 		tab.addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
 	for (int i = 7; i < 10; i++)
 		tab.addExtraText(generateText(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i - 6), SETTINGYPOS), true, false, true));
-
-	// Set key recorders to default configuration
-	int counter = 0;
-	for (KeySet* set : keySets) {
-		for (sf::Keyboard::Key* key : set->getSet()) {
-			tab.setKey(counter, *key);
-			counter++;
-		}
-	}
 }
 
-// Update gameplay settings based on int vector
-void updateGameSettings(vector<int> values, Screen* screen, KeyDAS* dasSettings, sf::RectangleShape& queueRect, sf::RectangleShape& holdRect) {
+// Update gameplay settings for a single player
+void updateGameplaySettings(vector<int> values, Screen* screen) {
 	// Starting speed. Will not take effect in sandbox mode
 	screen->setStartingGravity(GRAVITYSPEEDS[values[0]]); 
-	
-	// Next piece count
-	screen->setNextPieceCount(values[1]);
-	// Update queue rectangle size. values[1] / values[1] hides the outline when rectangle has zero size
-	queueRect.setSize(sf::Vector2f{ TILESIZE * 4.0f * values[1] / values[1], GAMEHEIGHT / 9.0f * values[1] });
-
-	// Piece holding
-	screen->setHoldEnabled(values[2]);
-	// Update hold rectangle size
-	holdRect.setSize(sf::Vector2f{ TILESIZE * 4.0f * values[2], TILESIZE * 4.0f * values[2] });
-
-	// Ghost piece
-	screen->setGhostPieceEnabled(values[3]);
-	// DAS delay
-	dasSettings->setStartDelay(DASDELAYVALUES[values[4]]);
-	// DAS speed
-	dasSettings->setHoldDelay(DASSPEEDVALUES[values[5]]);
-	// 7-bag
-	screen->setBagEnabled(values[6]);
-	// Rotation style
-	screen->setSRS(values[7]);
-	// Garbage timer
-	screen->setGarbageTimer(GARBAGETIMERS[values[8]]);
-	// Garbage multiplier
-	screen->setGarbageMultiplier(GARBAGEMULTIPLIERS[values[9]]);
-	// Garbage repeat probability
-	screen->setGarbRepeatProbability(GARBAGEREPEATPROBABILITIES[values[10]]);
-
+	screen->setNextPieceCount(values[1]); // Next piece count
+	screen->setHoldEnabled(values[2]);	// Piece holding
+	screen->setGhostPieceEnabled(values[3]); // Ghost piece
+	screen->setBagEnabled(values[6]); // 7-bag
+	screen->setSRS(values[7]); // Rotation style
+	screen->setGarbageTimer(GARBAGETIMERS[values[8]]); // Garbage timer
+	screen->setGarbageMultiplier(GARBAGEMULTIPLIERS[values[9]]); // Garbage multiplier
+	screen->setGarbRepeatProbability(GARBAGEREPEATPROBABILITIES[values[10]]); // Garbage repeat probability
 }
 
 // Update keybind configurations from setting tab entries
@@ -346,23 +306,27 @@ void updateKeybinds(vector<KeySet*>& keySets, vector<KeyRecorder*> newKeybinds) 
 		*keySets[i / 7]->getSet()[i % 7] = *newKeybinds[i]->getKey();
 }
 
-// Play a sound starting at a time point
-void playSound(sf::Sound& sound, float seconds) {
-	sound.play();
-	sound.setPlayingOffset(sf::seconds(seconds));
+// Convert settings menu contents to game variables
+void updateAllSettings(SettingsMenu& gameSettings, vector<Screen*> screens, vector<KeyDAS*> dasSets, vector<vector<sf::RectangleShape>*> gameRects, vector<KeySet*> keySets) {
+	vector<int> gameplaySettings = gameSettings[0].getValues();
+	for (int i = 0; i < screens.size(); i++)
+		updateGameplaySettings(gameplaySettings, screens[i]);
+	for (int i = 0; i < gameRects.size(); i++)
+	{
+		// [1] / [1] hides the outline when rectangle has zero size
+		gameRects[i]->at(1).setSize(sf::Vector2f{ TILESIZE * 4.0f * gameplaySettings[2], TILESIZE * 4.0f * gameplaySettings[2] });
+		gameRects[i]->at(2).setSize(sf::Vector2f{ TILESIZE * 4.0f * gameplaySettings[1] / gameplaySettings[1], GAMEHEIGHT / 9.0f * gameplaySettings[1] });
+	}
+	for (int i = 0; i < dasSets.size(); i++) {
+		dasSets[i]->setStartDelay(DASDELAYVALUES[gameplaySettings[4]]); // DAS delay
+		dasSets[i]->setHoldDelay(DASSPEEDVALUES[gameplaySettings[5]]); // DAS speed
+	}
+
+	updateKeybinds(keySets, gameSettings[1].getKeybinds());
 }
-int main(){
-	srand(time(NULL));
-	// Set SFML objects
-	sf::Font font;
-	if (!font.loadFromFile("font.ttf"))
-		return -1;
-	sf::Texture texture;
-	if (!texture.loadFromFile("images/tile_hidden.png"))
-		return -1;
-	sf::SoundBuffer buffer;
-	if (!buffer.loadFromFile("sound-effects.ogg"))
-		return -1;
+
+// Play a sound starting at a time point
+SoundManager* generateSoundManager(){
 	SoundManager* soundFX = new SoundManager("sound-effects.ogg");
 	soundFX->addEffect(MEDIUMBEEP);
 	soundFX->addEffect(HIGHBEEP);
@@ -371,39 +335,78 @@ int main(){
 	soundFX->addEffect(LOWBEEP);
 	soundFX->addEffect(LOWTHUD);
 	soundFX->setVolume(20);
+	return soundFX;
+}
+
+// Read config file and return a vector of integers
+vector<int> readConfigFile(string fileName) {
+	ifstream inFile(fileName);
+	try{
+		if (!inFile.is_open()) 
+			throw ConfigError();
+		vector<int> configValues;
+		string line;
+		while (getline(inFile, line))
+			configValues.push_back(stoi(line));
+		return configValues;
+	}
+	catch (ConfigError err) {
+		cout << "File does not exist. Creating default file.\n";
+		return DEFAULTSETTINGS;
+	}
+	catch (exception err) {
+		cout << "File reading error. Restoring to defaults.\n";
+		return DEFAULTSETTINGS;
+	}
+	inFile.close();
+}
+
+// Write setting menu contents to a file
+void writeConfigFile(string fileName, vector<int> values) {
+	ofstream outFile(fileName);
+	if (!outFile.is_open()) {
+		cout << "Failed to write file";
+		throw exception();
+	}
+	for (int val : values)
+		outFile << to_string(val) << endl;
+	outFile.close();
+}
+
+int main(){
+	srand(time(NULL));
+
+#pragma region SFML Setup
+	// Set SFML objects
+	sf::Font font;
+	if (!font.loadFromFile("font.ttf"))
+		return -1;
+	sf::Texture texture;
+	if (!texture.loadFromFile("images/tile_hidden.png"))
+		return -1;
+	SoundManager* soundFX = generateSoundManager();
 
 	sf::ContextSettings windowSettings;
 	windowSettings.antialiasingLevel = 8;
 	sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "Tetris", sf::Style::Close | sf::Style::Titlebar, windowSettings);
 	window.setFramerateLimit(FPS);
 	window.setKeyRepeatEnabled(false);
+#pragma endregion
 
+#pragma region Basic Assets
 	// Title screen sprites
 	sf::Text& titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
 	sf::CircleShape* cursor = new sf::CircleShape(15.f, 3); // Triangle shaped cursor
 	cursor->rotate(90.f);
 	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
 	ClickableMenu gameMenu(font, WHITE, menuText, MENUTEXTSIZE, MENUPOS, MENUSPACING, *cursor);
-	
+
 	// Game sprites in a vector and constructed in a separate method to keep main clean
-	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS); 
-	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles); 
+	vector<sf::RectangleShape> gameScreenRectangles = getGameRects(GAMEPOS);
+	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles);
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
 	sf::Text& linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
-
-	// Sandbox mode exclusive sprites
-	vector<sf::Text> sandboxText = getSandboxText(font);
-	Checkbox*  autoFallBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
-	IncrementalBox* gravityBox = new IncrementalBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font);
-	Checkbox* creativeModeBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
-	Checkbox* resetBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
-	Checkbox* quitBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
-	vector<Checkbox*> sandboxes = { autoFallBox, gravityBox, creativeModeBox, resetBox, quitBox };
-	bool creativeModeOn = false;
-
-	// Text for loss screen
-	vector<sf::Text> lossText = getLossText(font);
 
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
@@ -412,11 +415,34 @@ int main(){
 	vector<sf::Text> gameTextP2 = getGameText(gameScreenBoundsP2, font);
 	gameTextP2[2].setString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	gameTextP2[2].setPosition(WIDTH, gameTextP2[2].getPosition().y);
-	
+
+
+#pragma endregion
+
+#pragma region Extra Assets
+	// Sandbox mode exclusive sprites
+	vector<sf::Text> sandboxText = getSandboxText(font);
+	Checkbox* autoFallBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y, true, font);
+	IncrementalBox* gravityBox = new IncrementalBox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING, 1, GRAVITYTIERCOUNT, font);
+	Checkbox* creativeModeBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 2, false, font);
+	Checkbox* resetBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 3, false, font);
+	Checkbox* quitBox = new Checkbox(TILESIZE, SANDBOXMENUPOS.x + 180, SANDBOXMENUPOS.y + MENUSPACING * 4, false, font);
+	vector<Checkbox*> sandboxes = { autoFallBox, gravityBox, creativeModeBox, resetBox, quitBox };
+	bool creativeModeOn = false;
+
+	// Pause screen sprites
+	vector<string> pauseMenuText = { "Continue", "Restart", "Quit" };
+	pauseScreen pause(GAMEPOS, pauseMenuText, font);
+
+	// Text for loss screen
+	vector<sf::Text> lossText = getLossText(font);
+
 	// Initiate animation classes
 	vector<FadeText> clearAnimations = getFadeText(GAMEPOS, font);
 	vector<FadeText> clearAnimationsP2 = getFadeText(GAMEPOSP2, font);
+#pragma endregion
 
+#pragma region Controller Classes
 	// Initialize controls with default keybinds
 	KeySet* playerSoloKeys = new KeySet(LEFT, RIGHT, UP, DOWN, SPINCW, SPINCCW, HOLD);
 	KeySet* player1Keys = new KeySet(LEFT1, RIGHT1, UP1, DOWN1, SPINCW1, SPINCCW1, HOLD1);
@@ -427,6 +453,7 @@ int main(){
 	KeyDAS* playerSoloDAS = new KeyDAS(DASDELAY, DASSPEED, playerSoloKeys);
 	KeyDAS* player1DAS = new KeyDAS(DASDELAY, DASSPEED, player1Keys);
 	KeyDAS* player2DAS = new KeyDAS(DASDELAY, DASSPEED, player2Keys);
+#pragma endregion
 
 	// Initiate piece rng
 	pieceBag bag;
@@ -436,34 +463,39 @@ int main(){
 	Screen* screenP2 = new Screen(window, gameScreenBoundsP2, texture, &clearAnimationsP2, &bag, soundFX);
 	int currentScreen = MAINMENU;
 
-	// Pause screen sprites
-	vector<string> pauseMenuText = { "Continue", "Restart", "Quit" };
-	pauseScreen pause(GAMEPOS, pauseMenuText, font);
-
 	// Set up settings sprites
 	SettingsMenu gameSettings;
 	generateSettingsContent(gameSettings, font);
+
 	vector<ClickableButton> clickableButtons; // { Reset, Discard, Save }
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 150, 725 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED));
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 400, 725 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED));
 	clickableButtons.push_back(ClickableButton({ 230, 40 }, { 650, 725 }, font, "Save & Quit", BUTTONTEXTSIZE, RED));
 	
+	// Key recorders need a pointer to keyStrings stored in main
 	map<sf::Keyboard::Key, string> keyStrings = getKeyStrings();
 	generateKeybinds(keySets, gameSettings[1], keyStrings, font);
 
-	// Store new keybinds
-	vector<KeyRecorder*>& newKeybinds = gameSettings[1].getKeybinds();
+	// Read settings file
+	vector<int> configValues = readConfigFile(CONFIGFILENAME); // Stores a copy of file contents
+	gameSettings.applyConfig(configValues);
+	// Rewrite settings file to fix invalid configurations from previous two lines.
+	writeConfigFile(CONFIGFILENAME, gameSettings.getValues());
+
+	updateAllSettings(gameSettings, { screen, screenP2 },
+		{ playerSoloDAS, player1DAS, player2DAS }, { &gameScreenRectangles, &gameScreenRectanglesP2 }, keySets);
+	
 	// Game loop
 	while (window.isOpen())
 	{
+		// Manage audio across all screens
+		soundFX->checkTimers(); 
+
 		// Run on main menu
 		if (currentScreen == MAINMENU) {
 			window.clear(BLUE);
 			window.draw(titleText);
 			window.draw(gameMenu);
-
-			// Manage audio
-			soundFX->checkTimers();
 
 			bool modeSelected = false;
 			
@@ -975,16 +1007,25 @@ int main(){
 					break;
 				case sf::Event::MouseButtonPressed:
 					gameSettings.processMouseClick(event.mouseButton.x, event.mouseButton.y);
-					if (clickableButtons[1].checkClick(event.mouseButton.x, event.mouseButton.y)) {
+					// Restore to default settings
+					if (clickableButtons[0].checkClick(event.mouseButton.x, event.mouseButton.y)) {
+						gameSettings.applyConfig(DEFAULTSETTINGS);
+					}
+					// Discard & quit
+					else if (clickableButtons[1].checkClick(event.mouseButton.x, event.mouseButton.y)) {
+						gameSettings.applyConfig(configValues);
 						currentScreen = MAINMENU;
-						updateKeybinds(keySets, newKeybinds);
-
+					}
+					// Save & quit
+					else if (clickableButtons[2].checkClick(event.mouseButton.x, event.mouseButton.y)) {
 						// Update gameplay settings for two screens and three DAS sets
-						vector<int> values = gameSettings[0].getValues();
-						updateGameSettings(values, screen, player1DAS, gameScreenRectangles[2], gameScreenRectangles[1]);
-						updateGameSettings(values, screenP2, player2DAS, gameScreenRectanglesP2[2], gameScreenRectanglesP2[1]);
-						playerSoloDAS->setStartDelay(DASDELAYVALUES[values[4]]);
-						playerSoloDAS->setHoldDelay(DASSPEEDVALUES[values[5]]);
+						updateAllSettings(gameSettings, { screen, screenP2 },
+							{ playerSoloDAS, player1DAS, player2DAS }, { &gameScreenRectangles, &gameScreenRectanglesP2 }, keySets);
+						writeConfigFile(CONFIGFILENAME, gameSettings.getValues());
+						// Refresh file contents copy without having to open the file again
+						configValues = gameSettings.getValues(); 
+
+						currentScreen = MAINMENU;
 					}
 					break;
 				case sf::Event::MouseButtonReleased:
