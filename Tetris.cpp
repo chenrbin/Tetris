@@ -11,6 +11,8 @@
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
+// Tetris game made with SFML 2.5.1
+// Sound effects and music made with IOS Garage Band
 // Line count as of 8/20/2023: 3563
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
@@ -1006,9 +1008,11 @@ int main(){
 					break; 
 				case sf::Event::KeyPressed: 
 					currentScreen = MAINMENU;
+					soundFX->play(MEDIUMBEEP);
 					break;
 				case sf::Event::MouseButtonPressed: 
 					currentScreen = MAINMENU;
+					soundFX->play(MEDIUMBEEP);
 					break;
 				default:
 					break;
@@ -1042,11 +1046,13 @@ int main(){
 					// Restore to default settings
 					if (clickableButtons[0].checkClick(event.mouseButton.x, event.mouseButton.y)) {
 						gameSettings.applyConfig(DEFAULTSETTINGS);
+						soundFX->play(MEDIUMBEEP);
 					}
 					// Discard & quit
 					else if (clickableButtons[1].checkClick(event.mouseButton.x, event.mouseButton.y)) {
 						gameSettings.applyConfig(configValues);
 						currentScreen = MAINMENU;
+						soundFX->play(HIGHBEEP);
 					}
 					// Save & quit
 					else if (clickableButtons[2].checkClick(event.mouseButton.x, event.mouseButton.y)) {
@@ -1058,6 +1064,7 @@ int main(){
 						configValues = gameSettings.getValues(); 
 
 						currentScreen = MAINMENU;
+						soundFX->play(HIGHBEEP);
 					}
 					break;
 				case sf::Event::MouseButtonReleased:

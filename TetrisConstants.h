@@ -4,7 +4,7 @@
 #include <map>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: Full screen compatibility, online, default settings in online matches
+	// Todo: online, Full screen compatibility, audio settings
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
