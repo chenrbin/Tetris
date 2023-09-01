@@ -8,7 +8,6 @@
 #include "Mechanisms.h"
 #include "Drawing.h"
 
-
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
