@@ -1,6 +1,4 @@
 #pragma once
-#include <iostream>
-#include <SFML/Graphics.hpp>
 #include "Tetromino.h"
 #include <cstdlib> 
 #include <ctime>
@@ -9,6 +7,7 @@
 #include "Mechanisms.h"
 #include <map>
 #include <algorithm>
+
 using namespace std;
 using namespace TetrisVariables;
 
@@ -44,10 +43,10 @@ class Screen {
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
 	bool canDump; // Dump garbage if a piece has been set without clearing lines
-	GarbageStack* garbStack; // Visuals for garbage
+	GarbageStack garbStack; // Visuals for garbage
 	int garbLastCol; // Stores location of garbage for randomness settings
 
-	DeathAnimation* deathAnimation;
+	DeathAnimation deathAnimation;
 
 	// Customizable game settings
 	float lockDelay, superLockDelay;
@@ -97,8 +96,8 @@ public:
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 
-		deathAnimation = new DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
-		garbStack = new GarbageStack({ gameBounds.left, gameBounds.top });
+		deathAnimation = DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
+		garbStack = GarbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
 		
 
@@ -113,6 +112,10 @@ public:
 		spawnPiece();
 	}
 
+	~Screen() {
+		for (Tetromino* tet : tetrominos)
+			delete tet;
+	}
 #pragma region Core Gameplay
 	// Checked every frame. Handles timer related events
 	void doTimeStuff() {
@@ -121,7 +124,7 @@ public:
 			return;
 		// Update garbageStack if gameMode is sandbox or PVP
 		if (gameMode != CLASSIC)
-			garbStack->updateStack(getStackVector());
+			garbStack.updateStack(getStackVector());
 		// Handles gravity. Disabled if autoFall is off (sandbox exclusive)
 		if (gravityTimer.getTimeSeconds() >= gravity && gravity > 0 && autoFall) {
 			movePiece(1);
@@ -299,6 +302,7 @@ public:
 		}
 		else {
 			int temp = heldPiece->getPieceCode();
+			delete heldPiece;
 			heldPiece = currentPiece->getNewPiece();
 			heldPiece->setPieceCode(currentPiece->getPieceCode());
 			spawnPiece(temp);
@@ -720,11 +724,11 @@ public:
 
 		// Enable death animation if game is over
 		if (gameOver)
-			deathAnimation->drawAnimation(*window);
+			deathAnimation.drawAnimation(*window);
 
 		// Draw garbage stack if game mode is sandbox or PVP
 		if (gameMode != CLASSIC)
-			window->draw(*garbStack);
+			window->draw(garbStack);
 	}
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() {
@@ -806,7 +810,7 @@ public:
 	// Play death animation. This is performed right before game over.
 	// NOTE: This will be called by main to avoid bugs with simultaneous loss in pvp
 	void playDeathAnimation() {
-		deathAnimation->restart();
+		deathAnimation.restart();
 		soundFX->pauseAll();
 		soundFX->play(LOWTHUD);
 	}
@@ -876,7 +880,7 @@ public:
 	}
 	// Check if death animation has finished playing
 	bool isDeathAnimationOver() {
-		return deathAnimation->isOver();
+		return deathAnimation.isOver();
 	}
 #pragma endregion
 };

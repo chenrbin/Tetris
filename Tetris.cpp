@@ -1,36 +1,37 @@
 #include <iostream>
-#include <fstream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
-#include "Screen.h"
+#include <fstream>
 #include "TetrisConstants.h"
+#include "Screen.h"
 #include <map>
-#include "Drawing.h"
 #include "Mechanisms.h"
+#include "Drawing.h"
+
 
 using namespace std;
 using namespace TetrisVariables;
 // Ruobin Chen
 // Tetris game made with SFML 2.5.1
 // Sound effects and music made with IOS Garage Band
-// Line count as of 8/20/2023: 3563
+// Line count as of 8/31/2023: 4001
 
 // Generate centered text entity. Can specify font, color, message, size, position, and style
-sf::Text& generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
-	sf::Text* text = new sf::Text(); // Store on the heap.
-	text->setFont(font);
-	text->setFillColor(color);
-	text->setString(message);
-	text->setCharacterSize(textSize);
-	const sf::FloatRect box = text->getLocalBounds();
+sf::Text generateText(sf::Font& font, sf::Color color, string message, unsigned int textSize, sf::Vector2f coords, bool bold = true, bool underlined = false, bool centered = false) {
+	sf::Text text; 
+	text.setFont(font);
+	text.setFillColor(color);
+	text.setString(message);
+	text.setCharacterSize(textSize);
+	const sf::FloatRect box = text.getLocalBounds();
 	if (centered)
-		text->setOrigin(box.width / 2.0f, box.height / 2.0f);
-	text->setPosition(coords);
+		text.setOrigin(box.width / 2.0f, box.height / 2.0f);
+	text.setPosition(coords);
 	if (bold)
-		text->setStyle(sf::Text::Bold);
+		text.setStyle(sf::Text::Bold);
 	if (underlined)
-		text->setStyle(sf::Text::Underlined);
-	return *text;
+		text.setStyle(sf::Text::Underlined);
+	return text;
 }
 // Generate rectangle entity. Can specify dimensions, color, position, origin, outline
 sf::RectangleShape generateRectangle(sf::Vector2f dimensions, sf::Color fillColor, sf::Vector2f position, sf::Vector2f origin = { 0, 0 }, sf::Color outlineColor = sf::Color(), float outlineThickness = 0)
@@ -377,10 +378,10 @@ void writeConfigFile(string fileName, vector<int> values) {
 
 int main(){
 	srand(time(NULL));
-
 #pragma region SFML Setup
 	// Set SFML objects
 	sf::Font font;
+
 	if (!font.loadFromFile("font.ttf"))
 		return -1;
 	sf::Texture texture;
@@ -402,7 +403,7 @@ int main(){
 
 #pragma region Basic Assets
 	// Title screen sprites
-	sf::Text& titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
+	sf::Text titleText(generateText(font, WHITE, "TETRIS", 150, TITLETEXTPOS, true, false, true));
 	sf::CircleShape* cursor = new sf::CircleShape(15.f, 3); // Triangle shaped cursor
 	cursor->rotate(90.f);
 	vector<string> menuText = { "Classic Mode", "Sandbox Mode", "PVP Mode", "Settings", "Quit" };
@@ -413,7 +414,7 @@ int main(){
 	vector<sf::FloatRect> gameScreenBounds = getGameBounds(gameScreenRectangles);
 	vector<sf::Text> gameText = getGameText(gameScreenBounds, font);
 	vector<sf::RectangleShape> lines = getLines(gameScreenBounds[0]);
-	sf::Text& linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
+	sf::Text linesClearedText = generateText(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
 
 	// Get player two assets
 	vector<sf::RectangleShape> gameScreenRectanglesP2 = getGameRects(GAMEPOSP2);
@@ -601,7 +602,7 @@ int main(){
 					break;
 				case 4: // Quit
 					window.close();
-					return 0;
+					break;
 				default:
 					break;
 				}
@@ -655,10 +656,14 @@ int main(){
 				case sf::Event::KeyPressed:
 				{
 					if (screen->getPaused()) { // Pause screen
-						if (event.key.code == sf::Keyboard::Down)
+						if (event.key.code == sf::Keyboard::Down) {
+							soundFX->play(LIGHTTAP);
 							pause.getMenu().moveDown();
-						else if (event.key.code == sf::Keyboard::Up)
+						}
+						else if (event.key.code == sf::Keyboard::Up) {
+							soundFX->play(LIGHTTAP);
 							pause.getMenu().moveUp();
+						}
 						else if (event.key.code == sf::Keyboard::Z)
 							modeSelected = true;
 					}
@@ -688,9 +693,8 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if (screen->getPaused())
-						if (pause.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
-							soundFX->play(LIGHTTAP);
+					if (screen->getPaused() && pause.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+						soundFX->play(LIGHTTAP);
 					break;
 				}
 				default:
@@ -908,10 +912,14 @@ int main(){
 				case sf::Event::KeyPressed:
 				{
 					if (screen->getPaused()) { // Pause screen
-						if (event.key.code == sf::Keyboard::Down)
+						if (event.key.code == sf::Keyboard::Down) {
+							soundFX->play(LIGHTTAP);
 							pause.getMenu().moveDown();
-						else if (event.key.code == sf::Keyboard::Up)
+						}
+						else if (event.key.code == sf::Keyboard::Up) {
+							soundFX->play(LIGHTTAP);
 							pause.getMenu().moveUp();
+						}
 						else if (event.key.code == sf::Keyboard::Z)
 							modeSelected = true;
 					}
@@ -954,8 +962,8 @@ int main(){
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if (screen->getPaused())
-						pause.getMenu().updateMouseClick(event.mouseMove.x, event.mouseMove.y);
+					if (screen->getPaused() && pause.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+						soundFX->play(LIGHTTAP);
 					break;
 				}
 				default:
@@ -1077,5 +1085,19 @@ int main(){
 		}
 		window.display();
 	}
+
+	// Cleanup
+	for (Checkbox* box : sandboxes)
+		delete box;
+	delete playerSoloKeys;
+	delete player1Keys;
+	delete player2Keys;
+	delete playerSoloDAS;
+	delete player1DAS;
+	delete player2DAS;
+	delete screen;
+	delete screenP2;
+	delete soundFX;
+	delete cursor;
 	return 0;
 }

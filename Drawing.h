@@ -1,8 +1,4 @@
 #pragma once
-#include <iostream>
-#include <SFML/Graphics.hpp>
-#include "TetrisConstants.h"
-#include "Tile.h"
 #include "Mechanisms.h"
 using namespace TetrisVariables;
 
@@ -244,6 +240,9 @@ class DeathAnimation : public Animation {
 	float endDuration; // Delay at the end of animation
 	vector<vector<Tile>> board;
 public:
+	DeathAnimation() { 
+		endDuration = 0;
+	};
 	DeathAnimation(sf::Vector2f gamePos, float duration, float endDuration, sf::Texture& blockTexture) {
 		this->duration = duration;
 		this->endDuration = endDuration;
@@ -290,6 +289,7 @@ class GarbageStack : public sf::Drawable{
 		}
 	}
 public:
+	GarbageStack() {};
 	// Construct a stack of rectangles at position relative to gamePos
 	GarbageStack(sf::Vector2f gamePos) {
 		for (int i = 0; i < NUMROWS; i++) {
@@ -336,7 +336,7 @@ public:
 	ClickableMenu(){
 		cursorPos = 0;
 	}
-	ClickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape& cursor) {
+	ClickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape cursor) {
 		for (int i = 0; i < menuText.size(); i++)
 			texts.push_back(SfTextAtHome(font, color, menuText[i], textSize, { startPos.x, startPos.y + spacing * i }));
 		this->cursor = cursor;
@@ -774,6 +774,10 @@ public:
 		settingCount = 0;
 		this->soundFX = soundFX;
 	}
+	~SettingsTab() {
+		for (OptionSelector* sel : settingSelectors)
+			delete sel;
+	}
 	// Set tab size and position based on float rect
 	void setBounds(float left, float top, float width, float height) {
 		tabBounds = sf::FloatRect(left, top, width, height);
@@ -985,9 +989,9 @@ public:
 
 		texts.push_back(SfTextAtHome(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true));
 	
-		sf::CircleShape* cursor = new sf::CircleShape(15.f, 3); // Triangle shaped cursor
-		cursor->rotate(90.f);
-		menu = ClickableMenu(font, WHITE, menuText, MENUTEXTSIZE, { gamePos.x + GAMEWIDTH / 4, gamePos.y + GAMEWIDTH * 2 / 3 }, MENUSPACING, *cursor);
+		sf::CircleShape cursor = sf::CircleShape(15.f, 3); // Triangle shaped cursor
+		cursor.rotate(90.f);
+		menu = ClickableMenu(font, WHITE, menuText, MENUTEXTSIZE, { gamePos.x + GAMEWIDTH / 4, gamePos.y + GAMEWIDTH * 2 / 3 }, MENUSPACING, cursor);
 	}
 	// Return a reference to the menu
 	ClickableMenu& getMenu() {

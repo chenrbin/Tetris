@@ -1,8 +1,5 @@
 #pragma once
-#include "TetrisConstants.h"
 #include <vector>
-#include <SFML/Graphics.hpp>
-
 
 using namespace std;
 using namespace TetrisVariables;

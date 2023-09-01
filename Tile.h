@@ -1,6 +1,4 @@
 #pragma once
-#include <iostream>
-#include <SFML/Graphics.hpp>
 #include "Tetromino.h"
 
 using namespace std;

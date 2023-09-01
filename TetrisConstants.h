@@ -1,7 +1,5 @@
 #pragma once
-#include <SFML/Graphics.hpp>
-#include <iostream>
-#include <map>
+
 using namespace std;
 namespace TetrisVariables {
 	// Todo: online, Full screen compatibility, audio settings

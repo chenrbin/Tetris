@@ -1,8 +1,4 @@
 #pragma once
-#include <iostream>
-#include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
-#include "TetrisConstants.h"
 using namespace TetrisVariables;
 
 // Modified sf::Clock for ease of use and pausing
