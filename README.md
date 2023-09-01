@@ -1,4 +1,6 @@
 # Tetris
+Run tetris.exe to play
+
 Default controls:
 
 Single player:
