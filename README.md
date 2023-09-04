@@ -1,6 +1,9 @@
 # Tetris
 Run tetris.exe to play
 
+Game made with SFML 2.5.1
+Music made with GarageBand
+
 Default controls:
 
 Single player:
@@ -29,3 +32,8 @@ UArrow - Fast Drop
 Comma - Spin Counterclockwise
 Period - Spin Clockwise
 RShift - Hold
+
+Sandbox Mode Controls
+Num 1-7 to spawn pieces
+Q, W, S, E, R, T for toggles
+Click in creative mode to place blocks
