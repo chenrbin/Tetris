@@ -329,7 +329,7 @@ void updateAllSettings(SettingsMenu& gameSettings, vector<Screen*> screens, vect
 
 // Play a sound starting at a time point
 SoundManager* generateSoundManager(){
-	SoundManager* soundFX = new SoundManager("sound-effects.ogg");
+	SoundManager* soundFX = new SoundManager("files/sound-effects.ogg");
 	soundFX->addEffect(MEDIUMBEEP);
 	soundFX->addEffect(HIGHBEEP);
 	soundFX->addEffect(LIGHTTAP);
@@ -381,14 +381,14 @@ int main(){
 	// Set SFML objects
 	sf::Font font;
 
-	if (!font.loadFromFile("font.ttf"))
+	if (!font.loadFromFile("files/font.ttf"))
 		return -1;
 	sf::Texture texture;
-	if (!texture.loadFromFile("images/tile_hidden.png"))
+	if (!texture.loadFromFile("files/tile_hidden.png"))
 		return -1;
 	SoundManager* soundFX = generateSoundManager();
 	sf::Music bgm;
-	if (!bgm.openFromFile("tetris-theme.ogg"))
+	if (!bgm.openFromFile("files/tetris-theme.ogg"))
 		return -1;
 	bgm.setVolume(5);
 	bgm.setLoop(true);
