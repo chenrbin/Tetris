@@ -329,7 +329,7 @@ void updateAllSettings(SettingsMenu& gameSettings, vector<Screen*> screens, vect
 
 // Play a sound starting at a time point
 SoundManager* generateSoundManager(){
-	SoundManager* soundFX = new SoundManager("files/sound-effects.ogg");
+	SoundManager* soundFX = new SoundManager(SOUNDFXFILEPATH);
 	soundFX->addEffect(MEDIUMBEEP);
 	soundFX->addEffect(HIGHBEEP);
 	soundFX->addEffect(LIGHTTAP);
@@ -353,11 +353,11 @@ vector<int> readConfigFile(string fileName) {
 		return configValues;
 	}
 	catch (ConfigError err) {
-		cout << "File does not exist. Creating default file.\n";
+		cout << "Config file does not exist. Creating default file.\n";
 		return DEFAULTSETTINGS;
 	}
 	catch (exception err) {
-		cout << "File reading error. Restoring to defaults.\n";
+		cout << "Config file reading error. Restoring to defaults.\n";
 		return DEFAULTSETTINGS;
 	}
 	inFile.close();
@@ -381,14 +381,14 @@ int main(){
 	// Set SFML objects
 	sf::Font font;
 
-	if (!font.loadFromFile("files/font.ttf"))
+	if (!font.loadFromFile(FONTFILEPATH))
 		return -1;
 	sf::Texture texture;
-	if (!texture.loadFromFile("files/tile_hidden.png"))
+	if (!texture.loadFromFile(BLOCKFILEPATH))
 		return -1;
 	SoundManager* soundFX = generateSoundManager();
 	sf::Music bgm;
-	if (!bgm.openFromFile("files/tetris-theme.ogg"))
+	if (!bgm.openFromFile(BGMFILEPATH))
 		return -1;
 	bgm.setVolume(5);
 	bgm.setLoop(true);
@@ -484,10 +484,10 @@ int main(){
 	generateKeybinds(keySets, gameSettings[1], keyStrings, font);
 
 	// Read settings file
-	vector<int> configValues = readConfigFile(CONFIGFILENAME); // Stores a copy of file contents
+	vector<int> configValues = readConfigFile(CONFIGFILEPATH); // Stores a copy of file contents
 	gameSettings.applyConfig(configValues);
 	// Rewrite settings file to fix invalid configurations from previous two lines.
-	writeConfigFile(CONFIGFILENAME, gameSettings.getValues());
+	writeConfigFile(CONFIGFILEPATH, gameSettings.getValues());
 
 	updateAllSettings(gameSettings, { screen, screenP2 },
 		{ playerSoloDAS, player1DAS, player2DAS }, { &gameScreenRectangles, &gameScreenRectanglesP2 }, keySets);
@@ -1066,7 +1066,7 @@ int main(){
 						// Update gameplay settings for two screens and three DAS sets
 						updateAllSettings(gameSettings, { screen, screenP2 },
 							{ playerSoloDAS, player1DAS, player2DAS }, { &gameScreenRectangles, &gameScreenRectanglesP2 }, keySets);
-						writeConfigFile(CONFIGFILENAME, gameSettings.getValues());
+						writeConfigFile(CONFIGFILEPATH, gameSettings.getValues());
 						// Refresh file contents copy without having to open the file again
 						configValues = gameSettings.getValues(); 
 
