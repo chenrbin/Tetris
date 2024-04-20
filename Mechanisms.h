@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+#include <random>
 using namespace TetrisVariables;
 
 // Modified sf::Clock for ease of use and pausing
@@ -165,6 +167,7 @@ public:
 	vector<sf::Keyboard::Key*> getSet() {
 		return { &up, &left, &down, &right, &spinCW, &spinCCW, &hold };
 	}
+
 };
 
 // Organize DAS for each player
@@ -227,7 +230,8 @@ public:
 	// Adds a bag of 7 numbers to the queue when needed.
 	void addBatch() {
 		vector<char> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
-		random_shuffle(queueBatch.begin(), queueBatch.end());
+		random_device rd;
+		shuffle(queueBatch.begin(), queueBatch.end(), mt19937{rd()});
 		for (char num : queueBatch) {
 			pieceQueue.push_back(num);
 		}
