@@ -101,11 +101,11 @@ namespace TetrisVariables {
 	UP, LEFT, DOWN, RIGHT, SPINCW, SPINCCW, HOLD,
 	UP1, LEFT1, DOWN1, RIGHT1, SPINCW1, SPINCCW1, HOLD1,
 	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2 };
-	const string CONFIGFILEPATH = "assets/config.cfg";
-	const string SOUNDFXFILEPATH = "assets/sound-effects.ogg";
-	const string FONTFILEPATH = "assets/font.ttf";
-	const string BLOCKFILEPATH = "assets/tile_hidden.png";
-	const string BGMFILEPATH = "assets/tetris-theme.ogg";
+	const string CONFIGFILEPATH = "../assets/config.cfg";
+	const string SOUNDFXFILEPATH = "../assets/sound-effects.ogg";
+	const string FONTFILEPATH = "../assets/font.ttf";
+	const string BLOCKFILEPATH = "../assets/tile_hidden.png";
+	const string BGMFILEPATH = "../assets/tetris-theme.ogg";
 
 	// Audio timestamps for tetris-effects.ogg
 	const float CLIPDURATION = 0.5;
