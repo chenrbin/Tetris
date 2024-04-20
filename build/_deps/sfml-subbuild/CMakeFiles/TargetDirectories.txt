@@ -1,3 +1,0 @@
-C:/Users/geniu/source/repos/Tetris-2/build/_deps/sfml-subbuild/CMakeFiles/sfml-populate.dir
-C:/Users/geniu/source/repos/Tetris-2/build/_deps/sfml-subbuild/CMakeFiles/ALL_BUILD.dir
-C:/Users/geniu/source/repos/Tetris-2/build/_deps/sfml-subbuild/CMakeFiles/ZERO_CHECK.dir
