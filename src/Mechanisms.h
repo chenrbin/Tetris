@@ -71,13 +71,14 @@ public:
 			}
 			return false;
 		}
-		// If holdOn isn't true, check startOn for startTimer
+		// If holdOn isn't true, check startOn for startTimer. This doubles as taking action on the initial press
 		if (!startOn) {
 			startOn = true;
 			startTimer.restart();
 			return true;
 		}
 		else {
+			// Starts the auto-repeated after startDelay has elapsed
 			if (startTimer.getElapsedTime().asMilliseconds() >= startDelay) {
 				holdOn = true;
 				holdTimer.restart();
@@ -196,6 +197,7 @@ public:
 		if (sf::Keyboard::isKeyPressed(keySet->getDown()) && (downKey.press()))
 			screen->movePiece(1);
 	}
+	// Must be called during the KeyReleasedEvent
 	void releaseKey(sf::Keyboard::Key& event) {
 		if (event == keySet->getLeft())
 			leftKey.release();
@@ -204,6 +206,7 @@ public:
 		else if (event == keySet->getRight())
 			rightKey.release();
 	}
+	// Set DAS speeds via settings
 	void setStartDelay(float val) {
 		leftKey.setStartDelay(val);
 		rightKey.setStartDelay(val);
@@ -248,6 +251,7 @@ public:
 		pieceQueue.clear();
 		addBatch();
 	}
+	// Resets to the beginning of the random sequence. Does not change the sequence itself.
 	void resetPosition(int playerIndex) {
 		positions[playerIndex] = 0;
 	}
@@ -412,16 +416,18 @@ public:
 class SoundManager {
 	vector<SoundEffect> soundEffects;
 	sf::SoundBuffer buffer;
-	map<float, int> timestamps; // For easier play function calls
+	map<float, int> timestamps; // Maps timestamp to vector index for easier play function calls
 public:
 	SoundManager(string fileName) {
 		if (!buffer.loadFromFile(fileName))
 			cout << "Missing audio file";
+		throw exception();
 	}
 	void addEffect(float startTime) {
 		timestamps.emplace(startTime, soundEffects.size());
 		soundEffects.push_back(SoundEffect(buffer, startTime, CLIPDURATION));
 	}
+	// Check when a sound has met its duration and stop it.
 	void checkTimers() {
 		for (SoundEffect& fx : soundEffects)
 			fx.checkSound();

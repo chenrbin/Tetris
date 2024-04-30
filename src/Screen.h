@@ -99,7 +99,7 @@ public:
 		deathAnimation = DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
 		garbStack = GarbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
-		
+
 
 		// Generate board
 		for (int i = 0; i < REALNUMROWS; i++) {
@@ -524,7 +524,7 @@ public:
 		}
 	}
 
-	
+
 #pragma region Garbage Interaction
 	// When clearing lines, send garbage to the opponent or cancel out incoming garbage
 	void sendGarbage(int lineCount) {
@@ -660,7 +660,7 @@ public:
 		vector<float> vec = bin.getBin();
 		// Add a 1 for each garbage line ready to dump
 		for (int i = 0; i < inGarbage; i++)
-			vec.insert(vec.begin(), 1); 
+			vec.insert(vec.begin(), 1);
 		return vec;
 	}
 #pragma endregion

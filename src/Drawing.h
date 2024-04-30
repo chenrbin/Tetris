@@ -644,7 +644,7 @@ public:
 	}
 };
 
-// Class to store custom keybinds
+// Class to input and store a keybind setting
 class KeyRecorder : public OptionSelector {
 	// Sprites
 	SfRectangleAtHome rect;
@@ -732,6 +732,7 @@ public:
 };
 #pragma endregion
 
+// A single tab containing configurable settings
 class SettingsTab : public sf::Drawable{
 	SfRectangleAtHome tabRect;
 	SfTextAtHome tabText;
@@ -874,6 +875,7 @@ public:
 	}
 };
 
+// Menu containing multiple tabs
 class SettingsMenu : public sf::Drawable{
 	vector<SettingsTab> tabs;
 	int tabCount;
