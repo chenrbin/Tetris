@@ -13,8 +13,13 @@ using namespace TetrisVariables;
 
 class Screen {
 #pragma region Attributes
-	sf::RenderWindow* window;
+	// HUD Items
+	vector<SfRectangleAtHome> screenRects;
 	sf::FloatRect gameBounds, holdBounds, queueBounds;
+	SfTextAtHome holdText, nextText, gamemodeText;
+	vector<SfRectangleAtHome> lines;
+
+	sf::RenderWindow* window;
 	sf::Texture blockTexture;
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
 	map<int, float> gravityTiers;
@@ -36,7 +41,7 @@ class Screen {
 	sfClockAtHome gravityTimer, lockTimer, superLockTimer; // Timer to track gravity and locking
 
 	int comboCounter;
-	vector<FadeText>* clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
+	vector<FadeText> clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	bool backToBack; // Stores back-to-back clear flag
 	pieceBag* bag; // Stores the random piece generation
 
@@ -59,13 +64,17 @@ class Screen {
 #pragma endregion
 
 public:
-	Screen(sf::RenderWindow& window, vector<sf::FloatRect>& gameScreenBounds, sf::Texture& blockTexture, vector<FadeText>* clearAnimations, pieceBag* bag, SoundManager* soundFX) {
+	Screen(sf::RenderWindow& window, sf::Vector2f gamePos, sf::Font& font, sf::Texture& blockTexture, pieceBag* bag, SoundManager* soundFX) {
 		this->window = &window;
-		this->gameBounds = gameScreenBounds[0];
-		this->holdBounds = gameScreenBounds[1];
-		this->queueBounds = gameScreenBounds[2];
+		setHUD(gamePos, font);
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
+		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, { gamePos.x + GAMEWIDTH / 2, gamePos.y }, true, false, true), 1, 1));
+		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f }), 0, 2.5f));
+		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING }), 0, 2.5f));
+		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "2X Combo", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 2 }), 0, 2.5f));
+		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "All Clear", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 3 }), 0, 2.5f));
+		
 		this->bag = bag;
 		this->soundFX = soundFX;
 
@@ -520,7 +529,7 @@ public:
 			return;
 		if (totalLinesCleared >= iter->first && gravity >= iter->second) {
 			setGravity(iter->second);
-			(*clearAnimations)[0].restart();
+			clearAnimations[0].restart();
 		}
 	}
 
@@ -588,6 +597,56 @@ public:
 #pragma endregion
 
 #pragma region Getters/Setters
+	// Create HUD on game position
+	void setHUD(sf::Vector2f gamePos, sf::Font& font){
+		// Rectangles for game screen, hold, queue, garbage bin, and top row, 
+		screenRects.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT },
+			gamePos, false, WHITE, LINEWIDTH));
+		screenRects.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, TILESIZE * 4 },
+			{ gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+		screenRects.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT },
+			{ gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+		screenRects.push_back(SfRectangleAtHome(BLACK, { TILESIZE / 2, GAMEHEIGHT - LINEWIDTH },
+			{ gamePos.x - TILESIZE / 2 - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
+
+		// Rectangles to show a couple pixels of the very top row
+		screenRects.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, TOPROWPIXELS },
+			{ gamePos.x, gamePos.y - TOPROWPIXELS }, false, WHITE, LINEWIDTH));
+		screenRects.push_back(SfRectangleAtHome(BLUE, { GAMEWIDTH + 1, TILESIZE - 9 },
+			{ gamePos.x - 1, gamePos.y - TILESIZE - 1 }));
+
+		// Get bounds of first three rectangles (game, hold, queue)
+		gameBounds = screenRects[0].getGlobalBounds();
+		holdBounds = screenRects[1].getGlobalBounds();
+		queueBounds = screenRects[2].getGlobalBounds();
+
+
+		// Generate all static text on game screen
+		holdText = SfTextAtHome(font, WHITE, "Hold", GAMETEXTSIZE, { holdBounds.left + holdBounds.width / 2, holdBounds.top - GAMETEXTSIZE }, true, false, true);
+		nextText = SfTextAtHome(font, WHITE, "Next", GAMETEXTSIZE, { queueBounds.left + queueBounds.width / 2, queueBounds.top - GAMETEXTSIZE }, true, false, true);
+		gamemodeText = SfTextAtHome(font, WHITE, "Classic Mode", GAMETEXTSIZE * 2, { gameBounds.left + gameBounds.width / 2, gameBounds.top - GAMETEXTSIZE * 2 }, true, false, true);
+
+		// Generate game field lines
+		for (int i = 1; i < NUMROWS; i++) { // Horizontal lines
+			lines.push_back(SfRectangleAtHome(SEETHROUGH, { GAMEWIDTH, LINEWIDTH }, { gameBounds.left, gameBounds.top + i * TILESIZE - 1 }));
+		}
+		for (int j = 1; j < NUMCOLS; j++) { // Vertical lines
+			lines.push_back(SfRectangleAtHome(SEETHROUGH, { LINEWIDTH, GAMEHEIGHT + TOPROWPIXELS },
+				{ gameBounds.left + j * TILESIZE - 1, gameBounds.top - TOPROWPIXELS }));
+		}
+	}
+	sf::FloatRect& getGameBounds(){
+		return gameBounds;
+	}
+	void setGamemodeTextString(string str){
+		gamemodeText.setString(str);
+	}
+	void setGamemodeTextX(float x){
+		gamemodeText.setPosition(x, gamemodeText.getPosition().y);
+	}
+	vector<SfRectangleAtHome>& getScreenRects(){
+		return screenRects;
+	}
 	// Set gravity to a specific speed or back to its starting speed
 	void setGravity(float speed) {
 		gravity = speed;
@@ -711,6 +770,12 @@ public:
 #pragma region Graphics
 	// Draw all tiles, held piece, and queue pieces
 	void drawScreen() {
+		// Last rectangle needs to be redrawn manually
+		for (const SfRectangleAtHome& rect : screenRects)
+			window->draw(rect);
+		for (const SfRectangleAtHome& line : lines)
+			window->draw(line);
+		
 		for (int i = 1; i < REALNUMROWS; i++) {
 			for (int j = 0; j < NUMCOLS; j++) {
 				window->draw(board[i][j]);
@@ -724,11 +789,19 @@ public:
 
 		// Enable death animation if game is over
 		if (gameOver)
-			deathAnimation.drawAnimation(*window);
+			deathAnimation.update(*window);
 
 		// Draw garbage stack if game mode is sandbox or PVP
 		if (gameMode != CLASSIC)
 			window->draw(garbStack);
+
+		window->draw(screenRects.back()); // Redraw last rectangle
+
+		window->draw(holdText);
+		window->draw(nextText);
+		window->draw(gamemodeText);
+		for (FadeText& animation : clearAnimations)
+			animation.update(*window);
 	}
 	// Hide current moving tiles, update position, set new tiles
 	void updateBlocks() {
@@ -794,18 +867,18 @@ public:
 	}
 	// Play fadeText animations
 	void playClearText(string str) {
-		(*clearAnimations)[1].setString(str);
-		(*clearAnimations)[1].restart();
+		clearAnimations[1].setString(str);
+		clearAnimations[1].restart();
 	}
 	void playBackToBackText() {
-		(*clearAnimations)[2].restart();
+		clearAnimations[2].restart();
 	}
 	void playComboText() {
-		(*clearAnimations)[3].setString(to_string(comboCounter) + "X Combo");
-		(*clearAnimations)[3].restart();
+		clearAnimations[3].setString(to_string(comboCounter) + "X Combo");
+		clearAnimations[3].restart();
 	}
 	void playAllClearText() {
-		(*clearAnimations)[4].restart();
+		clearAnimations[4].restart();
 	}
 	// Play death animation. This is performed right before game over.
 	// NOTE: This will be called by main to avoid bugs with simultaneous loss in pvp

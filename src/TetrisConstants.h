@@ -1,5 +1,7 @@
 #pragma once
-
+#include <iostream>
+#include <SFML/Graphics.hpp>
+#include <map>
 using namespace std;
 namespace TetrisVariables {
 	// Todo: online, Full screen compatibility, audio settings
@@ -49,7 +51,6 @@ namespace TetrisVariables {
 	const sf::Vector2f ORIGIN(0, 0);
 	// Game screen state codes
 	const int MAINMENU = 1, CLASSIC = 2, SANDBOX = 3, MULTIPLAYER = 4, LOSESCREEN = 5, SETTINGSCREEN = 6;
-	
 	// Set color constants for easy use and passing to functions
 	const sf::Color WHITE(255, 255, 255);
 	const sf::Color BLACK(0, 0, 0);
@@ -101,12 +102,12 @@ namespace TetrisVariables {
 	UP, LEFT, DOWN, RIGHT, SPINCW, SPINCCW, HOLD,
 	UP1, LEFT1, DOWN1, RIGHT1, SPINCW1, SPINCCW1, HOLD1,
 	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2 };
-	const string CONFIGFILEPATH = "../assets/config.cfg";
-	const string SOUNDFXFILEPATH = "../assets/sound-effects.ogg";
-	const string FONTFILEPATH = "../assets/font.ttf";
-	const string BLOCKFILEPATH = "../assets/tile_hidden.png";
-	const string BGMFILEPATH = "../assets/tetris-theme.ogg";
-
+	const string CONFIGFILEPATH = "assets/config.cfg";
+	const string SOUNDFXFILEPATH = "assets/sound-effects.ogg";
+	const string FONTFILEPATH = "assets/font.ttf";
+	const string BLOCKFILEPATH = "assets/tile_hidden.png";
+	const string BGMFILEPATH = "assets/tetris-theme.ogg";
+	
 	// Audio timestamps for tetris-effects.ogg
 	const float CLIPDURATION = 0.5;
 	const float LIGHTTAP = 3.655, MEDIUMBEEP = 1.8, HIGHBEEP = 3.628;

@@ -419,9 +419,10 @@ class SoundManager {
 	map<float, int> timestamps; // Maps timestamp to vector index for easier play function calls
 public:
 	SoundManager(string fileName) {
-		if (!buffer.loadFromFile(fileName))
+		if (!buffer.loadFromFile(fileName)){
 			cout << "Missing audio file";
-		throw exception();
+			throw exception();
+		}
 	}
 	void addEffect(float startTime) {
 		timestamps.emplace(startTime, soundEffects.size());

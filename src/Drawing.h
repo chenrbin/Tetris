@@ -187,7 +187,7 @@ public:
 		duration = 0;
 	}
 	// Draws the animation to the window
-	virtual void drawAnimation(sf::RenderWindow& window) = 0;
+	virtual void update(sf::RenderWindow& window) = 0;
 	virtual ~Animation() {};
 	// Turns on animation
 	virtual void restart() = 0;
@@ -213,7 +213,7 @@ public:
 		this->text.setFillColor(textColor);
 	}
 	// Draws the animation to the window
-	void drawAnimation(sf::RenderWindow& window) {
+	void update(sf::RenderWindow& window) {
 		float elapsedTime = startTime.getElapsedTime().asSeconds();
 		if (elapsedTime > duration + fadeDuration)
 			return; // Returns nothing if animation is past duration
@@ -259,7 +259,7 @@ public:
 		}
 	}
 	// Draws the animation to the window
-	void drawAnimation(sf::RenderWindow& window) {
+	void update(sf::RenderWindow& window) {
 		// Does not execute if animation duration is over
 		if (startTime.getTimeSeconds() > duration + endDuration)
 			return;
@@ -732,236 +732,6 @@ public:
 };
 #pragma endregion
 
-// A single tab containing configurable settings
-class SettingsTab : public sf::Drawable{
-	SfRectangleAtHome tabRect;
-	SfTextAtHome tabText;
-	sf::FloatRect tabBounds; // Used to align tab rectangle and text
-	int index; // First tab has index of 0
-	bool tabSelected; // The currently selected tab is violet and taller, otherwise gray
-
-	vector<SfTextAtHome> settingsTexts;
-	vector<OptionSelector*> settingSelectors;
-	vector<KeyRecorder*> keybinds; // Keybinds stored separately from selectors
-	int settingCount;
-
-	vector<sf::Text> extraText; // Any additional text to draw
-
-	SoundManager* soundFX;
-	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
-		// Always draw the tab itself
-		target.draw(tabRect, states);
-		target.draw(tabText, states);
-
-		// Draw contents if current tab is selected
-		if (tabSelected) {
-			for (int i = 0; i < settingCount; i++)
-			{
-				target.draw(settingsTexts[i], states);
-				target.draw(*settingSelectors[i], states);
-			}
-			for (int i = 0; i < extraText.size(); i++)
-				target.draw(extraText[i], states);
-		}
-		
-	}
-public:
-	SettingsTab(sf::Font& font, string name, int index, SoundManager* soundFX) {
-		// Rect origin is set at 0, 0 and text origin is centered
-		tabRect = SfRectangleAtHome(GRAY, { 0, 0 }, { 0, 0 }, false, BLACK, 2);
-		tabText = SfTextAtHome(font, WHITE, name, MENUTEXTSIZE, { 0, 0 }, true, false, true, true);
-		this->index = index;
-		tabSelected = false;
-		settingCount = 0;
-		this->soundFX = soundFX;
-	}
-	~SettingsTab() {
-		for (OptionSelector* sel : settingSelectors)
-			delete sel;
-	}
-	// Set tab size and position based on float rect
-	void setBounds(float left, float top, float width, float height) {
-		tabBounds = sf::FloatRect(left, top, width, height);
-		tabRect.setSize({ width, height });
-		tabRect.setPosition(left, top);
-		tabText.setPosition(left + width / 2, top + height / 2);
-	}
-	void setRectColor(const sf::Color& color) {
-		tabRect.setFillColor(color);
-	}
-	void setSelected(bool val) {
-		if (tabSelected == val)
-			return;
-		tabSelected = val;
-		// Change tab visuals accordingly
-		if (tabSelected) {
-			tabRect.setFillColor(VIOLET);
-			// Change width slightly to align outlines
-			setBounds(tabBounds.left, tabBounds.top, tabBounds.width - 2, tabBounds.height + TABHEIGHTGROWTH);
-		}
-		else {
-			tabRect.setFillColor(GRAY);
-			setBounds(tabBounds.left, tabBounds.top, tabBounds.width + 2, tabBounds.height - TABHEIGHTGROWTH);
-		}
-	}
-	int getIndex() {
-		return index;
-	}
-	sf::FloatRect getTabBounds() {
-		return tabBounds;
-	}
-	vector<int> getValues() {
-		vector<int> val;
-		for (OptionSelector* selector : settingSelectors)
-			val.push_back(selector->getValue());
-		return val;
-	}
-	vector<OptionSelector*>& getSelectors() {
-		return settingSelectors;
-	}
-	// Add a setting option and its selection mechanism.
-	void addSetting(string text, sf::Vector2f textPosition, OptionSelector* selector, sf::Vector2f selectorPosition, sf::Font& font) {
-		settingsTexts.push_back(SfTextAtHome(font, WHITE, text, MENUTEXTSIZE, textPosition));
-		settingSelectors.push_back(selector);
-		selector->move(selectorPosition.x, selectorPosition.y);
-		settingCount++;
-	}
-		// Add additional text to draw
-	void addExtraText(sf::Text text) {
-		extraText.push_back(text);
-	}
-	// Add a setting option while storing a keybind for extra operations
-	void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
-		keybinds.push_back(new KeyRecorder(keyStrings, font));
-		addSetting(text, textPosition, keybinds[keybinds.size() - 1], selectorPosition, font);
-	}
-	// Reads and records the key
-	
-	void readKeys(sf::Keyboard::Key key) {
-		for (KeyRecorder* keyRec : keybinds) {
-			if (keyRec->getSelected() && keyRec->readKey(key)){
-				soundFX->play(LIGHTTAP);
-				break;
-			}
-		}
-	}
-	vector<KeyRecorder*>& getKeybinds() {
-		return keybinds;
-	}
-	void setKey(int index, sf::Keyboard::Key key) {
-		keybinds[index]->setSelect(true);
-		keybinds[index]->readKey(key);
-	}
-	
-	OptionSelector& operator[](int index) {
-		return *settingSelectors[index];
-	}
-	// Check all mechanisms on mouse click position
-	void processMouseMove(int mouseX, int mouseY) {
-		for (OptionSelector* selector : settingSelectors)
-			if (selector->processMouseMove(mouseX, mouseY)) 
-				break; // Break after a successful action. Skips the need to check everything
-	}
-	void processMouseClick(int mouseX, int mouseY) {
-		for (OptionSelector* selector : settingSelectors)
-			if (selector->processMouseClick(mouseX, mouseY)) {
-				soundFX->play(LIGHTTAP);
-				break; // Since no sprites overlap, this saves the need to check all bounds;
-			}
-	}
-	void processMouseRelease() {
-		for (OptionSelector* selector : settingSelectors)
-			selector->processMouseRelease();
-	}
-};
-
-// Menu containing multiple tabs
-class SettingsMenu : public sf::Drawable{
-	vector<SettingsTab> tabs;
-	int tabCount;
-	int currentTabIndex;
-	SoundManager* soundFX;
-
-	// Draw all tabs
-	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
-		for (int i = 0; i < tabCount; i++)
-			target.draw(tabs[i], states);
-	}
-public:
-	SettingsMenu(SoundManager* soundFX) {
-		tabCount = 0;
-		currentTabIndex = 0;
-		this->soundFX = soundFX;
-	}
-	void addTab(sf::Font& font, string name) {
-		tabs.push_back(SettingsTab(font, name, tabCount++, soundFX));
-		alignTabs();
-	}
-	// Align tab positions across top of screen based on number of tabs
-	void alignTabs() {
-		for (int i = 0; i < tabs.size(); i++)
-			tabs[i].setBounds(WIDTH * i / tabs.size() + 1.0f, TABTOP, WIDTH / tabs.size(), TABHEIGHT);
-	}
-	
-	// Select specific tab. Should be called once after creating tabs to select default
-	void selectTab(int index) {
-		for (int i = 0; i < tabCount; i++)
-			if (i == index)
-				tabs[i].setSelected(true);
-			else
-				tabs[i].setSelected(false);
-	}
-	// Process clicking to select a tab
-	void clickTab(float xPos, float yPos) {
-		for (int i = 0; i < tabCount; i++)
-			if (tabs[i].getTabBounds().contains(xPos, yPos)) {
-				selectTab(i);
-				currentTabIndex = i;
-				soundFX->play(LIGHTTAP);
-				break;
-			}
-	}
-	// Process mouse events for current tab
-	void processMouseMove(int mouseX, int mouseY) {
-		tabs[currentTabIndex].processMouseMove(mouseX, mouseY);
-	}
-	void processMouseClick(int mouseX, int mouseY) {
-		clickTab(mouseX, mouseY);
-		tabs[currentTabIndex].processMouseClick(mouseX, mouseY);
-	}
-	void processMouseRelease() {
-		tabs[currentTabIndex].processMouseRelease();
-	}
-	SettingsTab& operator[](int index) {
-		return tabs[index];
-	}
-	// Get a vector of integers that represent the setting contents
-	vector<int> getValues() {
-		vector<int> vec;
-		for (SettingsTab& tab : tabs)
-			for (int val : tab.getValues())
-				vec.push_back(val);
-		return vec;
-	}
-	// Configure settings based on int vector from config file
-	void applyConfig(vector<int> config) {
-		try {
-			int tab1Size = tabs[0].getSelectors().size(); // Index to separate tabs
-			for (int i = 0; i < tab1Size; i++) // First tab
-				tabs[0][i].setIndex(config[i]);
-			for (int i = 0; i < tabs[1].getSelectors().size(); i++) { // Second tab
-				tabs[1].setKey(i, sf::Keyboard::Key(config.at(i + tab1Size)));
-			}
-		}
-		catch (out_of_range err) {
-			cout << "applyConfig out of range. Restoring to default\n";
-			applyConfig(DEFAULTSETTINGS);
-		}
-		catch (ConfigError err) {
-			applyConfig(DEFAULTSETTINGS);
-		}
-	}
-};
 
 // Class for pause screen sprites. Varies based on mode
 class pauseScreen : public sf::Drawable {
