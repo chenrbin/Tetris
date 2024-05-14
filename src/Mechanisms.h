@@ -99,7 +99,7 @@ public:
 	}
 };
 
-// Controls for each player
+// Stores the controls for each player
 class KeySet {
 	sf::Keyboard::Key left;
 	sf::Keyboard::Key right;
@@ -171,7 +171,7 @@ public:
 
 };
 
-// Organize DAS for each player
+// Organize DAS for each player. Stores the type of key and length of time to press for an action
 class KeyDAS {
 	KeyTimer leftKey;
 	KeyTimer rightKey;
@@ -223,11 +223,11 @@ public:
 };
 
 // Class to store random piece order to it is consistent across all players
-class pieceBag {
+class PieceBag {
 	vector<char> pieceQueue; // Complete piece order
 	vector<unsigned int> positions; // Position in the queue for each player
 public:
-	pieceBag() {
+	PieceBag() {
 		addBatch();
 	}
 	// Adds a bag of 7 numbers to the queue when needed.
@@ -344,7 +344,7 @@ public:
 		return bin.size() == 0;
 	}
 	// Return the number of lines of garbage to be dumped
-	int checkGarbage() {
+	int getGarbage() {
 		if (isEmpty() || !bin[0].checkTimer())
 			return 0;
 		int count;

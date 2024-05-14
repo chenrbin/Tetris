@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+#include "Tile.h"
 #include "Mechanisms.h"
 using namespace TetrisVariables;
 
@@ -734,7 +736,7 @@ public:
 
 
 // Class for pause screen sprites. Varies based on mode
-class pauseScreen : public sf::Drawable {
+class PauseScreen : public sf::Drawable {
 	// All Rectangles and shapes needed to construct the screen
 	vector<SfRectangleAtHome> rectangles;
 	vector<SfTextAtHome> texts;
@@ -748,7 +750,7 @@ class pauseScreen : public sf::Drawable {
 		target.draw(menu, states);
 	}
 public:
-	pauseScreen(sf::Vector2f gamePos, vector<string>& menuText, sf::Font& font) {
+	PauseScreen(sf::Vector2f gamePos, vector<string>& menuText, sf::Font& font) {
 		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, {gamePos.x, gamePos.y - TOPROWPIXELS}, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));

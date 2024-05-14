@@ -1,11 +1,17 @@
 #pragma once
-#include "Drawing.h"
-#include "TetrisConstants.h"
 #include <vector>
 #include <SFML/Graphics.hpp>
-using namespace TetrisVariables;
-// Contains the setting data structure
+#include "TetrisConstants.h"
+#include "Screen.h"
 
+using namespace std;
+using namespace TetrisVariables;
+
+// Map between keys and their corresponding text to display
+// This global variable will be used by several classes
+map<sf::Keyboard::Key, string> keyStrings; 
+
+// Contains the setting data structures
 // A single tab containing configurable settings
 class SettingsTab : public sf::Drawable {
     SfRectangleAtHome tabRect;
@@ -84,6 +90,7 @@ public:
     sf::FloatRect getTabBounds() {
         return tabBounds;
     }
+    // Get config values of current tab
     vector<int> getValues() {
         vector<int> val;
         for (OptionSelector* selector : settingSelectors)
@@ -105,8 +112,8 @@ public:
         extraText.push_back(text);
     }
     // Add a setting option while storing a keybind for extra operations
-    void addKeybind(string text, sf::Vector2f textPosition, map<sf::Keyboard::Key, string>* keyStrings, sf::Vector2f selectorPosition, sf::Font& font) {
-        keybinds.push_back(new KeyRecorder(keyStrings, font));
+    void addKeybind(string text, sf::Vector2f textPosition, sf::Vector2f selectorPosition, sf::Font& font) {
+        keybinds.push_back(new KeyRecorder(&keyStrings, font));
         addSetting(text, textPosition, keybinds[keybinds.size() - 1], selectorPosition, font);
     }
     // Reads and records the key
@@ -119,6 +126,7 @@ public:
             }
         }
     }
+    // Returns only the keybind configurations
     vector<KeyRecorder*>& getKeybinds() {
         return keybinds;
     }
@@ -131,19 +139,19 @@ public:
         return *settingSelectors[index];
     }
     // Check all mechanisms on mouse click position
-    void processMouseMove(int mouseX, int mouseY) {
+    void onMouseMove(int mouseX, int mouseY) {
         for (OptionSelector* selector : settingSelectors)
             if (selector->processMouseMove(mouseX, mouseY))
                 break; // Break after a successful action. Skips the need to check everything
     }
-    void processMouseClick(int mouseX, int mouseY) {
+    void onMouseClick(int mouseX, int mouseY) {
         for (OptionSelector* selector : settingSelectors)
             if (selector->processMouseClick(mouseX, mouseY)) {
                 soundFX->play(LIGHTTAP);
                 break; // Since no sprites overlap, this saves the need to check all bounds;
             }
     }
-    void processMouseRelease() {
+    void onMouseRelease() {
         for (OptionSelector* selector : settingSelectors)
             selector->processMouseRelease();
     }
@@ -151,31 +159,62 @@ public:
 
 // Menu containing multiple tabs
 class SettingsMenu : public sf::Drawable {
+    // Menu interface
     vector<SettingsTab> tabs;
     int tabCount;
     int currentTabIndex;
+    ClickableButton resetButton; // Reset to default
+    ClickableButton discardButton; // Discard and continue
+    ClickableButton saveButton; // Save and continue
     SoundManager* soundFX;
     sf::Font* font;
+    int* currentScreen; // Pointer to current screen to return to the menu screen 
+
+    // Setting data
+    vector<Screen*> screens; // Game screens the setting will apply to
+    vector<KeyDAS*> dasSets; // Control profiles to modify
+    vector<int> configValues; // A saved copy of config values. Only updates when reading or writing the config file
+    string fileName;
+
     // Draw all tabs
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
         for (int i = 0; i < tabCount; i++)
             target.draw(tabs[i], states);
+        target.draw(resetButton, states);
+        target.draw(discardButton, states);
+        target.draw(saveButton, states);
     }
+
+
 public:
-    SettingsMenu(SoundManager* soundFX, sf::Font& font, map<sf::Keyboard::Key, string>& keyStrings) {
+    SettingsMenu(vector<Screen*> screens, vector<KeyDAS*> dasSets, SoundManager* soundFX, sf::Font& font, int* currentScreen) {
         tabCount = 0;
         currentTabIndex = 0;
+        this->screens = screens;
+        this->dasSets = dasSets;
         this->soundFX = soundFX;
         this->font = &font;
-        addTab(font, "Gameplay");
-        addTab(font, "Controls");
-        addTab(font, "Graphics (WIP)");
-        selectTab(0);
+        this->currentScreen = currentScreen;
+        fileName = CONFIGFILEPATH;
+        // Initialize keyStrings if empty
+        if (keyStrings.empty())
+            initializeKeyStrings(keyStrings);
 
         vector<sf::Vector2f> settingPositions;
         vector<OptionSelector*> selectors;
         vector<sf::Vector2f> selectorPositions;
         vector<string> settingText;
+
+        // Add exit buttons
+        resetButton = ClickableButton({ 230, 40 }, { 150, 725 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED);
+        discardButton = ClickableButton({ 230, 40 }, { 400, 725 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED);
+        saveButton = ClickableButton({ 230, 40 }, { 650, 725 }, font, "Save & Quit", BUTTONTEXTSIZE, RED);
+
+        // Add tabs
+        addTab(font, "Gameplay");
+        addTab(font, "Controls");
+        addTab(font, "Graphics (WIP)");
+        selectTab(0);
 
         // Set up text, selectors, and positions for tab 1
         for (float i = 0; i < 11; i++) { // Positions 
@@ -209,12 +248,17 @@ public:
                 keybindPositions.push_back(sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i + 1), SETTINGYPOS + SETTINGSPACING * (j + 1)));
         // Add key recorders to settings tab
         for (sf::Vector2f& vec : keybindPositions)
-            tabs[1].addKeybind("", ORIGIN, &keyStrings, vec, font);
+            tabs[1].addKeybind("", ORIGIN, vec, font);
         vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold", "Solo", "PVP P1", "PVP P2" };
         for (int i = 0; i < 7; i++)
             tabs[1].addExtraText(SfTextAtHome(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
         for (int i = 7; i < 10; i++)
             tabs[1].addExtraText(SfTextAtHome(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i - 6), SETTINGYPOS), true, false, true));
+
+        // Read settings file
+        readConfigFile();
+        resetConfig();
+        updateAllSettings();
     }
     void addTab(sf::Font& font, string name) {
         tabs.push_back(SettingsTab(font, name, tabCount++, soundFX));
@@ -245,20 +289,39 @@ public:
             }
     }
     // Process mouse events for current tab
-    void processMouseMove(int mouseX, int mouseY) {
-        tabs[currentTabIndex].processMouseMove(mouseX, mouseY);
+    void onMouseMove(int mouseX, int mouseY) {
+        tabs[currentTabIndex].onMouseMove(mouseX, mouseY);
     }
-    void processMouseClick(int mouseX, int mouseY) {
+    void onMouseClick(int mouseX, int mouseY) {
         clickTab(mouseX, mouseY);
-        tabs[currentTabIndex].processMouseClick(mouseX, mouseY);
+        tabs[currentTabIndex].onMouseClick(mouseX, mouseY);
+        // Restore to default settings
+        if (resetButton.checkClick(mouseX, mouseY)) {
+            resetConfig(true);
+            soundFX->play(MEDIUMBEEP);
+        }
+        // Discard & quit
+        else if (discardButton.checkClick(mouseX, mouseY)) {
+            resetConfig();
+            *currentScreen = MAINMENU;
+            soundFX->play(HIGHBEEP);
+        }
+        // Save & quit
+        else if (saveButton.checkClick(mouseX, mouseY)) {
+            // Update gameplay settings for two screens and three DAS sets
+            updateAllSettings();
+            writeConfigFile();
+            *currentScreen = MAINMENU;
+            soundFX->play(HIGHBEEP);
+        }
     }
-    void processMouseRelease() {
-        tabs[currentTabIndex].processMouseRelease();
+    void onMouseRelease() {
+        tabs[currentTabIndex].onMouseRelease();
     }
     SettingsTab& operator[](int index) {
         return tabs[index];
     }
-    // Get a vector of integers that represent the setting contents
+    // Obtain the config vector of current settings
     vector<int> getValues() {
         vector<int> vec;
         for (SettingsTab& tab : tabs)
@@ -266,8 +329,10 @@ public:
                 vec.push_back(val);
         return vec;
     }
-    // Configure settings based on int vector from config file
-    void applyConfig(vector<int> config) {
+    // Reset settings to saved configValues (false) or defaultValues (true)
+    // This function does not change gameplay variables
+    void resetConfig(bool defaultValues = false) {
+        const vector<int>& config = (defaultValues) ? DEFAULTSETTINGS : configValues;
         try {
             int tab1Size = tabs[0].getSelectors().size(); // Index to separate tabs
             int tab2Size = tabs[1].getSelectors().size();
@@ -278,12 +343,82 @@ public:
             }
         }
         catch (out_of_range err) {
-            cout << "applyConfig out of range. Restoring to default\n";
+            cout << "config out of range. Restoring to default\n";
             cout << err.what();
-            applyConfig(DEFAULTSETTINGS);
+            resetConfig(true);
+        }
+        writeConfigFile();
+    }
+    // Read config file and save the vector of integers
+    void readConfigFile() {
+        ifstream inFile(fileName);
+        try {
+            if (!inFile.is_open())
+                throw ConfigError();
+            configValues.clear();
+            string line;
+            while (getline(inFile, line))
+                configValues.push_back(stoi(line));
         }
         catch (ConfigError err) {
-            applyConfig(DEFAULTSETTINGS);
+            cout << "Config file does not exist. Creating default file.\n";
+            resetConfig(true);
+            writeConfigFile();
         }
+        catch (exception err) {
+            cout << "Config file reading error. Restoring to defaults.\n";
+            resetConfig(true);
+            writeConfigFile();
+        }
+        inFile.close();
+    }
+
+    // Write setting menu contents to a file
+    void writeConfigFile() {
+        configValues = getValues();
+        ofstream outFile(fileName);
+        if (!outFile.is_open()) {
+            cout << "Failed to write file";
+            throw exception();
+        }
+        for (int val : configValues)
+            outFile << to_string(val) << endl;
+        outFile.close();
+    }
+
+    // Convert settings menu contents to gameplay variables
+    void updateAllSettings() {
+        vector<int> settings = tabs[0].getValues();
+        // Update game screens
+        for (Screen* screen : screens) {
+            // Starting speed. Will not take effect in sandbox mode
+            screen->setStartingGravity(GRAVITYSPEEDS[settings[0]]);
+            screen->setNextPieceCount(settings[1]); // Next piece count
+            screen->setHoldEnabled(settings[2]);	// Piece holding
+            screen->setGhostPieceEnabled(settings[3]); // Ghost piece
+            screen->setBagEnabled(settings[6]); // 7-bag
+            screen->setSRS(settings[7]); // Rotation style
+            screen->setGarbageTimer(GARBAGETIMERS[settings[8]]); // Garbage timer
+            screen->setGarbageMultiplier(GARBAGEMULTIPLIERS[settings[9]]); // Garbage multiplier
+            screen->setGarbRepeatProbability(GARBAGEREPEATPROBABILITIES[settings[10]]); // Garbage repeat probability
+
+            // Update hold and queue display
+            screen->getScreenRects()[1].setSize(sf::Vector2f{ TILESIZE * 4.0f * settings[2], TILESIZE * 4.0f * settings[2] });
+            screen->getScreenRects()[2].setSize(sf::Vector2f{ TILESIZE * 4.0f * settings[1] / settings[1], GAMEHEIGHT / 9.0f * settings[1] });
+
+        }
+
+        // Update das responsiveness
+        vector<KeySet*> keySets;
+        for (KeyDAS* keyDas : dasSets) {
+            keyDas->setStartDelay(DASDELAYVALUES[settings[4]]); // DAS delay
+            keyDas->setHoldDelay(DASSPEEDVALUES[settings[5]]); // DAS speed
+            keySets.push_back(keyDas->getKeySet());
+        }
+
+        // Update keybind configurations from setting tab entries
+        std::vector<KeyRecorder*> keybinds = tabs[1].getKeybinds();
+        for (int i = 0; i < keybinds.size(); i++) // Update keybind controls
+            *keySets[i / 7]->getSet()[i % 7] = *keybinds[i]->getKey();
     }
 };

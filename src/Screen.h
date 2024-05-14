@@ -1,12 +1,10 @@
 #pragma once
-#include "Tetromino.h"
 #include <cstdlib> 
 #include <ctime>
-#include "Tile.h"
-#include "Drawing.h"
-#include "Mechanisms.h"
-#include <map>
 #include <algorithm>
+#include "Tetromino.h"
+#include "Tile.h"
+
 
 using namespace std;
 using namespace TetrisVariables;
@@ -43,7 +41,7 @@ class Screen {
 	int comboCounter;
 	vector<FadeText> clearAnimations; // { &speedupText, &clearText, &b2bText, &comboText, &allClearText }
 	bool backToBack; // Stores back-to-back clear flag
-	pieceBag* bag; // Stores the random piece generation
+	PieceBag* bag; // Stores the random piece generation
 
 	int inGarbage, outGarbage; // Lines of garbage to receive/send
 	GarbageBin bin; // Queue for garbage inventory
@@ -64,7 +62,7 @@ class Screen {
 #pragma endregion
 
 public:
-	Screen(sf::RenderWindow& window, sf::Vector2f gamePos, sf::Font& font, sf::Texture& blockTexture, pieceBag* bag, SoundManager* soundFX) {
+	Screen(sf::RenderWindow& window, sf::Vector2f gamePos, sf::Font& font, sf::Texture& blockTexture, PieceBag* bag, SoundManager* soundFX) {
 		this->window = &window;
 		setHUD(gamePos, font);
 		this->blockTexture = blockTexture;
@@ -548,7 +546,7 @@ public:
 	}
 	// Check garbage bin. See if garbage should be dumped.
 	void updateGarbage() {
-		int lines = bin.checkGarbage();
+		int lines = bin.getGarbage();
 		if (lines > 0)
 			inGarbage += lines;
 	}
@@ -641,7 +639,7 @@ public:
 	void setGamemodeTextString(string str){
 		gamemodeText.setString(str);
 	}
-	void setGamemodeTextX(float x){
+	void setGamemodeTextXPos(float x){
 		gamemodeText.setPosition(x, gamemodeText.getPosition().y);
 	}
 	vector<SfRectangleAtHome>& getScreenRects(){

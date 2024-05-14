@@ -112,7 +112,7 @@ namespace TetrisVariables {
 	const float CLIPDURATION = 0.5;
 	const float LIGHTTAP = 3.655, MEDIUMBEEP = 1.8, HIGHBEEP = 3.628;
 	const float HIGHHIGHBEEP = 5.4, LOWBEEP = 7.2, LOWTHUD = 9;
-	
+
 
 	// Constants for sprite classes
 
@@ -130,6 +130,51 @@ namespace TetrisVariables {
 	const int BUTTONTEXTSIZE = 22;
 	// On-Off Switch
 	const int SWITCHWIDTH = 90, SWITCHHEIGHT = 30;
+
+	void initializeKeyStrings(map<sf::Keyboard::Key, string>& keyStrings){
+		keyStrings[sf::Keyboard::Menu] = "Menu";
+		keyStrings[sf::Keyboard::LBracket] = "[";
+		keyStrings[sf::Keyboard::RBracket] = "]";
+		keyStrings[sf::Keyboard::Semicolon] = ";";
+		keyStrings[sf::Keyboard::Comma] = ",";
+		keyStrings[sf::Keyboard::Period] = ".";
+		keyStrings[sf::Keyboard::Quote] = "'";
+		keyStrings[sf::Keyboard::Slash] = "/";
+		keyStrings[sf::Keyboard::Backslash] = "\\";
+		keyStrings[sf::Keyboard::Tilde] = "`";
+		keyStrings[sf::Keyboard::Equal] = "=";
+		keyStrings[sf::Keyboard::Hyphen] = "-";
+		keyStrings[sf::Keyboard::LShift] = "LShift";
+		keyStrings[sf::Keyboard::RShift] = "RShift";
+		keyStrings[sf::Keyboard::Left] = "Left";
+		keyStrings[sf::Keyboard::Up] = "Up";
+		keyStrings[sf::Keyboard::Down] = "Down";
+		keyStrings[sf::Keyboard::Right] = "Right";
+		keyStrings[sf::Keyboard::LControl] = "LControl";
+		keyStrings[sf::Keyboard::RControl] = "RControl";
+		keyStrings[sf::Keyboard::LAlt] = "LAlt";
+		keyStrings[sf::Keyboard::RAlt] = "RAlt";
+		keyStrings[sf::Keyboard::Tab] = "Tab";
+		keyStrings[sf::Keyboard::Enter] = "Enter";
+		keyStrings[sf::Keyboard::Space] = "Space";
+		keyStrings[sf::Keyboard::Backspace] = "Backspace";
+		keyStrings[sf::Keyboard::PageUp] = "PageUp";
+		keyStrings[sf::Keyboard::PageDown] = "PageDown";
+		keyStrings[sf::Keyboard::End] = "End";
+		keyStrings[sf::Keyboard::Home] = "Home";
+		keyStrings[sf::Keyboard::Insert] = "Insert";
+		keyStrings[sf::Keyboard::Delete] = "Delete";
+		// Procedurally generate alphabet, num, numpad, and Fnum maps for cleaner code
+		for (int i = 0; i <= 25; i++)
+			keyStrings[sf::Keyboard::Key(i)] = string(1, i + 65);
+		for (int i = 26; i <= 35; i++)
+			keyStrings[sf::Keyboard::Key(i)] = "Num" + to_string(i - 26);
+		for (int i = 75; i <= 84; i++)
+			keyStrings[sf::Keyboard::Key(i)] = "Numpad" + to_string(i - 75);
+		for (int i = 85; i <= 99; i++)
+			keyStrings[sf::Keyboard::Key(i)] = "F" + to_string(i - 84);
+		cout << "KeyStrings initialized\n";
+	}
 
 	// Print stuff for debug
 	template <typename T>
