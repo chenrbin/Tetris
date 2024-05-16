@@ -4,7 +4,7 @@
 using namespace TetrisVariables;
 
 // Modified sf::Clock for ease of use and pausing
-class sfClockAtHome : public sf::Clock{
+class sfClockAtHome : public sf::Clock {
 	sf::Time storage; // For pausing and resuming the clock;
 	bool paused;
 public:
@@ -63,7 +63,7 @@ public:
 		holdOn = false;
 	}
 	// Handles action while key is pressed. Returns true if an action should be performed
-	bool press() {
+	bool onPress() {
 		if (holdOn) { // If startOn and holdOn are true, check for auto repeat
 			if (holdTimer.getElapsedTime().asMilliseconds() >= holdDelay) {
 				holdTimer.restart();
@@ -184,17 +184,16 @@ public:
 		downKey = KeyTimer(startDelay, holdDelay);
 		this->keySet = keySet;
 	}
-	template<typename T>
-	// Handles movement with auto-repeat (DAS). 
-	void checkKeyPress(T screen) { // Doesn't work if parameter type is Screen& for some reason. Needs template
-		if (sf::Keyboard::isKeyPressed(keySet->getLeft())) {
-			if (leftKey.press())
-				screen->movePiece(0);
-		}
-		else if (sf::Keyboard::isKeyPressed(keySet->getRight()) && (rightKey.press()))
+
+	// Handles movement with auto-repeat (DAS). Run this for the profile that controls the current screen
+	template <typename T> // Needs template to fix a linking issue
+	void checkKeyPress(T& screen) {
+		if (sf::Keyboard::isKeyPressed(keySet->getLeft()) && leftKey.onPress()) 
+			screen->movePiece(0);
+		else if (sf::Keyboard::isKeyPressed(keySet->getRight()) && rightKey.onPress())
 			screen->movePiece(2);
 		// The code above prioritizes the left key if both left and right are held.
-		if (sf::Keyboard::isKeyPressed(keySet->getDown()) && (downKey.press()))
+		if (sf::Keyboard::isKeyPressed(keySet->getDown()) && (downKey.onPress()))
 			screen->movePiece(1);
 	}
 	// Must be called during the KeyReleasedEvent
@@ -234,7 +233,7 @@ public:
 	void addBatch() {
 		vector<char> queueBatch{ 0, 1, 2, 3, 4, 5, 6 };
 		random_device rd;
-		shuffle(queueBatch.begin(), queueBatch.end(), mt19937{rd()});
+		shuffle(queueBatch.begin(), queueBatch.end(), mt19937{ rd() });
 		for (char num : queueBatch) {
 			pieceQueue.push_back(num);
 		}
@@ -419,7 +418,7 @@ class SoundManager {
 	map<float, int> timestamps; // Maps timestamp to vector index for easier play function calls
 public:
 	SoundManager(string fileName) {
-		if (!buffer.loadFromFile(fileName)){
+		if (!buffer.loadFromFile(fileName)) {
 			cout << "Missing audio file";
 			throw exception();
 		}

@@ -7,6 +7,7 @@
 #include "Mechanisms.h"
 using namespace std;
 using namespace TetrisVariables;
+
 // Sandbox functionality interface
 class SandboxMenu : public sf::Drawable {
     vector<sf::Text> sandboxText; // HUD text
@@ -73,8 +74,8 @@ public:
             screen->startCreativeMode();
         }
     }
+    
     // Handle key presses for sandbox-exclusive functions. Pass in variables that may be manipulated
-
     void onKeyPress(sf::Keyboard::Key& key, PieceBag& bag, sf::Music& bgm, int& currentScreen) {
         // Hot keys for sandbox controls
         if (key == sf::Keyboard::Q || key == sf::Keyboard::Escape)

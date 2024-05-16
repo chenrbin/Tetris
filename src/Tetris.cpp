@@ -17,7 +17,7 @@ using namespace TetrisVariables;
 // Tetris game made with SFML 2.5.1
 // Sound effects and music made with IOS Garage Band
 // Line count as of 5/11/2024: 3937
-// Todo: pause menu rects
+// Todo: pause menu rects, bullet list indicator
 
 // Generate text for loss screen
 vector<sf::Text> getLossText(sf::Font& font) {
@@ -97,6 +97,7 @@ int main() {
 	Screen* screenP2 = new Screen(window, GAMEPOSP2, font, texture, &bag, soundFX);
 	screenP2->setGamemodeTextString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	screenP2->setGamemodeTextXPos(WIDTH);
+	
 	sf::Text linesClearedText = SfTextAtHome(font, WHITE, "Lines: 0", 25, { GAMEXPOS + GAMEWIDTH + 150, GAMEYPOS });
 	int currentScreen = MAINMENU;
 
@@ -145,14 +146,13 @@ int main() {
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if (gameMenu.updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+					if (gameMenu.onMouseMove(event.mouseMove.x, event.mouseMove.y))
 						soundFX->play(LIGHTTAP);
 					break;
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (gameMenu.updateMouseClick(event.mouseButton.x, event.mouseButton.y))
+					if (gameMenu.onMouseClick(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
-
 					break;
 				}
 				default:
@@ -289,12 +289,12 @@ int main() {
 					playerSoloDAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (screen->getPaused() && pauseMenu.getMenu().updateMouseClick(event.mouseButton.x, event.mouseButton.y))
+					if (screen->getPaused() && pauseMenu.getMenu().onMouseClick(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if (screen->getPaused() && pauseMenu.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+					if (screen->getPaused() && pauseMenu.getMenu().onMouseMove(event.mouseMove.x, event.mouseMove.y))
 						soundFX->play(LIGHTTAP);
 					break;
 				}
@@ -338,6 +338,7 @@ int main() {
 
 			// In-game timer events
 			screen->doTimeStuff();
+
 			// Handles movement with auto-repeat (DAS)
 			playerSoloDAS->checkKeyPress(screen);
 
@@ -406,6 +407,7 @@ int main() {
 			// In-game timer events
 			screen->doTimeStuff();
 			screenP2->doTimeStuff();
+
 			// Process garbage exchange
 			screen->receiveGarbage(screenP2->getOutGarbage());
 			screenP2->receiveGarbage(screen->getOutGarbage());
@@ -494,12 +496,12 @@ int main() {
 					player2DAS->releaseKey(event.key.code);
 				}
 				case sf::Event::MouseButtonPressed: {
-					if (screen->getPaused() && pauseMenu.getMenu().updateMouseClick(event.mouseButton.x, event.mouseButton.y))
+					if (screen->getPaused() && pauseMenu.getMenu().onMouseClick(event.mouseButton.x, event.mouseButton.y))
 						modeSelected = true;
 					break;
 				}
 				case sf::Event::MouseMoved: {
-					if (screen->getPaused() && pauseMenu.getMenu().updateMouseMove(event.mouseMove.x, event.mouseMove.y))
+					if (screen->getPaused() && pauseMenu.getMenu().onMouseMove(event.mouseMove.x, event.mouseMove.y))
 						soundFX->play(LIGHTTAP);
 					break;
 				}

@@ -141,19 +141,19 @@ public:
     // Check all mechanisms on mouse click position
     void onMouseMove(int mouseX, int mouseY) {
         for (OptionSelector* selector : settingSelectors)
-            if (selector->processMouseMove(mouseX, mouseY))
+            if (selector->onMouseMove(mouseX, mouseY))
                 break; // Break after a successful action. Skips the need to check everything
     }
     void onMouseClick(int mouseX, int mouseY) {
         for (OptionSelector* selector : settingSelectors)
-            if (selector->processMouseClick(mouseX, mouseY)) {
+            if (selector->onMouseClick(mouseX, mouseY)) {
                 soundFX->play(LIGHTTAP);
                 break; // Since no sprites overlap, this saves the need to check all bounds;
             }
     }
     void onMouseRelease() {
         for (OptionSelector* selector : settingSelectors)
-            selector->processMouseRelease();
+            selector->onMouseRelease();
     }
 };
 
@@ -200,11 +200,6 @@ public:
         if (keyStrings.empty())
             initializeKeyStrings(keyStrings);
 
-        vector<sf::Vector2f> settingPositions;
-        vector<OptionSelector*> selectors;
-        vector<sf::Vector2f> selectorPositions;
-        vector<string> settingText;
-
         // Add exit buttons
         resetButton = ClickableButton({ 230, 40 }, { 150, 725 }, font, "Reset Defaults", BUTTONTEXTSIZE, RED);
         discardButton = ClickableButton({ 230, 40 }, { 400, 725 }, font, "Discard & Quit", BUTTONTEXTSIZE, RED);
@@ -213,32 +208,37 @@ public:
         // Add tabs
         addTab(font, "Gameplay");
         addTab(font, "Controls");
-        addTab(font, "Graphics (WIP)");
+        addTab(font, "Graphics");
         selectTab(0);
+
+        vector<string> tab1Text;
+        vector<sf::Vector2f> tab1TextPositions;
+        vector<OptionSelector*> tab1Selectors;
+        vector<sf::Vector2f> tab1SelectorPositions;
 
         // Set up text, selectors, and positions for tab 1
         for (float i = 0; i < 11; i++) { // Positions 
-            settingPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
-            selectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
+            tab1TextPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * i });
+            tab1SelectorPositions.push_back({ SETTINGXPOS + SELECTORRIGHTSPACING, SETTINGYPOS + SETTINGSPACING * i });
         }
-        settingText = { "Starting Speed","Next Piece Count", "Piece Holding", "Ghost Piece", "Auto Shift Delay", "Auto Shift Speed",
+        tab1Text = { "Starting Speed","Next Piece Count", "Piece Holding", "Ghost Piece", "Auto Shift Delay", "Auto Shift Speed",
             "Piece RNG", "Rotation Style", "Garbage Timer", "Garbage Multiplier", "Garbage RNG" };
 
-        selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
-        selectors.push_back(new SlidingBar(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
-        selectors.push_back(new OnOffSwitch(font));
-        selectors.push_back(new OnOffSwitch(font));
-        selectors.push_back(new SlidingBar(270, { "Long", "Normal", "Short", "Instant" }, font));
-        selectors.push_back(new SlidingBar(270, { "Slow", "Normal", "Fast", "Instant" }, font));
-        selectors.push_back(new SlidingBar(150, { "Random", "7-Bag" }, font));
-        selectors.push_back(new SlidingBar(150, { "Classic", "Modern" }, font));
-        selectors.push_back(new SlidingBar(270, { "5s", "3s", "1s", "Instant" }, font));
-        selectors.push_back(new SlidingBar(270, { "0.5x", "1x", "1.5x" }, font));
-        selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
+        tab1Selectors.push_back(new OnOffSwitch(font));
+        tab1Selectors.push_back(new OnOffSwitch(font));
+        tab1Selectors.push_back(new SlidingBar(270, { "Long", "Normal", "Short", "Instant" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "Slow", "Normal", "Fast", "Instant" }, font));
+        tab1Selectors.push_back(new SlidingBar(150, { "Random", "7-Bag" }, font));
+        tab1Selectors.push_back(new SlidingBar(150, { "Classic", "Modern" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "5s", "3s", "1s", "Instant" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "0.5x", "1x", "1.5x" }, font));
+        tab1Selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
 
         // Add settings to tab 1
-        for (int i = 0; i < selectors.size(); i++)
-            tabs[0].addSetting(settingText[i], settingPositions[i], selectors[i], selectorPositions[i], font);
+        for (int i = 0; i < tab1Selectors.size(); i++)
+            tabs[0].addSetting(tab1Text[i], tab1TextPositions[i], tab1Selectors[i], tab1SelectorPositions[i], font);
 
         // Set contents for tab 2
         // Generate positions for 21 keybinds
@@ -249,11 +249,22 @@ public:
         // Add key recorders to settings tab
         for (sf::Vector2f& vec : keybindPositions)
             tabs[1].addKeybind("", ORIGIN, vec, font);
-        vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold", "Solo", "PVP P1", "PVP P2" };
-        for (int i = 0; i < 7; i++)
+        vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold"};
+        vector<string> playersText = { "Solo", "PVP P1", "PVP P2" };
+        for (int i = 0; i < controlsText.size(); i++)
             tabs[1].addExtraText(SfTextAtHome(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
-        for (int i = 7; i < 10; i++)
-            tabs[1].addExtraText(SfTextAtHome(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i - 6), SETTINGYPOS), true, false, true));
+        for (int i = 0; i < playersText.size(); i++)
+            tabs[1].addExtraText(SfTextAtHome(font, WHITE, playersText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i + 1), SETTINGYPOS), true, false, true));
+
+        // Set contents for tab 3
+        vector<string> tab3Text {"Block Colors"};
+        vector<sf::Vector2f> tab3TextPositions {{100, 100}};
+        vector<OptionSelector*> tab3Selectors { new BulletListSelector(40, {"1", "2", "3"}, font)};
+        vector<sf::Vector2f> tab3SelectorPositions = {{100, 150}};
+
+        // Add settings to tab 1
+        for (int i = 0; i < tab3Selectors.size(); i++)
+            tabs[2].addSetting(tab3Text[i], tab3TextPositions[i], tab3Selectors[i], tab3SelectorPositions[i], font);
 
         // Read settings file
         readConfigFile();

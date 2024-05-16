@@ -130,6 +130,8 @@ namespace TetrisVariables {
 	const int BUTTONTEXTSIZE = 22;
 	// On-Off Switch
 	const int SWITCHWIDTH = 90, SWITCHHEIGHT = 30;
+	// BulletListSelector
+	const int BULLETNODERADIUS = 10, BULLETCURSORRADIUS = 6;
 
 	void initializeKeyStrings(map<sf::Keyboard::Key, string>& keyStrings){
 		keyStrings[sf::Keyboard::Menu] = "Menu";
@@ -173,7 +175,6 @@ namespace TetrisVariables {
 			keyStrings[sf::Keyboard::Key(i)] = "Numpad" + to_string(i - 75);
 		for (int i = 85; i <= 99; i++)
 			keyStrings[sf::Keyboard::Key(i)] = "F" + to_string(i - 84);
-		cout << "KeyStrings initialized\n";
 	}
 
 	// Print stuff for debug

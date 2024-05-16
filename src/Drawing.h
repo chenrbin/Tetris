@@ -3,6 +3,7 @@
 #include "Tile.h"
 #include "Mechanisms.h"
 using namespace TetrisVariables;
+using namespace std;
 
 #pragma region Sf Sprites At Home
 // Class for easy sf::Text generation. Replaces the setText function
@@ -57,11 +58,32 @@ public:
 		return getGlobalBounds().contains(x, y);
 	}
 };
+
+class SfCircleAtHome : public sf::CircleShape {
+public:
+	SfCircleAtHome() {}
+	SfCircleAtHome(sf::Color color, float radius, sf::Vector2f position, bool centered = true, sf::Color outlineColor = sf::Color(), float outlineThickness = 0) {
+		setRadius(radius);
+		setFillColor(color);
+		if (centered)
+			alignCenter();
+		setPosition(position);
+		setOutlineColor(outlineColor);
+		setOutlineThickness(outlineThickness);
+	}
+	void alignCenter() {
+		const sf::FloatRect box = getLocalBounds();
+		setOrigin(box.width / 2.0f, box.height / 2.0f);
+	}
+	bool contains(float x, float y) {
+		return getGlobalBounds().contains(x, y);
+	}
+};
 #pragma endregion
 
 #pragma region Sandbox Checkboxes
 // Class to organize drawable sprites of a checkbox. Purely visual functionality.
-class Checkbox : public sf::Drawable{
+class Checkbox : public sf::Drawable {
 protected:
 	SfRectangleAtHome box;
 	sf::FloatRect bounds;
@@ -179,7 +201,7 @@ public:
 
 #pragma region Animations
 // Animations are meant to be each created once and restarted when played
-class Animation { 
+class Animation {
 protected:
 	sfClockAtHome startTime;
 	float duration;
@@ -226,7 +248,7 @@ public:
 		window.draw(text);
 	}
 	// Turns on animation
-	void restart() { 
+	void restart() {
 		startTime.restart();
 		textColor.a = 255;
 		text.setFillColor(textColor);
@@ -242,7 +264,7 @@ class DeathAnimation : public Animation {
 	float endDuration; // Delay at the end of animation
 	vector<vector<Tile>> board;
 public:
-	DeathAnimation() { 
+	DeathAnimation() {
 		endDuration = 0;
 	};
 	DeathAnimation(sf::Vector2f gamePos, float duration, float endDuration, sf::Texture& blockTexture) {
@@ -271,7 +293,7 @@ public:
 					window.draw(board[REALNUMROWS - i - 1][j]);
 	}
 	// Turns on animation
-	void restart(){
+	void restart() {
 		startTime.restart();
 	}
 	// Return true if animation has expired
@@ -282,7 +304,7 @@ public:
 #pragma endregion
 
 // Class to display garbage bin. Actual mechanism is in Mechanisms.h
-class GarbageStack : public sf::Drawable{
+class GarbageStack : public sf::Drawable {
 	vector<sf::RectangleShape> stack;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -308,10 +330,10 @@ public:
 		{
 			// (255 * vec[i] + 255) / 2 sets the red value to 127-255 based on timer progress
 			if (vec.size() > i) {
-				stack[i].setFillColor(sf::Color( (255 * vec[i] + 255) / 2, 0, 0 ));
+				stack[i].setFillColor(sf::Color((255 * vec[i] + 255) / 2, 0, 0));
 				if (stack[i].getFillColor() == RED)
 					stack[i].setOutlineColor(RED);
-				else 
+				else
 					stack[i].setOutlineColor(WHITE);
 			}
 			else {
@@ -323,7 +345,7 @@ public:
 };
 
 // Class for a text that can be navigated and clicked
-class ClickableMenu : public sf::Drawable{
+class ClickableMenu : public sf::Drawable {
 	vector<SfTextAtHome> texts;
 	sf::CircleShape cursor; // Takes in a shape as the cursor. Must preset attributes.
 	int cursorPos;
@@ -335,7 +357,7 @@ class ClickableMenu : public sf::Drawable{
 		target.draw(cursor, states);
 	}
 public:
-	ClickableMenu(){
+	ClickableMenu() {
 		cursorPos = 0;
 	}
 	ClickableMenu(sf::Font& font, sf::Color color, vector<string>& menuText, int textSize, sf::Vector2f startPos, int spacing, sf::CircleShape cursor) {
@@ -363,7 +385,7 @@ public:
 		cursor.setPosition(texts[cursorPos].getPosition().x - 5, texts[cursorPos].getPosition().y);
 	}
 	// Update cursor based on mouse position. Return true if a text is selected
-	bool updateMouseClick(int x, int y) {
+	bool onMouseClick(int x, int y) {
 		for (int i = 0; i < texts.size(); i++) {
 			if (texts[i].contains(x, y)) {
 				cursorPos = i;
@@ -374,7 +396,7 @@ public:
 		return false;
 	}
 	// Slightly different from mouse click. Needed for sound effect conditionals
-	bool updateMouseMove(int x, int y) {
+	bool onMouseMove(int x, int y) {
 		for (int i = 0; i < texts.size(); i++) {
 			if (texts[i].contains(x, y)) {
 				if (cursorPos != i) {
@@ -398,7 +420,7 @@ public:
 };
 
 // Class for a button that can be clicked
-class ClickableButton : public sf::Drawable{
+class ClickableButton : public sf::Drawable {
 	SfRectangleAtHome button;
 	SfTextAtHome text;
 
@@ -438,18 +460,18 @@ struct OptionSelector : public sf::Drawable {
 	virtual void move(float offsetX, float offsetY) = 0;
 
 	// React to mouse movement, click, and release. 
-	// Returns whether a successful action is performed for efficiency purposes
-	virtual bool processMouseMove(int mouseX, int mouseY) {
+	// Returns whether a successful action is performed
+	virtual bool onMouseMove(int mouseX, int mouseY) {
 		return false;
 	}
-	virtual bool processMouseClick(int mouseX, int mouseY) {
+	virtual bool onMouseClick(int mouseX, int mouseY) {
 		return false;
 	}
-	virtual bool processMouseRelease() {
+	virtual bool onMouseRelease() {
 		return false;
 	}
 
-private: 
+private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const = 0;
 };
 
@@ -460,7 +482,7 @@ class SlidingBar : public OptionSelector
 	SfRectangleAtHome bar;
 	vector<SfRectangleAtHome> nodes;
 	vector<SfTextAtHome> valuesText;
-	sf::CircleShape cursor;
+	SfCircleAtHome cursor;
 
 	// Data to handle
 	vector<string> values;
@@ -491,15 +513,10 @@ public:
 		}
 
 		// Create circle cursor
-		// TODO sfCircleAtHome
-		cursor.setRadius(BAR_CURSOR_RADIUS);
-		cursor.setFillColor(WHITE);
-		cursor.setOrigin(BAR_CURSOR_RADIUS, BAR_CURSOR_RADIUS);
-		cursor.setOutlineColor(BLACK);
-		cursor.setOutlineThickness(1);
+		cursor = SfCircleAtHome(WHITE, BAR_CURSOR_RADIUS, { 0, 0 }, true, BLACK, 1);
 	}
 	// Returns the value at the cursor
-	int getValue(){
+	int getValue() {
 		return cursorIndex;
 	}
 	// Move the cursor based on mouse x position to select a node
@@ -522,7 +539,7 @@ public:
 			return false;
 		cursorPressed = val;
 		// Visual indicator that a cursor has been clicked
-		if (val) { 
+		if (val) {
 			cursor.setRadius(BAR_CURSOR_RADIUS + BAR_CURSOR_GROWTH);
 			cursor.move(-BAR_CURSOR_GROWTH, -BAR_CURSOR_GROWTH);
 			return true;
@@ -570,15 +587,15 @@ public:
 		}
 		return false;
 	}
-	bool processMouseMove(int mouseX, int mouseY) {
+	bool onMouseMove(int mouseX, int mouseY) {
 		return moveCursor(mouseX);
 	}
-	bool processMouseClick(int mouseX, int mouseY) {
-		if (getCursorBounds().contains(mouseX, mouseY)) 
+	bool onMouseClick(int mouseX, int mouseY) {
+		if (getCursorBounds().contains(mouseX, mouseY))
 			return setCursorPressed(true);
 		return clickNodes(mouseX, mouseY);
 	}
-	bool processMouseRelease() {
+	bool onMouseRelease() {
 		return setCursorPressed(false);
 	}
 };
@@ -597,7 +614,7 @@ public:
 	// Switch is set to true by default
 	OnOffSwitch(sf::Font& font) {
 		switchBase = ClickableButton({ SWITCHWIDTH, SWITCHHEIGHT }, ORIGIN, font, "OFF ON ", SWITCHHEIGHT * 2 / 3.0f, GREEN);
-		switchCover = SfRectangleAtHome(GRAY, { SWITCHWIDTH / 2.0f, SWITCHHEIGHT }, {-SWITCHWIDTH / 4.0f, 0}, true, BLACK, 1);
+		switchCover = SfRectangleAtHome(GRAY, { SWITCHWIDTH / 2.0f, SWITCHHEIGHT }, { -SWITCHWIDTH / 4.0f, 0 }, true, BLACK, 1);
 		move(SWITCHWIDTH / 2.0f, SWITCHHEIGHT / 2.0f); // Initial movement to offset the origin change used to center the text
 		isOn = true;
 	}
@@ -635,13 +652,13 @@ public:
 		}
 		return false;
 	}
-	virtual bool processMouseMove(int mouseX, int mouseY) {
+	virtual bool onMouseMove(int mouseX, int mouseY) {
 		return false;
 	}
-	virtual bool processMouseClick(int mouseX, int mouseY) {
+	virtual bool onMouseClick(int mouseX, int mouseY) {
 		return clickButton(mouseX, mouseY);
 	}
-	virtual bool processMouseRelease() {
+	virtual bool onMouseRelease() {
 		return false;
 	}
 };
@@ -654,7 +671,7 @@ class KeyRecorder : public OptionSelector {
 
 	sf::Keyboard::Key key; // Key object to detect
 	map<sf::Keyboard::Key, string>* keyStrings; // Map for nontext key strings
-	
+
 	// Selection mechanism
 	bool isSelected;
 	string tempString; // Used to update the correct string after selecting a recorder
@@ -719,16 +736,99 @@ public:
 			updateString(tempString);
 		}
 	}
-	
-	virtual bool processMouseMove(int mouseX, int mouseY) {
+
+	virtual bool onMouseMove(int mouseX, int mouseY) {
 		return false;
 	}
-	virtual bool processMouseClick(int mouseX, int mouseY) {
+	virtual bool onMouseClick(int mouseX, int mouseY) {
 		// Has to iterate through every recorder to deselect on click.
 		setSelect(rect.contains(mouseX, mouseY));
 		return false;
 	}
-	virtual bool processMouseRelease() {
+	virtual bool onMouseRelease() {
+		return false;
+	}
+};
+
+// Class to select from a bullet list
+class BulletListSelector : public OptionSelector {
+	// Sprites to draw
+	vector<SfCircleAtHome> nodes;
+	vector<SfTextAtHome> valuesText;
+	SfCircleAtHome cursor;
+	SfCircleAtHome ghostCursor; // For when the user hovers over an option
+
+	// Data to handle
+	vector<string> values;
+	int nodeCount;
+	int cursorIndex;
+	
+protected:
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		for (int i = 0; i < nodeCount; i++) {
+			target.draw(nodes[i], states);
+			target.draw(valuesText[i], states);
+		}
+		target.draw(cursor, states);
+		target.draw(ghostCursor, states);
+	}
+public:
+	BulletListSelector(float spacing, vector<string> values, sf::Font& font) {
+		nodeCount = values.size();
+		this->values = values;
+
+		// Create nodes
+		for (int i = 0; i < nodeCount; i++) {
+			nodes.push_back(SfCircleAtHome(WHITE, BULLETNODERADIUS, { 0, spacing * i }, false, BLACK, 1));
+			valuesText.push_back(SfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { BULLETNODERADIUS * 3, spacing * i }, true, false, false, true));
+		}
+
+		// Create circle cursor
+		cursor = SfCircleAtHome(BLACK, BULLETCURSORRADIUS, { BULLETNODERADIUS - BULLETCURSORRADIUS, BULLETNODERADIUS - BULLETCURSORRADIUS }, false);
+		ghostCursor = SfCircleAtHome(GRAY, BULLETCURSORRADIUS, { BULLETNODERADIUS - BULLETCURSORRADIUS, BULLETNODERADIUS - BULLETCURSORRADIUS }, false);
+		cursorIndex = 0;
+	}
+	// Returns the value at the cursor
+	int getValue() {
+		return cursorIndex;
+	}
+	void setIndex(int index){
+		ghostCursor.setRadius(0); // Hides ghost cursor
+		cursorIndex = index;
+		cursor.setPosition(nodes[index].getPosition());
+		// Offset to keep cursor centered
+		cursor.move(BULLETNODERADIUS - BULLETCURSORRADIUS, BULLETNODERADIUS - BULLETCURSORRADIUS);
+	}
+	// Move all sprites
+	void move(float offsetX, float offsetY) {
+		for (SfCircleAtHome& node : nodes)
+			node.move(offsetX, offsetY);
+		for (SfTextAtHome& text : valuesText)
+			text.move(offsetX, offsetY);
+		cursor.move(offsetX, offsetY);
+	}
+	bool onMouseMove(int mouseX, int mouseY) {
+		// Show ghost cursor
+		ghostCursor.setRadius(0); // Hides ghost cursor
+		for (int i = 0; i < nodes.size(); i++) {
+			if (nodes[i].contains(mouseX, mouseY) && i != cursorIndex) {
+				// Show ghost cursor and set position
+				ghostCursor.setRadius(BULLETCURSORRADIUS); 
+				ghostCursor.setPosition(nodes[i].getPosition());
+				// Offset to keep cursor centered
+				ghostCursor.move(BULLETNODERADIUS - BULLETCURSORRADIUS, BULLETNODERADIUS - BULLETCURSORRADIUS);
+				return true;
+			}
+		}
+		return false;
+	}
+	bool onMouseClick(int mouseX, int mouseY) {
+		for (int i = 0; i < nodes.size(); i++) {
+			if (nodes[i].contains(mouseX, mouseY)) {
+				setIndex(i);
+				return true;
+			}
+		}
 		return false;
 	}
 };
@@ -751,7 +851,7 @@ class PauseScreen : public sf::Drawable {
 	}
 public:
 	PauseScreen(sf::Vector2f gamePos, vector<string>& menuText, sf::Font& font) {
-		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, {gamePos.x, gamePos.y - TOPROWPIXELS}, false, WHITE, LINEWIDTH));
+		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, { gamePos.x, gamePos.y - TOPROWPIXELS }, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
 		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
 
@@ -762,7 +862,7 @@ public:
 
 
 		texts.push_back(SfTextAtHome(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true));
-	
+
 		sf::CircleShape cursor = sf::CircleShape(15.f, 3); // Triangle shaped cursor
 		cursor.rotate(90.f);
 		menu = ClickableMenu(font, WHITE, menuText, MENUTEXTSIZE, { gamePos.x + GAMEWIDTH / 4, gamePos.y + GAMEWIDTH * 2 / 3 }, MENUSPACING, cursor);
