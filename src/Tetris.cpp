@@ -17,7 +17,7 @@ using namespace TetrisVariables;
 // Tetris game made with SFML 2.5.1
 // Sound effects and music made with IOS Garage Band
 // Line count as of 5/11/2024: 3937
-// Todo: pause menu rects, bullet list indicator
+// Todo: Color pallette displayer
 
 // Generate text for loss screen
 vector<sf::Text> getLossText(sf::Font& font) {

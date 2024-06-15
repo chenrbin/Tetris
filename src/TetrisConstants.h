@@ -68,9 +68,13 @@ namespace TetrisVariables {
 	const sf::Color INVISIBLE(255, 255, 255, 0);
 
 	const sf::Color TPIECECOLOR = VIOLET; // Defining T piece color for detecting T-spins
-	
+	const vector<vector<sf::Color>> PIECECOLORSETS {
+		{CYAN, BLUE, ORANGE, YELLOW, GREEN, RED, VIOLET}, 
+		{CYAN, YELLOW, VIOLET, GREEN, YELLOW, VIOLET, RED}, 
+		{GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY}
+	};
 	// Default keybinds
-	
+
 	// Single player
 	sf::Keyboard::Key UP = sf::Keyboard::Up;
 	sf::Keyboard::Key LEFT = sf::Keyboard::Left;
@@ -101,7 +105,8 @@ namespace TetrisVariables {
 	const vector<int> DEFAULTSETTINGS{ 1, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 	UP, LEFT, DOWN, RIGHT, SPINCW, SPINCCW, HOLD,
 	UP1, LEFT1, DOWN1, RIGHT1, SPINCW1, SPINCCW1, HOLD1,
-	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2 };
+	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2,
+	0 };
 	const string CONFIGFILEPATH = "assets/config.cfg";
 	const string SOUNDFXFILEPATH = "assets/sound-effects.ogg";
 	const string FONTFILEPATH = "assets/font.ttf";

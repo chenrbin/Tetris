@@ -259,7 +259,7 @@ public:
         // Set contents for tab 3
         vector<string> tab3Text {"Block Colors"};
         vector<sf::Vector2f> tab3TextPositions {{100, 100}};
-        vector<OptionSelector*> tab3Selectors { new BulletListSelector(40, {"1", "2", "3"}, font)};
+        vector<OptionSelector*> tab3Selectors { new BulletListSelector(50, {"1", "2", "3"}, font)};
         vector<sf::Vector2f> tab3SelectorPositions = {{100, 150}};
 
         // Add settings to tab 1
@@ -345,13 +345,17 @@ public:
     void resetConfig(bool defaultValues = false) {
         const vector<int>& config = (defaultValues) ? DEFAULTSETTINGS : configValues;
         try {
+            int index = 0;
             int tab1Size = tabs[0].getSelectors().size(); // Index to separate tabs
             int tab2Size = tabs[1].getSelectors().size();
+            int tab3Size = tabs[2].getSelectors().size();
             for (int i = 0; i < tab1Size; i++) // First tab
-                tabs[0][i].setIndex(config[i]);
+                tabs[0][i].setIndex(config.at(index++));
             for (int i = 0; i < tab2Size; i++) { // Second tab
-                tabs[1].setKey(i, sf::Keyboard::Key(config.at(i + tab1Size)));
+                tabs[1].setKey(i, sf::Keyboard::Key(config.at(index++)));
             }
+            for (int i = 0; i < tab3Size; i++) // Third tab
+                tabs[2][i].setIndex(config.at(index++));
         }
         catch (out_of_range err) {
             cout << "config out of range. Restoring to default\n";
@@ -431,5 +435,10 @@ public:
         std::vector<KeyRecorder*> keybinds = tabs[1].getKeybinds();
         for (int i = 0; i < keybinds.size(); i++) // Update keybind controls
             *keySets[i / 7]->getSet()[i % 7] = *keybinds[i]->getKey();
+
+        // Update color pallete
+        settings = tabs[2].getValues();
+        for (Screen* screen : screens) 
+            screen->setColorPallete(settings[0]);
     }
 };

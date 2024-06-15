@@ -57,6 +57,7 @@ class Screen {
 	bool holdEnabled, ghostPieceEnabled, SRS_Enabled, bagEnabled;
 	float garbRepeatProbability; // Probability for a guaranteed repeat garbage
 	float garbageMultiplier; // Scalar for garbage exchange, rounded up
+	int colorPallete;
 
 	SoundManager* soundFX;
 #pragma endregion
@@ -67,12 +68,12 @@ public:
 		setHUD(gamePos, font);
 		this->blockTexture = blockTexture;
 		this->clearAnimations = clearAnimations;	// Pass animations to screen class to play when prompted
-		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, { gamePos.x + GAMEWIDTH / 2, gamePos.y }, true, false, true), 1, 1));
-		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f }), 0, 2.5f));
-		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING }), 0, 2.5f));
-		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "2X Combo", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 2 }), 0, 2.5f));
-		clearAnimations.push_back(FadeText (SfTextAtHome(font, WHITE, "All Clear", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 3 }), 0, 2.5f));
-		
+		clearAnimations.push_back(FadeText(SfTextAtHome(font, WHITE, "SPEED UP", GAMETEXTSIZE * 2, { gamePos.x + GAMEWIDTH / 2, gamePos.y }, true, false, true), 1, 1));
+		clearAnimations.push_back(FadeText(SfTextAtHome(font, WHITE, "T-spin Triple", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f }), 0, 2.5f));
+		clearAnimations.push_back(FadeText(SfTextAtHome(font, WHITE, "Back-to-Back", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING }), 0, 2.5f));
+		clearAnimations.push_back(FadeText(SfTextAtHome(font, WHITE, "2X Combo", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 2 }), 0, 2.5f));
+		clearAnimations.push_back(FadeText(SfTextAtHome(font, WHITE, "All Clear", CLEARTEXTSIZE, { gamePos.x + GAMEWIDTH + LINEWIDTH * 2, gamePos.y + GAMEHEIGHT / 1.5f + MENUSPACING * 3 }), 0, 2.5f));
+
 		this->bag = bag;
 		this->soundFX = soundFX;
 
@@ -84,6 +85,7 @@ public:
 		startingGravity = DEFAULTGRAVITY;
 		garbRepeatProbability = DEFAULTGARBAGEPROBABILITY;
 		garbageMultiplier = 1;
+		colorPallete = 0;
 
 		playerIndex = bag->addPlayer();
 		totalLinesCleared = 0, comboCounter = 0;
@@ -96,6 +98,7 @@ public:
 		tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // Piece codes allow for specified piece spawns
+			tetrominos[i]->setColor(PIECECOLORSETS[colorPallete][i]);
 			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, SCALE));
 		}
 		for (int i = 0; i < nextPieceCount; i++) // Initialize next pieces sprites
@@ -596,7 +599,7 @@ public:
 
 #pragma region Getters/Setters
 	// Create HUD on game position
-	void setHUD(sf::Vector2f gamePos, sf::Font& font){
+	void setHUD(sf::Vector2f gamePos, sf::Font& font) {
 		// Rectangles for game screen, hold, queue, garbage bin, and top row, 
 		screenRects.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT },
 			gamePos, false, WHITE, LINEWIDTH));
@@ -633,16 +636,16 @@ public:
 				{ gameBounds.left + j * TILESIZE - 1, gameBounds.top - TOPROWPIXELS }));
 		}
 	}
-	sf::FloatRect& getGameBounds(){
+	sf::FloatRect& getGameBounds() {
 		return gameBounds;
 	}
-	void setGamemodeTextString(string str){
+	void setGamemodeTextString(string str) {
 		gamemodeText.setString(str);
 	}
-	void setGamemodeTextXPos(float x){
+	void setGamemodeTextXPos(float x) {
 		gamemodeText.setPosition(x, gamemodeText.getPosition().y);
 	}
-	vector<SfRectangleAtHome>& getScreenRects(){
+	vector<SfRectangleAtHome>& getScreenRects() {
 		return screenRects;
 	}
 	// Set gravity to a specific speed or back to its starting speed
@@ -690,6 +693,12 @@ public:
 	}
 	void setGarbageMultiplier(float val) {
 		garbageMultiplier = val;
+	}
+	void setColorPallete(int val) {
+		// Update color pallete
+		colorPallete = val;
+		for (int i = 0; i < tetrominos.size(); i++)
+			tetrominos[i]->setColor(PIECECOLORSETS[colorPallete][i]);
 	}
 	int getLinesCleared() {
 		return totalLinesCleared;
@@ -771,32 +780,34 @@ public:
 		// Last rectangle needs to be redrawn manually
 		for (const SfRectangleAtHome& rect : screenRects)
 			window->draw(rect);
-		for (const SfRectangleAtHome& line : lines)
-			window->draw(line);
-		
-		for (int i = 1; i < REALNUMROWS; i++) {
-			for (int j = 0; j < NUMCOLS; j++) {
-				window->draw(board[i][j]);
+		if (!paused) {
+			for (const SfRectangleAtHome& line : lines)
+				window->draw(line);
+			for (int i = 1; i < REALNUMROWS; i++) {
+				for (int j = 0; j < NUMCOLS; j++) {
+					window->draw(board[i][j]);
+				}
 			}
-		}
-		for (sf::Sprite& sprite : heldSprite)
-			window->draw(sprite);
-		for (int i = 0; i < nextPieceCount; i++)
-			for (sf::Sprite& sprite : nextPieceSprites[i])
+			for (sf::Sprite& sprite : heldSprite)
 				window->draw(sprite);
+			for (int i = 0; i < nextPieceCount; i++)
+				for (sf::Sprite& sprite : nextPieceSprites[i])
+					window->draw(sprite);
 
+			// Draw garbage stack if game mode is sandbox or PVP
+			if (gameMode != CLASSIC)
+				window->draw(garbStack);
+		}
 		// Enable death animation if game is over
 		if (gameOver)
 			deathAnimation.update(*window);
 
-		// Draw garbage stack if game mode is sandbox or PVP
-		if (gameMode != CLASSIC)
-			window->draw(garbStack);
-
 		window->draw(screenRects.back()); // Redraw last rectangle
 
-		window->draw(holdText);
-		window->draw(nextText);
+		if (holdEnabled)
+			window->draw(holdText);
+		if (nextPieceCount > 0)
+			window->draw(nextText);
 		window->draw(gamemodeText);
 		for (FadeText& animation : clearAnimations)
 			animation.update(*window);
@@ -932,7 +943,7 @@ public:
 	}
 	// Return true if a t-spin has been achieved. 
 	bool checkTspin() {
-		if (currentPiece->getColor() != TPIECECOLOR || !lastMoveSpin) // Skip the corner checks if first two conditions fail
+		if (currentPiece->getPieceCode() != 6 || !lastMoveSpin) // Skip the corner checks if first two conditions fail
 			return false;
 		int cornerBlockCount = 0;
 		int row = currentPositions[3].x, col = currentPositions[3].y; // Center square position

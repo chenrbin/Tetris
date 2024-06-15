@@ -835,32 +835,18 @@ public:
 #pragma endregion
 
 
-// Class for pause screen sprites. Varies based on mode
+// Class for pause screen sprites.
 class PauseScreen : public sf::Drawable {
-	// All Rectangles and shapes needed to construct the screen
-	vector<SfRectangleAtHome> rectangles;
 	vector<SfTextAtHome> texts;
 	ClickableMenu menu;
 
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
-		for (int i = 0; i < rectangles.size(); i++)
-			target.draw(rectangles[i], states);
 		for (int i = 0; i < texts.size(); i++)
 			target.draw(texts[i], states);
 		target.draw(menu, states);
 	}
 public:
 	PauseScreen(sf::Vector2f gamePos, vector<string>& menuText, sf::Font& font) {
-		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, { gamePos.x, gamePos.y - TOPROWPIXELS }, false, WHITE, LINEWIDTH));
-		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
-		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
-
-		// Offscreen rectangles for player two. Will have no text
-		rectangles.push_back(SfRectangleAtHome(BLACK, { GAMEWIDTH, GAMEHEIGHT + TOPROWPIXELS }, { gamePos.x + WIDTH, gamePos.y - TOPROWPIXELS }, false, WHITE, LINEWIDTH));
-		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4 - LINEWIDTH, TILESIZE * 4 }, { gamePos.x + WIDTH - TILESIZE * 4.5f - LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
-		rectangles.push_back(SfRectangleAtHome(BLACK, { TILESIZE * 4, GAMEHEIGHT / 9 * NEXTPIECECOUNT }, { gamePos.x + WIDTH + GAMEWIDTH + LINEWIDTH, gamePos.y + LINEWIDTH }, false, WHITE, LINEWIDTH));
-
-
 		texts.push_back(SfTextAtHome(font, WHITE, "PAUSED", 40, { GAMEXPOS + GAMEWIDTH / 2, GAMEYPOS + GAMEWIDTH / 3 }, true, false, true));
 
 		sf::CircleShape cursor = sf::CircleShape(15.f, 3); // Triangle shaped cursor

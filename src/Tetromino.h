@@ -19,6 +19,7 @@ struct Tetromino {
 	Tetromino(int pieceCode = -1) {
 		centerPos = sf::Vector2i(1, 4); // Initial starting position for center
 		orientation = 0;
+		color = GRAY;
 		this->pieceCode = pieceCode;
 		somethingBelow = false, somethingLeft = false, somethingRight = false;
 		positions = { &block1Pos, &block2Pos, &block3Pos, &centerPos };
@@ -45,6 +46,9 @@ struct Tetromino {
 	}
 	sf::Color getColor() {
 		return color;
+	}
+	void setColor(sf::Color value) {
+		color = value;
 	}
 	// Set absolute positions (row, col) for the piece
 	void setPositions(vector<sf::Vector2i>& newPositions) {
@@ -163,11 +167,12 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 2);
-		color = CYAN;
 	}
 	Tetromino* getNewPiece() {
-		return new IPiece;
-	}
+		Tetromino* copy = new IPiece();
+		copy->setColor(color);
+		return copy;
+	} 
 	vector<vector<sf::Vector2i>> spinCW() { // Special case, center changes. Notation document which orientation to change to
 		vector<sf::Vector2i> shiftValues; // There are in the format (col, row). Remember to flip later.
 		if (orientation == 0) { // 1 v C v 2 v 3
@@ -259,10 +264,11 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x - 1, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
-		color = BLUE;
 	}
 	Tetromino* getNewPiece() {
-		return new JPiece;
+		Tetromino* copy = new JPiece();
+		copy->setColor(color);
+		return copy;
 	}
 };
 
@@ -272,10 +278,11 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
 		block3Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
-		color = ORANGE;
 	}
 	Tetromino* getNewPiece() {
-		return new LPiece;
+		Tetromino* copy = new LPiece();
+		copy->setColor(color);
+		return copy;
 	}
 };
 
@@ -285,10 +292,11 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
-		color = YELLOW;
 	}
 	Tetromino* getNewPiece() {
-		return new OPiece;
+		Tetromino* copy = new OPiece();
+		copy->setColor(color);
+		return copy;
 	}
 	// Return current position to check. Will always rotate but does not do anything visually
 	vector<vector<sf::Vector2i>> spinCW() {
@@ -305,10 +313,11 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block3Pos = sf::Vector2i(centerPos.x - 1, centerPos.y + 1);
-		color = GREEN;
 	}
 	Tetromino* getNewPiece() {
-		return new SPiece;
+		Tetromino* copy = new SPiece();
+		copy->setColor(color);
+		return copy;
 	}
 };
 
@@ -318,10 +327,11 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x - 1, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
-		color = RED;
 	}
-	ZPiece* getNewPiece() {
-		return new ZPiece;
+	Tetromino* getNewPiece() {
+		Tetromino* copy = new ZPiece();
+		copy->setColor(color);
+		return copy;
 	}
 };
 
@@ -332,9 +342,10 @@ public:
 		block1Pos = sf::Vector2i(centerPos.x, centerPos.y - 1);
 		block2Pos = sf::Vector2i(centerPos.x - 1, centerPos.y);
 		block3Pos = sf::Vector2i(centerPos.x, centerPos.y + 1);
-		color = TPIECECOLOR;
 	}
-	TPiece* getNewPiece() {
-		return new TPiece;
+	Tetromino* getNewPiece() {
+		Tetromino* copy = new TPiece();
+		copy->setColor(color);
+		return copy;
 	}
 };
