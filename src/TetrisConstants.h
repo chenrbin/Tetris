@@ -4,7 +4,7 @@
 #include <map>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: online, Full screen compatibility, audio settings
+	// Todo: online, Full screen compatibility, audio settings, Color pallete 2, organize tab 3 pos, update volume
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
@@ -13,7 +13,8 @@ namespace TetrisVariables {
 	// Item sizes and spacings
 	const int TILESIZE = 32, LEFTMARGIN = 180, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
-	const float SCALE = 0.8f; // Smaller display for hold and next pieces
+	const float HUDPIECESCALE = 0.8f; // Smaller display for hold and next pieces
+	const float PALLETEPIECESCALE = 0.6f; // Used to display color pallete
 
 	// Screen dimensions
 	const int WIDTH = 800, HEIGHT = 800, NUMROWS = 20, NUMCOLS = 10;
@@ -56,6 +57,7 @@ namespace TetrisVariables {
 	const sf::Color BLACK(0, 0, 0);
 	const sf::Color GRAY(128, 128, 128);
 	const sf::Color RED(255, 0, 0); 
+	const sf::Color MAGENTA(255, 0, 255);
 	const sf::Color ORANGE(255, 165, 0);
 	const sf::Color YELLOW(255, 255, 0);
 	const sf::Color GREEN(0, 255, 0);
@@ -67,10 +69,9 @@ namespace TetrisVariables {
 	const int PREVIEWTRANSPARENCY = 120;
 	const sf::Color INVISIBLE(255, 255, 255, 0);
 
-	const sf::Color TPIECECOLOR = VIOLET; // Defining T piece color for detecting T-spins
 	const vector<vector<sf::Color>> PIECECOLORSETS {
 		{CYAN, BLUE, ORANGE, YELLOW, GREEN, RED, VIOLET}, 
-		{CYAN, YELLOW, VIOLET, GREEN, YELLOW, VIOLET, RED}, 
+		{RED, MAGENTA, YELLOW, CYAN, BLUE, GREEN, GRAY}, 
 		{GRAY, GRAY, GRAY, GRAY, GRAY, GRAY, GRAY}
 	};
 	// Default keybinds
@@ -106,7 +107,7 @@ namespace TetrisVariables {
 	UP, LEFT, DOWN, RIGHT, SPINCW, SPINCCW, HOLD,
 	UP1, LEFT1, DOWN1, RIGHT1, SPINCW1, SPINCCW1, HOLD1,
 	UP2, LEFT2, DOWN2, RIGHT2, SPINCW2, SPINCCW2, HOLD2,
-	0 };
+	0, 50, 50 };
 	const string CONFIGFILEPATH = "assets/config.cfg";
 	const string SOUNDFXFILEPATH = "assets/sound-effects.ogg";
 	const string FONTFILEPATH = "assets/font.ttf";
@@ -129,8 +130,8 @@ namespace TetrisVariables {
 	// Settings Tab
 	const int TABTOP = 0, TABHEIGHT = 50, TABHEIGHTGROWTH = 10;
 	// Tab items
-	const int SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 50;
-	const int SELECTORRIGHTSPACING = 300, SELECTORDOWNSPACING = 40;
+	const float SETTINGXPOS = 50, SETTINGYPOS = 100, SETTINGSPACING = 50;
+	const float SELECTORRIGHTSPACING = 300, SELECTORDOWNSPACING = 40;
 	// Clickable button
 	const int BUTTONTEXTSIZE = 22;
 	// On-Off Switch
@@ -138,6 +139,10 @@ namespace TetrisVariables {
 	// BulletListSelector
 	const int BULLETNODERADIUS = 10, BULLETCURSORRADIUS = 6;
 
+	// Music track is loud at max volume, this constant provides a constant scalar
+	const float BGMVOLUME = 10, SFXVOLUME = 50;
+
+	// Builder function for map used in keybinds
 	void initializeKeyStrings(map<sf::Keyboard::Key, string>& keyStrings){
 		keyStrings[sf::Keyboard::Menu] = "Menu";
 		keyStrings[sf::Keyboard::LBracket] = "[";

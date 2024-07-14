@@ -17,7 +17,6 @@ using namespace TetrisVariables;
 // Tetris game made with SFML 2.5.1
 // Sound effects and music made with IOS Garage Band
 // Line count as of 5/11/2024: 3937
-// Todo: Color pallette displayer
 
 // Generate text for loss screen
 vector<sf::Text> getLossText(sf::Font& font) {
@@ -55,7 +54,7 @@ int main() {
 	sf::Music bgm;
 	if (!bgm.openFromFile(BGMFILEPATH))
 		return -1;
-	bgm.setVolume(5);
+	bgm.setVolume(BGMVOLUME);
 	bgm.setLoop(true);
 
 	sf::ContextSettings windowSettings;
@@ -93,8 +92,8 @@ int main() {
 	PieceBag bag;
 
 	// Set up game screen
-	Screen* screen = new Screen(window, GAMEPOS, font, texture, &bag, soundFX);
-	Screen* screenP2 = new Screen(window, GAMEPOSP2, font, texture, &bag, soundFX);
+	Screen* screen = new Screen(window, GAMEPOS, font, &texture, &bag, soundFX);
+	Screen* screenP2 = new Screen(window, GAMEPOSP2, font, &texture, &bag, soundFX);
 	screenP2->setGamemodeTextString("PVP Mode"); // This will be the title text used in pvp mode. Hide the other title text
 	screenP2->setGamemodeTextXPos(WIDTH);
 	
@@ -107,7 +106,7 @@ int main() {
 	// Sandbox mode exclusive sprites
 	SandboxMenu* sandboxMenu = new SandboxMenu(font, screen);
 	// Set up settings menu
-	SettingsMenu gameSettings({ screen, screenP2 }, { playerSoloDAS, player1DAS, player2DAS }, soundFX, font, &currentScreen);
+	SettingsMenu gameSettings({ screen, screenP2 }, { playerSoloDAS, player1DAS, player2DAS }, soundFX, font, &bgm, &currentScreen);
 
 	// Game loop
 	while (window.isOpen())

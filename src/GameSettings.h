@@ -9,7 +9,7 @@ using namespace TetrisVariables;
 
 // Map between keys and their corresponding text to display
 // This global variable will be used by several classes
-map<sf::Keyboard::Key, string> keyStrings; 
+map<sf::Keyboard::Key, string> keyStrings;
 
 // Contains the setting data structures
 // A single tab containing configurable settings
@@ -26,6 +26,7 @@ class SettingsTab : public sf::Drawable {
     int settingCount;
 
     vector<sf::Text> extraText; // Any additional text to draw
+    vector<sf::Sprite> extraSprites; // Any additional sprites to draw
 
     SoundManager* soundFX;
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -42,6 +43,8 @@ class SettingsTab : public sf::Drawable {
             }
             for (int i = 0; i < extraText.size(); i++)
                 target.draw(extraText[i], states);
+            for (int i = 0; i < extraSprites.size(); i++)
+                target.draw(extraSprites[i], states);
         }
 
     }
@@ -111,6 +114,10 @@ public:
     void addExtraText(sf::Text text) {
         extraText.push_back(text);
     }
+    // Add additional sprites to draw
+    void addExtraSprite(sf::Sprite sprite) {
+        extraSprites.push_back(sprite);
+    }
     // Add a setting option while storing a keybind for extra operations
     void addKeybind(string text, sf::Vector2f textPosition, sf::Vector2f selectorPosition, sf::Font& font) {
         keybinds.push_back(new KeyRecorder(&keyStrings, font));
@@ -173,8 +180,10 @@ class SettingsMenu : public sf::Drawable {
     // Setting data
     vector<Screen*> screens; // Game screens the setting will apply to
     vector<KeyDAS*> dasSets; // Control profiles to modify
+    sf::Music* bgm;
     vector<int> configValues; // A saved copy of config values. Only updates when reading or writing the config file
     string fileName;
+
 
     // Draw all tabs
     virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -187,13 +196,14 @@ class SettingsMenu : public sf::Drawable {
 
 
 public:
-    SettingsMenu(vector<Screen*> screens, vector<KeyDAS*> dasSets, SoundManager* soundFX, sf::Font& font, int* currentScreen) {
+    SettingsMenu(vector<Screen*> screens, vector<KeyDAS*> dasSets, SoundManager* soundFX, sf::Font& font, sf::Music* bgm, int* currentScreen) {
         tabCount = 0;
         currentTabIndex = 0;
         this->screens = screens;
         this->dasSets = dasSets;
         this->soundFX = soundFX;
         this->font = &font;
+        this->bgm = bgm;
         this->currentScreen = currentScreen;
         fileName = CONFIGFILEPATH;
         // Initialize keyStrings if empty
@@ -224,17 +234,17 @@ public:
         tab1Text = { "Starting Speed","Next Piece Count", "Piece Holding", "Ghost Piece", "Auto Shift Delay", "Auto Shift Speed",
             "Piece RNG", "Rotation Style", "Garbage Timer", "Garbage Multiplier", "Garbage RNG" };
 
-        tab1Selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
-        tab1Selectors.push_back(new SlidingBar(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "Easy", "Normal", "Hard" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "0", "1", "2", "3", "4", "5", "6" }, font));
         tab1Selectors.push_back(new OnOffSwitch(font));
         tab1Selectors.push_back(new OnOffSwitch(font));
-        tab1Selectors.push_back(new SlidingBar(270, { "Long", "Normal", "Short", "Instant" }, font));
-        tab1Selectors.push_back(new SlidingBar(270, { "Slow", "Normal", "Fast", "Instant" }, font));
-        tab1Selectors.push_back(new SlidingBar(150, { "Random", "7-Bag" }, font));
-        tab1Selectors.push_back(new SlidingBar(150, { "Classic", "Modern" }, font));
-        tab1Selectors.push_back(new SlidingBar(270, { "5s", "3s", "1s", "Instant" }, font));
-        tab1Selectors.push_back(new SlidingBar(270, { "0.5x", "1x", "1.5x" }, font));
-        tab1Selectors.push_back(new SlidingBar(270, { "Easy", "Normal", "Hard" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "Long", "Normal", "Short", "Instant" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "Slow", "Normal", "Fast", "Instant" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(150, { "Random", "7-Bag" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(150, { "Classic", "Modern" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "5s", "3s", "1s", "Instant" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "0.5x", "1x", "1.5x" }, font));
+        tab1Selectors.push_back(new IncrementalSlider(270, { "Easy", "Normal", "Hard" }, font));
 
         // Add settings to tab 1
         for (int i = 0; i < tab1Selectors.size(); i++)
@@ -249,7 +259,7 @@ public:
         // Add key recorders to settings tab
         for (sf::Vector2f& vec : keybindPositions)
             tabs[1].addKeybind("", ORIGIN, vec, font);
-        vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold"};
+        vector<string> controlsText = { "Hard Drop", "Left", "Down", "Right", "SpinCW", "SpinCCW", "Hold" };
         vector<string> playersText = { "Solo", "PVP P1", "PVP P2" };
         for (int i = 0; i < controlsText.size(); i++)
             tabs[1].addExtraText(SfTextAtHome(font, WHITE, controlsText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i + 1))));
@@ -257,12 +267,40 @@ public:
             tabs[1].addExtraText(SfTextAtHome(font, WHITE, playersText[i], MENUTEXTSIZE, sf::Vector2f(SETTINGXPOS + SELECTORRIGHTSPACING / 1.5f * (i + 1), SETTINGYPOS), true, false, true));
 
         // Set contents for tab 3
-        vector<string> tab3Text {"Block Colors"};
-        vector<sf::Vector2f> tab3TextPositions {{100, 100}};
-        vector<OptionSelector*> tab3Selectors { new BulletListSelector(50, {"1", "2", "3"}, font)};
-        vector<sf::Vector2f> tab3SelectorPositions = {{100, 150}};
+        vector<string> tab3Text{ "Block Colors", "BGM Volume", "SFX Volume" };
+        vector<sf::Vector2f> tab3TextPositions{ {SETTINGXPOS, SETTINGYPOS}};
+        vector<OptionSelector*> tab3Selectors{ new BulletListSelector(SETTINGSPACING, {"1", "2", "3"}, font)};
+        vector<sf::Vector2f> tab3SelectorPositions = { {SETTINGXPOS, SETTINGYPOS + SETTINGSPACING} };
 
-        // Add settings to tab 1
+        // Add two volume sliders
+        for (int i = 0; i < 2; i++){
+            tab3TextPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i * 2 + 4)});
+            tab3Selectors.push_back(new BarSlider(270, 0, 100, font));
+            tab3SelectorPositions.push_back({ SETTINGXPOS, SETTINGYPOS + SETTINGSPACING * (i * 2 + 5) });
+        }
+
+        // Load sprites to display color pallete options
+        for (int i = 0; i < PIECECOLORSETS.size(); i++)
+        {
+            vector<Tetromino*> tetrominos = { new IPiece, new JPiece, new LPiece, new OPiece, new SPiece, new ZPiece, new TPiece };
+            int tetrominoCount = tetrominos.size();
+            for (int j = 0; j < tetrominoCount; j++) {
+                tetrominos[j]->setColor(PIECECOLORSETS[i][j]);
+            }
+            for (int k = 0; k < tetrominoCount; k++) { // Display queue
+                vector<sf::Sprite> pieceSprite = tetrominos[k]->getPieceSprite(screens[0]->getBlockTexture(),
+                    130 + k * 5 * TILESIZE * PALLETEPIECESCALE,
+                    130 + i * 3 * TILESIZE * PALLETEPIECESCALE, PALLETEPIECESCALE);
+                for (sf::Sprite& sprite : pieceSprite)
+                    tabs[2].addExtraSprite(sprite);
+            }
+            for (Tetromino* tet : tetrominos)
+                delete tet;
+
+        }
+
+
+        // Add settings to tab 3
         for (int i = 0; i < tab3Selectors.size(); i++)
             tabs[2].addSetting(tab3Text[i], tab3TextPositions[i], tab3Selectors[i], tab3SelectorPositions[i], font);
 
@@ -354,7 +392,7 @@ public:
             for (int i = 0; i < tab2Size; i++) { // Second tab
                 tabs[1].setKey(i, sf::Keyboard::Key(config.at(index++)));
             }
-            for (int i = 0; i < tab3Size; i++) // Third tab
+            for (int i = 0; i < tab3Size; i++) // Third tab 
                 tabs[2][i].setIndex(config.at(index++));
         }
         catch (out_of_range err) {
@@ -436,9 +474,16 @@ public:
         for (int i = 0; i < keybinds.size(); i++) // Update keybind controls
             *keySets[i / 7]->getSet()[i % 7] = *keybinds[i]->getKey();
 
-        // Update color pallete
+        // Tab 3 values
         settings = tabs[2].getValues();
-        for (Screen* screen : screens) 
+
+        // Update color pallete
+        for (Screen* screen : screens)
             screen->setColorPallete(settings[0]);
+
+        // Update volume settings
+        bgm->setVolume(BGMVOLUME * settings[1] / 100);
+        soundFX->setVolume(SFXVOLUME * settings[2] / 100);
+
     }
 };

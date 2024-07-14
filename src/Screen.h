@@ -18,7 +18,7 @@ class Screen {
 	vector<SfRectangleAtHome> lines;
 
 	sf::RenderWindow* window;
-	sf::Texture blockTexture;
+	sf::Texture* blockTexture;
 	float gravity, startingGravity; // Seconds between automatic movements. Smaller gravity falls faster. 0 disables gravity. 
 	map<int, float> gravityTiers;
 
@@ -30,7 +30,7 @@ class Screen {
 	vector<Tetromino*> tetrominos;
 	vector<sf::Vector2i> currentPositions, previewPositions;
 
-	vector<vector<sf::Sprite>> pieceSprites, nextPieceSprites;
+	vector<vector<sf::Sprite>> nextPieceSprites;
 	vector<int> nextPieceQueue;
 	vector<sf::Sprite> heldSprite;
 
@@ -63,7 +63,7 @@ class Screen {
 #pragma endregion
 
 public:
-	Screen(sf::RenderWindow& window, sf::Vector2f gamePos, sf::Font& font, sf::Texture& blockTexture, PieceBag* bag, SoundManager* soundFX) {
+	Screen(sf::RenderWindow& window, sf::Vector2f gamePos, sf::Font& font, sf::Texture* blockTexture, PieceBag* bag, SoundManager* soundFX) {
 		this->window = &window;
 		setHUD(gamePos, font);
 		this->blockTexture = blockTexture;
@@ -99,14 +99,13 @@ public:
 		for (int i = 0; i < tetrominos.size(); i++) {
 			tetrominos[i]->setPieceCode(i); // Piece codes allow for specified piece spawns
 			tetrominos[i]->setColor(PIECECOLORSETS[colorPallete][i]);
-			pieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, SCALE));
 		}
 		for (int i = 0; i < nextPieceCount; i++) // Initialize next pieces sprites
-			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(blockTexture, 0, 0, 1));
+			nextPieceSprites.push_back(tetrominos[i]->getPieceSprite(*blockTexture, 0, 0, 1));
 		for (int i = 0; i < GRAVITYTIERCOUNT; i++) // Initialize gravity thresholds
 			gravityTiers[GRAVITYTIERLINES[i]] = GRAVITYSPEEDS[i];
 
-		deathAnimation = DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, blockTexture);
+		deathAnimation = DeathAnimation({ gameBounds.left, gameBounds.top }, 2, 0.2f, *blockTexture);
 		garbStack = GarbageStack({ gameBounds.left, gameBounds.top });
 		garbLastCol = rand() % NUMCOLS; // Random column
 
@@ -115,7 +114,7 @@ public:
 		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
 			for (int j = 0; j < NUMCOLS; j++) {
-				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
+				row.push_back(Tile(*blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
 			}
 			board.push_back(row);
 		}
@@ -193,9 +192,9 @@ public:
 				nextPieceQueue.erase(nextPieceQueue.begin());
 			}
 			for (int i = 0; i < nextPieceSprites.size(); i++) { // Display queue
-				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(blockTexture,
-					queueBounds.left + TILESIZE * SCALE,
-					queueBounds.top + i * 2.5f * TILESIZE * SCALE + TILESIZE / 2.0f, SCALE);
+				nextPieceSprites[i] = tetrominos[nextPieceQueue[i]]->getPieceSprite(*blockTexture,
+					queueBounds.left + TILESIZE * HUDPIECESCALE,
+					queueBounds.top + i * 2.5f * TILESIZE * HUDPIECESCALE + TILESIZE / 2.0f, HUDPIECESCALE);
 			}
 		}
 		currentPiece = tetrominos[pieceCode]->getNewPiece();
@@ -317,7 +316,7 @@ public:
 			heldPiece->setPieceCode(currentPiece->getPieceCode());
 			spawnPiece(temp);
 		}
-		heldSprite = heldPiece->getPieceSprite(blockTexture, holdBounds.left + TILESIZE * SCALE, holdBounds.top + TILESIZE / 2.0f * SCALE, SCALE);
+		heldSprite = heldPiece->getPieceSprite(*blockTexture, holdBounds.left + TILESIZE * HUDPIECESCALE, holdBounds.top + TILESIZE / 2.0f * HUDPIECESCALE, HUDPIECESCALE);
 		hasHeld = true;
 		soundFX->play(MEDIUMBEEP);
 	}
@@ -350,7 +349,7 @@ public:
 				// Insert new row at top
 				vector<Tile> newRow;
 				for (int j = 0; j < NUMCOLS; j++) {
-					newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top - 2 * TILESIZE));
+					newRow.push_back(Tile(*blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top - 2 * TILESIZE));
 				}
 				board.insert(board.begin(), newRow);
 				totalLinesCleared++;
@@ -482,7 +481,7 @@ public:
 		for (int i = 0; i < REALNUMROWS; i++) {
 			vector<Tile> row;
 			for (int j = 0; j < NUMCOLS; j++) {
-				row.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
+				row.push_back(Tile(*blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + (i - 2) * TILESIZE));
 			}
 			board.push_back(row);
 		}
@@ -574,7 +573,7 @@ public:
 			// Insert new row at bottom
 			vector<Tile> newRow;
 			for (int j = 0; j < NUMCOLS; j++)
-				newRow.push_back(Tile(blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + GAMEHEIGHT - TILESIZE));
+				newRow.push_back(Tile(*blockTexture, gameBounds.left + j * TILESIZE, gameBounds.top + GAMEHEIGHT - TILESIZE));
 
 			// Fill in new row except one square.
 			int randomColumn;
@@ -699,6 +698,9 @@ public:
 		colorPallete = val;
 		for (int i = 0; i < tetrominos.size(); i++)
 			tetrominos[i]->setColor(PIECECOLORSETS[colorPallete][i]);
+	}
+	sf::Texture& getBlockTexture(){
+		return *blockTexture;
 	}
 	int getLinesCleared() {
 		return totalLinesCleared;
@@ -943,7 +945,7 @@ public:
 	}
 	// Return true if a t-spin has been achieved. 
 	bool checkTspin() {
-		if (currentPiece->getPieceCode() != 6 || !lastMoveSpin) // Skip the corner checks if first two conditions fail
+		if (!currentPiece->isTPiece() || !lastMoveSpin) // Skip the corner checks if first two conditions fail
 			return false;
 		int cornerBlockCount = 0;
 		int row = currentPositions[3].x, col = currentPositions[3].y; // Center square position

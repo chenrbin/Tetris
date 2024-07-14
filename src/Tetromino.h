@@ -159,6 +159,10 @@ struct Tetromino {
 		for (sf::Vector2i* pos : positions)
 			pos->y++;
 	}
+	// Used for checking T-Spins, all other pieces will return false.
+	virtual bool isTPiece(){
+		return false;
+	}
 };
 
 class IPiece : public Tetromino {
@@ -347,5 +351,8 @@ public:
 		Tetromino* copy = new TPiece();
 		copy->setColor(color);
 		return copy;
+	}
+	bool isTPiece(){
+		return true;
 	}
 };

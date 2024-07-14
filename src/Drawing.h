@@ -475,8 +475,125 @@ private:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const = 0;
 };
 
-// A sliding bar to select values
-class SlidingBar : public OptionSelector
+// A sliding bar to select from a range of values, such as a volume slider
+class BarSlider : public OptionSelector
+{
+	// Sprites to draw
+	SfRectangleAtHome bar;
+	SfTextAtHome valueText;
+	SfCircleAtHome cursor;
+
+	// Data to handle
+	int minVal, maxVal;
+	int cursorIndex; // Calculated as a number 0-100
+	bool cursorPressed;
+
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
+		target.draw(bar, states);
+		target.draw(valueText);
+		target.draw(cursor);
+	}
+public:
+	BarSlider(float length, int minVal, int maxVal, sf::Font& font) {
+		this->minVal = minVal;
+		this->maxVal = maxVal;
+
+		// Create bar. Width is specified but height is fixed.
+		bar = SfRectangleAtHome(WHITE, { length, BARHEIGHT }, { 0, 0 - BARHEIGHT / 2 }, false, BLACK, 1);
+		valueText = SfTextAtHome(font, WHITE, "0", MENUTEXTSIZE, { length + 50, 0}, true, false, true);
+
+		// Create circle cursor
+		cursor = SfCircleAtHome(WHITE, BAR_CURSOR_RADIUS, { 0, 0 }, true, BLACK, 1);
+		cursorIndex = 0;
+	}
+	// Returns the value at the cursor
+	int getValue() {
+		return cursorIndex;
+	}
+	// Move the cursor based on mouse x position to select a node
+	bool moveCursor(float xPosition) {
+		if (!cursorPressed)
+			return false;
+
+		sf::FloatRect barPos = bar.getGlobalBounds();
+		// Collision detections extends two cursor radii out both sides
+		if (xPosition > barPos.left - cursor.getRadius() * 2 && xPosition < barPos.left + barPos.width + cursor.getRadius() * 2) {
+			// Make sure position is within bounds
+			xPosition = max(barPos.left, xPosition);
+			xPosition = min(barPos.left + barPos.width, xPosition);
+
+			cursorIndex = (xPosition - barPos.left) / bar.getSize().x * 100;
+			cursor.setPosition(xPosition, barPos.top + BARHEIGHT / 2);
+			valueText.setString(to_string(int(cursorIndex / 100.f * (maxVal - minVal) + minVal)));
+			return true;
+		}
+		return false;
+	}
+	bool setCursorPressed(bool val) {
+		if (val == cursorPressed) // Do nothing if variable does not need to be changed
+			return false;
+		cursorPressed = val;
+		// Visual indicator that a cursor has been clicked
+		if (val) {
+			cursor.setRadius(BAR_CURSOR_RADIUS + BAR_CURSOR_GROWTH);
+			cursor.move(-BAR_CURSOR_GROWTH, -BAR_CURSOR_GROWTH);
+			return true;
+		}
+		else {
+			cursor.setRadius(BAR_CURSOR_RADIUS);
+			cursor.move(BAR_CURSOR_GROWTH, BAR_CURSOR_GROWTH);
+			return false;
+		}
+	}
+	sf::FloatRect getCursorBounds() {
+		return cursor.getGlobalBounds();
+	}
+	// Move all sprites
+	void move(float offsetX, float offsetY) {
+		bar.move(offsetX, offsetY);
+		valueText.move(offsetX, offsetY);
+		cursor.move(offsetX, offsetY);
+	}
+	// Go to a specific node based on its index
+	void setIndex(int index) {
+		if (index >= minVal && index <= maxVal)
+		{
+			setCursorPressed(true);
+			moveCursor(index / 100.f * bar.getSize().x + bar.getGlobalBounds().left);
+			setCursorPressed(false);
+		}
+		else
+		{
+			cout << "Error, invalid index for sliding bar.\n";
+			throw ConfigError();
+		}
+	}
+	// Click nodes to select option
+	bool clickNodes(int mouseX, int mouseY) {
+		SfRectangleAtHome barCopy = bar;
+		barCopy.setScale(1, 2); // Scale the copy of the bar for a bigger collision box
+		if (barCopy.contains(mouseX, mouseY)) {
+			setCursorPressed(true);
+			return moveCursor(mouseX);
+		}
+		return false;
+	}
+	bool onMouseMove(int mouseX, int mouseY) {
+		return moveCursor(mouseX);
+	}
+	bool onMouseClick(int mouseX, int mouseY) {
+		if (getCursorBounds().contains(mouseX, mouseY))
+			return setCursorPressed(true);
+		return clickNodes(mouseX, mouseY);
+	}
+	bool onMouseRelease() {
+		return setCursorPressed(false);
+	}
+};
+
+
+// A sliding bar with fixed nodes to select values
+class IncrementalSlider : public OptionSelector
 {
 	// Sprites to draw
 	SfRectangleAtHome bar;
@@ -499,7 +616,7 @@ class SlidingBar : public OptionSelector
 		target.draw(cursor);
 	}
 public:
-	SlidingBar(float length, vector<string> values, sf::Font& font) {
+	IncrementalSlider(float length, vector<string> values, sf::Font& font) {
 		nodeCount = values.size();
 		this->values = values;
 
@@ -762,7 +879,7 @@ class BulletListSelector : public OptionSelector {
 	vector<string> values;
 	int nodeCount;
 	int cursorIndex;
-	
+
 protected:
 	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const {
 		for (int i = 0; i < nodeCount; i++) {
@@ -780,7 +897,7 @@ public:
 		// Create nodes
 		for (int i = 0; i < nodeCount; i++) {
 			nodes.push_back(SfCircleAtHome(WHITE, BULLETNODERADIUS, { 0, spacing * i }, false, BLACK, 1));
-			valuesText.push_back(SfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { BULLETNODERADIUS * 3, spacing * i }, true, false, false, true));
+			valuesText.push_back(SfTextAtHome(font, WHITE, values[i], MENUTEXTSIZE, { BULLETNODERADIUS * 3, spacing * i - BULLETNODERADIUS / 3 }, true, false, false, true));
 		}
 
 		// Create circle cursor
@@ -792,7 +909,7 @@ public:
 	int getValue() {
 		return cursorIndex;
 	}
-	void setIndex(int index){
+	void setIndex(int index) {
 		ghostCursor.setRadius(0); // Hides ghost cursor
 		cursorIndex = index;
 		cursor.setPosition(nodes[index].getPosition());
@@ -813,7 +930,7 @@ public:
 		for (int i = 0; i < nodes.size(); i++) {
 			if (nodes[i].contains(mouseX, mouseY) && i != cursorIndex) {
 				// Show ghost cursor and set position
-				ghostCursor.setRadius(BULLETCURSORRADIUS); 
+				ghostCursor.setRadius(BULLETCURSORRADIUS);
 				ghostCursor.setPosition(nodes[i].getPosition());
 				// Offset to keep cursor centered
 				ghostCursor.move(BULLETNODERADIUS - BULLETCURSORRADIUS, BULLETNODERADIUS - BULLETCURSORRADIUS);
