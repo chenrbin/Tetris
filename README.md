@@ -1,7 +1,7 @@
 # Tetris
 Run tetris.exe to play
 
-Game made with SFML 2.5.1
+Game made with SFML
 
 Music made with GarageBand
 
