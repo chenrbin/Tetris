@@ -4,12 +4,12 @@
 #include <map>
 using namespace std;
 namespace TetrisVariables {
-	// Todo: online, Full screen compatibility, audio settings, Color pallete 2, organize tab 3 pos, update volume
+	// Todo: online, Full screen compatibility
 	// Known bugs: 
 	// DAS does not pause (Not Fixing)
 	
 	// Set constant variables
-
+	
 	// Item sizes and spacings
 	const int TILESIZE = 32, LEFTMARGIN = 180, GAMETEXTSIZE = 20, MENUTEXTSIZE = 24, CLEARTEXTSIZE = 30;
 	const int LINEWIDTH = 2, TOPROWPIXELS = 10, MENUSPACING = 40;
@@ -118,7 +118,6 @@ namespace TetrisVariables {
 	const float CLIPDURATION = 0.5;
 	const float LIGHTTAP = 3.655, MEDIUMBEEP = 1.8, HIGHBEEP = 3.628;
 	const float HIGHHIGHBEEP = 5.4, LOWBEEP = 7.2, LOWTHUD = 9;
-
 
 	// Constants for sprite classes
 

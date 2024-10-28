@@ -5,7 +5,6 @@
 #include "Tetromino.h"
 #include "Tile.h"
 
-
 using namespace std;
 using namespace TetrisVariables;
 
